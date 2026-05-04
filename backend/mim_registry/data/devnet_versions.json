@@ -1,0 +1,38 @@
+{
+  "_comment": "Fabrik devnet source registry. Seeded into DevNetVersion via data migration. URL templates use {pkg} and {class} placeholders. fallback_chain is the order in which versions are tried when a class 404s on the requested version (first entry must equal the version_key itself).",
+  "versions": [
+    {
+      "version_key": "611",
+      "label": "6.1.X",
+      "url_template": "https://pubhub.devnetcloud.com/media/model-doc-611/docs/doc/jsonmeta/{pkg}/{class}.json",
+      "fallback_chain": ["611", "601", "521"],
+      "class_list": "classes/611.json.gz",
+      "is_supported": true,
+      "display_order": 30,
+      "class_count_seed": 17648,
+      "notes": "APIC 6.1.x. Bundle is byte-identical to 6.0 — same class list, distinct URL host."
+    },
+    {
+      "version_key": "601",
+      "label": "6.0.X",
+      "url_template": "https://pubhub.devnetcloud.com/media/model-doc-601/docs/doc/jsonmeta/{pkg}/{class}.json",
+      "fallback_chain": ["601", "611", "521"],
+      "class_list": "classes/601.json.gz",
+      "is_supported": true,
+      "display_order": 20,
+      "class_count_seed": 17648,
+      "notes": "APIC 6.0.x."
+    },
+    {
+      "version_key": "521",
+      "label": "5.2.X",
+      "url_template": "https://pubhub.devnetcloud.com/media/model-doc-521/docs/doc/jsonmeta/{pkg}/{class}.json",
+      "fallback_chain": ["521", "601", "611"],
+      "class_list": "classes/521.json.gz",
+      "is_supported": true,
+      "display_order": 10,
+      "class_count_seed": 16807,
+      "notes": "APIC 5.2.x. Older class set than 6.x — about 800 fewer classes."
+    }
+  ]
+}

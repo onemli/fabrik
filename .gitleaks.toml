@@ -1,0 +1,44 @@
+title = "Fabrik Gitleaks Configuration"
+
+# Extends gitleaks default ruleset
+[extend]
+useDefault = true
+
+# Allowlist — false positives and documentation examples
+[allowlist]
+description = "Fabrik allowlist"
+paths = [
+    # Example env files (dummy values)
+    '''\.env\.example''',
+    '''\.env\.demo\.example''',
+
+    # Documentation with fake tokens for illustration
+    '''docs/''',
+    '''.*\.md$''',
+    '''.*\.mdx$''',
+
+    # Lab and setup guides that contain placeholder tokens
+    '''.*LAB_GUIDE.*''',
+    '''.*Lab Guide.*''',
+    '''.*KURULUM.*''',
+    '''scripts/.*\.md''',
+
+    # Test fixtures
+    '''.*__tests__/.*''',
+    '''.*test.*fixtures.*''',
+
+    # Security scan venv — third-party tool dependencies
+    '''scripts/security_analysis/venv/''',
+
+    # Node modules
+    '''node_modules/''',
+]
+
+# Regex patterns that are definitely not secrets
+regexes = [
+    # Common placeholder tokens used in docs
+    '''(?i)(your[_-]?token|dummy[_-]?token|example[_-]?token|placeholder)''',
+    '''(?i)(xxxxxxxxxx|xxxxx|123456)''',
+    '''glpat-xxxxxxxxxxxxxxxxxxxx''',
+    '''ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx''',
+]

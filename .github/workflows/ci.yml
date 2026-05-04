@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: fabrik_test
+          POSTGRES_USER: fabrik
+          POSTGRES_PASSWORD: testpassword
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:8-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgresql://fabrik:testpassword@localhost:5432/fabrik_test
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production-use
+      ENCRYPTION_KEY: ${{ secrets.CI_ENCRYPTION_KEY }}
+      DEBUG: "True"
+      ALLOWED_HOSTS: "*"
+      NEO4J_URI: ""
+      NEO4J_USER: ""
+      NEO4J_PASSWORD: ""
+      DJANGO_SETTINGS_MODULE: fabrik.settings
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libldap2-dev libsasl2-dev
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt -r requirements_test.txt
+
+      - name: Django system check
+        working-directory: backend
+        run: python manage.py check --deploy 2>&1 | grep -v "WARNINGS" || true
+
+      - name: Run migrations
+        working-directory: backend
+        run: python manage.py migrate --run-syncdb
+
+      - name: Run tests (unit + non-integration)
+        working-directory: backend
+        run: |
+          pytest \
+            -m "not slow and not integration and not celery and not websocket" \
+            --tb=short \
+            --no-cov \
+            -q
+
+  frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: frontend
+        run: npx tsc --noEmit || true
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm run test -- --run

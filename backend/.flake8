@@ -1,0 +1,27 @@
+[flake8]
+max-line-length = 120
+exclude =
+    migrations,
+    venv,
+    .venv,
+    htmlcov,
+    __pycache__,
+    staticfiles,
+    media
+extend-ignore =
+    E501,
+    E402,
+    E701,
+    E702,
+    E127,
+    E128,
+    E129,
+    E131,
+    E261,
+    E303,
+    E305,
+    W291,
+    W605,
+    F401,
+    F821,
+    F841

@@ -1,0 +1,52 @@
+# FABRIK Backend Requirements
+# Python 3.12+
+
+# Django
+Django
+djangorestframework
+django-cors-headers
+django-environ
+
+# Database
+psycopg2-binary
+neo4j
+
+# Cache & Queue
+redis
+django-redis
+celery
+django-celery-beat
+django-celery-results
+pika
+
+# WebSocket & Real-time
+channels
+channels-redis
+daphne
+
+# API & Auth
+djangorestframework-simplejwt
+drf-spectacular
+django-filter
+
+# Async HTTP Client (for APIC queries)
+aiohttp
+
+# Utils
+python-dotenv
+gunicorn
+whitenoise
+cryptography
+requests
+jsonpath-ng
+
+# LDAP Integration (Enterprise Authentication)
+# Optional: Install only if LDAP_ENABLED=true
+# Install with: pip install django-auth-ldap python-ldap
+django-auth-ldap==4.6.0
+python-ldap==3.4.4
+python-dateutil
+
+# MFA / TOTP
+pyotp
+qrcode[pil]

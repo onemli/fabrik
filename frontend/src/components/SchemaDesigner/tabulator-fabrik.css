@@ -1,0 +1,299 @@
+/* Fabrik Tabulator Theme
+ *
+ * Bridges Tabulator to Fabrik's CSS custom property system so the grid
+ * adapts to every palette (neutral, yellow, green, …) and light/dark mode
+ * automatically. Uses tabulator_simple.css as the structural base. */
+
+/* ── Core table ────────────────────────────────────────────────── */
+.tabulator {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  overflow: hidden;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.tabulator .tabulator-header {
+  background: var(--secondary);
+  border-bottom: 2px solid var(--border);
+  color: var(--secondary-foreground);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  min-height: 44px;
+}
+
+.tabulator .tabulator-header .tabulator-col {
+  background: transparent;
+  border-right: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+  padding: 0 14px;
+  min-height: 44px;
+}
+
+.tabulator .tabulator-header .tabulator-col:last-child {
+  border-right: none;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+  background: color-mix(in oklch, var(--accent) 60%, transparent);
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* Sort arrow */
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable .tabulator-col-sorter {
+  color: var(--muted-foreground);
+}
+
+/* Header filter inputs */
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.5);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring);
+}
+
+/* ── Rows & Cells ──────────────────────────────────────────────── */
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row {
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  transition: background 0.1s ease;
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row:nth-child(even) {
+  background: color-mix(in oklch, var(--muted) 25%, var(--card));
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row:hover {
+  background: color-mix(in oklch, var(--accent) 50%, var(--card));
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell {
+  border-right: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+  padding: 0 12px;
+  color: var(--foreground);
+  /* Tabulator cells are div-based, so `vertical-align: middle` does not work.
+   * Use flex centering so content stays vertically aligned even when row
+   * height grows (wrapped text, multi-line validation messages, etc.). */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell:last-child {
+  border-right: none;
+}
+
+/* ── Selected row ──────────────────────────────────────────────── */
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row.tabulator-selected {
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row.tabulator-selected:hover {
+  background: color-mix(in oklch, var(--primary) 18%, var(--card));
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row.tabulator-selected .tabulator-cell {
+  color: var(--foreground);
+}
+
+/* ── Editing cell ──────────────────────────────────────────────── */
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell.tabulator-editing {
+  border: 2px solid var(--primary);
+  padding: 0 10px;
+  background: var(--background);
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell.tabulator-editing input,
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell.tabulator-editing select,
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell.tabulator-editing textarea {
+  background: transparent;
+  color: var(--foreground);
+  border: none;
+  outline: none;
+  font-size: 0.8125rem;
+  width: 100%;
+}
+
+/* ── Validation fail highlight ─────────────────────────────────── */
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row .tabulator-cell.tabulator-validation-fail {
+  background: color-mix(in oklch, var(--destructive) 12%, var(--card));
+  border: 1px solid color-mix(in oklch, var(--destructive) 40%, transparent);
+}
+
+/* ── Backend error highlight ───────────────────────────────────── */
+.tabulator-cell-error {
+  background: color-mix(in oklch, var(--destructive) 15%, transparent) !important;
+  border: 2px solid var(--destructive) !important;
+}
+
+/* ── Validation error cells (used by ValidationErrorGrid) ──────── */
+.tabulator-validation-error {
+  background: color-mix(in oklch, var(--destructive) 15%, transparent) !important;
+  border: 2px solid var(--destructive) !important;
+  font-weight: 500;
+}
+
+/* ── Range selection ───────────────────────────────────────────── */
+.tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range {
+  border: 2px solid var(--primary);
+}
+
+.tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range.tabulator-range-active {
+  border-color: var(--primary);
+}
+
+.tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range .tabulator-range-handle {
+  background: var(--primary);
+  width: 7px;
+  height: 7px;
+}
+
+/* ── Placeholder ───────────────────────────────────────────────── */
+.tabulator .tabulator-tableholder .tabulator-placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  padding: 32px 16px;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+.tabulator .tabulator-tableholder::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+  opacity: 1;
+}
+
+/* ── Footer / pagination (if ever used) ────────────────────────── */
+.tabulator .tabulator-footer {
+  background: var(--muted);
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+}
+
+/* ── Column resize handle ──────────────────────────────────────── */
+.tabulator .tabulator-header .tabulator-col .tabulator-col-resize-handle {
+  width: 4px;
+  margin-right: -2px;
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-resize-handle:hover {
+  background: var(--primary);
+  opacity: 0.3;
+}
+
+/* ── Dropdown indicator arrow on select/list cells ─────────────── */
+.tabulator-cell-dropdown::after {
+  content: "▾";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.tabulator-cell-dropdown {
+  position: relative;
+  padding-right: 22px !important;
+}
+
+/* ── Popup / autocomplete list ─────────────────────────────────── */
+.tabulator-edit-list {
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--popover-foreground);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow-y: auto;
+  max-height: 200px;
+  padding: 4px 0;
+}
+
+.tabulator-edit-list .tabulator-edit-list-item {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  color: var(--popover-foreground);
+  background: transparent;
+  transition: background 0.1s ease;
+}
+
+.tabulator-edit-list .tabulator-edit-list-item.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tabulator-edit-list .tabulator-edit-list-item:hover {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+.tabulator-edit-list .tabulator-edit-list-item.focused {
+  outline: 1px solid var(--ring);
+}
+
+.tabulator-edit-list .tabulator-edit-list-item.selected {
+  background: color-mix(in oklch, var(--primary) 15%, var(--popover));
+  font-weight: 500;
+}
+
+.tabulator-edit-list .tabulator-edit-list-placeholder {
+  padding: 6px 12px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 0.8125rem;
+}
+
+.tabulator-edit-list .tabulator-edit-list-group {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
+  color: var(--foreground);
+  font-weight: 600;
+  font-size: 0.75rem;
+}

@@ -1,0 +1,586 @@
+[
+  {
+    "model": "awx.ansibletemplate",
+    "pk": 1,
+    "fields": {
+      "name": "Create ACI Tenant",
+      "description": "Create one or more tenants with descriptions. This template allows bulk creation of tenants in Cisco ACI fabric.",
+      "source_type": "builtin",
+      "category": "tenant",
+      "tags": [
+        "tenant",
+        "basic",
+        "onboarding",
+        "aci"
+      ],
+      "table_schema": [
+        {
+          "table_name": "tenants",
+          "description": "List of tenants to create",
+          "columns": [
+            {
+              "name": "tenant_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Tenant name (alphanumeric, underscore, hyphen, max 64 chars)"
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "required": false,
+              "description": "Tenant description"
+            },
+            {
+              "name": "vrf_count",
+              "type": "number",
+              "required": false,
+              "default": 1,
+              "description": "Number of VRFs to create in this tenant"
+            }
+          ],
+          "min_rows": 1,
+          "max_rows": 50,
+          "example_data": [
+            {
+              "tenant_name": "Production",
+              "description": "Production environment tenant",
+              "vrf_count": 3
+            },
+            {
+              "tenant_name": "Development",
+              "description": "Development environment tenant",
+              "vrf_count": 1
+            }
+          ]
+        }
+      ],
+      "variable_mappings": {
+        "tenants": {
+          "target_var": "aci_tenants",
+          "column_mapping": {
+            "tenant_name": "name",
+            "description": "descr",
+            "vrf_count": "vrf_count"
+          }
+        }
+      },
+      "awx_job_template_id": null,
+      "awx_job_template_name": null,
+      "awx_inventory_id": null,
+      "awx_inventory_name": null,
+      "requires_approval": true,
+      "requires_apic_connection": true,
+      "is_active": true,
+      "is_public": true,
+      "created_by": null,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "awx.ansibletemplate",
+    "pk": 2,
+    "fields": {
+      "name": "Create ACI VRF",
+      "description": "Create or update VRFs (Virtual Routing and Forwarding) in specified tenants. Supports BD enforcement and preferred group settings.",
+      "source_type": "builtin",
+      "category": "networking",
+      "tags": [
+        "vrf",
+        "networking",
+        "l3",
+        "aci"
+      ],
+      "table_schema": [
+        {
+          "table_name": "vrfs",
+          "description": "List of VRFs to create or update",
+          "columns": [
+            {
+              "name": "tenant",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Parent tenant name"
+            },
+            {
+              "name": "vrf_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "VRF name"
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "required": false,
+              "description": "VRF description"
+            },
+            {
+              "name": "preferred_group",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "enabled",
+                "disabled"
+              ],
+              "default": "disabled",
+              "description": "Enable preferred group (intra-EPG isolation bypass)"
+            },
+            {
+              "name": "bd_enforcement",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "enforced",
+                "unenforced"
+              ],
+              "default": "enforced",
+              "description": "Bridge Domain enforcement policy"
+            }
+          ],
+          "min_rows": 1,
+          "max_rows": 100,
+          "example_data": [
+            {
+              "tenant": "Production",
+              "vrf_name": "Prod_VRF",
+              "description": "Production VRF for application traffic",
+              "preferred_group": "enabled",
+              "bd_enforcement": "enforced"
+            },
+            {
+              "tenant": "Production",
+              "vrf_name": "Mgmt_VRF",
+              "description": "Management VRF",
+              "preferred_group": "disabled",
+              "bd_enforcement": "enforced"
+            }
+          ]
+        }
+      ],
+      "variable_mappings": {
+        "vrfs": {
+          "target_var": "aci_vrfs",
+          "column_mapping": {
+            "tenant": "tenant",
+            "vrf_name": "vrf",
+            "description": "descr",
+            "preferred_group": "preferred_group",
+            "bd_enforcement": "policy_control_preference"
+          }
+        }
+      },
+      "awx_job_template_id": null,
+      "awx_inventory_id": null,
+      "requires_approval": true,
+      "requires_apic_connection": true,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "created_by": null,
+      "is_public": true,
+      "awx_job_template_name": null,
+      "awx_inventory_name": null
+    }
+  },
+  {
+    "model": "awx.ansibletemplate",
+    "pk": 3,
+    "fields": {
+      "name": "Create ACI Bridge Domain",
+      "description": "Create Bridge Domains with subnet configuration. Supports multiple subnets per BD and advanced L3 settings.",
+      "source_type": "builtin",
+      "category": "networking",
+      "tags": [
+        "bridge-domain",
+        "bd",
+        "networking",
+        "l2",
+        "aci"
+      ],
+      "table_schema": [
+        {
+          "table_name": "bridge_domains",
+          "description": "List of Bridge Domains to create",
+          "columns": [
+            {
+              "name": "tenant",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Parent tenant name"
+            },
+            {
+              "name": "vrf",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Associated VRF name"
+            },
+            {
+              "name": "bd_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Bridge Domain name"
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "required": false,
+              "description": "BD description"
+            },
+            {
+              "name": "subnet",
+              "type": "text",
+              "required": false,
+              "validation": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+              "description": "Subnet in CIDR notation (e.g., 10.1.1.1/24)"
+            },
+            {
+              "name": "gateway",
+              "type": "text",
+              "required": false,
+              "validation": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$",
+              "description": "Gateway IP address"
+            },
+            {
+              "name": "arp_flooding",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "yes",
+                "no"
+              ],
+              "default": "no",
+              "description": "Enable ARP flooding"
+            },
+            {
+              "name": "l2_unknown_unicast",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "proxy",
+                "flood"
+              ],
+              "default": "proxy",
+              "description": "L2 unknown unicast behavior"
+            }
+          ],
+          "min_rows": 1,
+          "max_rows": 200,
+          "example_data": [
+            {
+              "tenant": "Production",
+              "vrf": "Prod_VRF",
+              "bd_name": "Web_BD",
+              "description": "Bridge Domain for web tier",
+              "subnet": "10.1.10.1/24",
+              "gateway": "10.1.10.1",
+              "arp_flooding": "no",
+              "l2_unknown_unicast": "proxy"
+            },
+            {
+              "tenant": "Production",
+              "vrf": "Prod_VRF",
+              "bd_name": "App_BD",
+              "description": "Bridge Domain for application tier",
+              "subnet": "10.1.20.1/24",
+              "gateway": "10.1.20.1",
+              "arp_flooding": "no",
+              "l2_unknown_unicast": "proxy"
+            }
+          ]
+        }
+      ],
+      "variable_mappings": {
+        "bridge_domains": {
+          "target_var": "aci_bridge_domains",
+          "column_mapping": {
+            "tenant": "tenant",
+            "vrf": "vrf",
+            "bd_name": "bd",
+            "description": "descr",
+            "subnet": "subnet",
+            "gateway": "gateway",
+            "arp_flooding": "arp_flood",
+            "l2_unknown_unicast": "l2_unknown_unicast"
+          }
+        }
+      },
+      "awx_job_template_id": null,
+      "awx_inventory_id": null,
+      "requires_approval": true,
+      "requires_apic_connection": true,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "created_by": null,
+      "is_public": true,
+      "awx_job_template_name": null,
+      "awx_inventory_name": null
+    }
+  },
+  {
+    "model": "awx.ansibletemplate",
+    "pk": 4,
+    "fields": {
+      "name": "Create ACI EPG",
+      "description": "Create Endpoint Groups (EPGs) with domain and contract bindings. Supports VMM domain integration and contract relationships.",
+      "source_type": "builtin",
+      "category": "epg",
+      "tags": [
+        "epg",
+        "endpoint-group",
+        "application",
+        "aci"
+      ],
+      "table_schema": [
+        {
+          "table_name": "epgs",
+          "description": "List of EPGs to create",
+          "columns": [
+            {
+              "name": "tenant",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Parent tenant name"
+            },
+            {
+              "name": "app_profile",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Application Profile name"
+            },
+            {
+              "name": "epg_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "EPG name"
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "required": false,
+              "description": "EPG description"
+            },
+            {
+              "name": "bd",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Associated Bridge Domain"
+            },
+            {
+              "name": "provided_contracts",
+              "type": "text",
+              "required": false,
+              "description": "Comma-separated list of provided contracts"
+            },
+            {
+              "name": "consumed_contracts",
+              "type": "text",
+              "required": false,
+              "description": "Comma-separated list of consumed contracts"
+            },
+            {
+              "name": "preferred_group",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "include",
+                "exclude"
+              ],
+              "default": "exclude",
+              "description": "Include in preferred group"
+            }
+          ],
+          "min_rows": 1,
+          "max_rows": 500,
+          "example_data": [
+            {
+              "tenant": "Production",
+              "app_profile": "ThreeTier_App",
+              "epg_name": "Web_EPG",
+              "description": "Web tier EPG",
+              "bd": "Web_BD",
+              "provided_contracts": "web_contract",
+              "consumed_contracts": "app_contract",
+              "preferred_group": "include"
+            },
+            {
+              "tenant": "Production",
+              "app_profile": "ThreeTier_App",
+              "epg_name": "App_EPG",
+              "description": "Application tier EPG",
+              "bd": "App_BD",
+              "provided_contracts": "app_contract",
+              "consumed_contracts": "db_contract",
+              "preferred_group": "include"
+            }
+          ]
+        }
+      ],
+      "variable_mappings": {
+        "epgs": {
+          "target_var": "aci_epgs",
+          "column_mapping": {
+            "tenant": "tenant",
+            "app_profile": "ap",
+            "epg_name": "epg",
+            "description": "descr",
+            "bd": "bd",
+            "provided_contracts": "provided_contracts",
+            "consumed_contracts": "consumed_contracts",
+            "preferred_group": "preferred_group_member"
+          }
+        }
+      },
+      "awx_job_template_id": null,
+      "awx_inventory_id": null,
+      "requires_approval": true,
+      "requires_apic_connection": true,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "created_by": null,
+      "is_public": true,
+      "awx_job_template_name": null,
+      "awx_inventory_name": null
+    }
+  },
+  {
+    "model": "awx.ansibletemplate",
+    "pk": 5,
+    "fields": {
+      "name": "Create ACI Contract",
+      "description": "Create contracts with subjects and filters for inter-EPG communication. Supports bidirectional and unidirectional communication policies.",
+      "source_type": "builtin",
+      "category": "policy",
+      "tags": [
+        "contract",
+        "policy",
+        "security",
+        "aci"
+      ],
+      "table_schema": [
+        {
+          "table_name": "contracts",
+          "description": "List of contracts to create",
+          "columns": [
+            {
+              "name": "tenant",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Parent tenant name"
+            },
+            {
+              "name": "contract_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Contract name"
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "required": false,
+              "description": "Contract description"
+            },
+            {
+              "name": "scope",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "context",
+                "global",
+                "tenant",
+                "application-profile"
+              ],
+              "default": "context",
+              "description": "Contract scope"
+            },
+            {
+              "name": "subject_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Contract subject name"
+            },
+            {
+              "name": "filter_name",
+              "type": "text",
+              "required": true,
+              "validation": "^[a-zA-Z0-9_-]{1,64}$",
+              "description": "Filter name (or comma-separated list)"
+            },
+            {
+              "name": "directives",
+              "type": "enum",
+              "required": false,
+              "enum_values": [
+                "none",
+                "log"
+              ],
+              "default": "none",
+              "description": "Contract directives"
+            }
+          ],
+          "min_rows": 1,
+          "max_rows": 100,
+          "example_data": [
+            {
+              "tenant": "Production",
+              "contract_name": "web_contract",
+              "description": "Contract for web traffic",
+              "scope": "context",
+              "subject_name": "http_subject",
+              "filter_name": "http,https",
+              "directives": "log"
+            },
+            {
+              "tenant": "Production",
+              "contract_name": "app_contract",
+              "description": "Contract for application tier",
+              "scope": "context",
+              "subject_name": "app_subject",
+              "filter_name": "tcp_8080",
+              "directives": "none"
+            }
+          ]
+        }
+      ],
+      "variable_mappings": {
+        "contracts": {
+          "target_var": "aci_contracts",
+          "column_mapping": {
+            "tenant": "tenant",
+            "contract_name": "contract",
+            "description": "descr",
+            "scope": "scope",
+            "subject_name": "subject",
+            "filter_name": "filter",
+            "directives": "directive"
+          }
+        }
+      },
+      "awx_job_template_id": null,
+      "awx_inventory_id": null,
+      "requires_approval": true,
+      "requires_apic_connection": true,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "created_by": null,
+      "is_public": true,
+      "awx_job_template_name": null,
+      "awx_inventory_name": null
+    }
+  }
+]

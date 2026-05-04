@@ -1,0 +1,31 @@
+# Core Django
+Django
+djangorestframework
+djangorestframework-simplejwt
+
+# Database
+psycopg2-binary
+neo4j
+
+# Security
+django-cors-headers
+django-ratelimit
+cryptography
+python-decouple
+
+# Async/HTTP
+httpx
+aiohttp
+
+# Celery & Redis
+celery
+redis
+django-redis
+
+# Utilities
+python-dateutil
+pytz
+
+# Security scanning (development)
+bandit
+safety

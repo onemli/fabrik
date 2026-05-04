@@ -1,0 +1,56 @@
+# Production multi-stage build for Fabrik backend
+# Uses Daphne (ASGI) for WebSocket support + gunicorn workers
+
+# --- Stage 1: Dependencies ---
+FROM python:3.13-slim AS deps
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    libldap2-dev \
+    libsasl2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# --- Stage 2: Production image ---
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    libldap-2.5-0 \
+    libsasl2-2 \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from deps stage
+COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+
+# Create non-root user
+RUN groupadd -r fabrik && useradd -r -g fabrik -d /app fabrik
+
+# Copy application code
+COPY . .
+
+# Collect static files
+RUN DJANGO_SECRET_KEY=build-placeholder python manage.py collectstatic --noinput 2>/dev/null || true
+
+# Set ownership
+RUN chown -R fabrik:fabrik /app
+
+USER fabrik
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/api/dashboard/platform-info/ || exit 1
+
+# Daphne for ASGI (HTTP + WebSocket on same port)
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "--proxy-headers", "fabrik.asgi:application"]

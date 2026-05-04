@@ -1,0 +1,98 @@
+# docker/ldap/bootstrap.ldif
+#
+# Seed data for the development OpenLDAP container.
+# Loaded automatically on first start via LDAP_SEED_INTERNAL_LDIF_PATH.
+#
+# Domain: dc=monode,dc=local
+# Admin bind: cn=admin,dc=monode,dc=local / admin (set via env)
+#
+# Structure:
+#   ou=users   — user accounts
+#   ou=groups  — permission groups (active, staff, admins)
+
+# --- Organizational Units ---------------------------------------------------
+
+dn: ou=users,dc=monode,dc=local
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=monode,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+# --- Groups ------------------------------------------------------------------
+# groupOfNames requires at least one member, so the admin is always included.
+
+dn: cn=active,ou=groups,dc=monode,dc=local
+objectClass: groupOfNames
+cn: active
+description: Active users — grants is_active flag
+member: uid=netadmin,ou=users,dc=monode,dc=local
+member: uid=netops,ou=users,dc=monode,dc=local
+member: uid=viewer,ou=users,dc=monode,dc=local
+
+dn: cn=staff,ou=groups,dc=monode,dc=local
+objectClass: groupOfNames
+cn: staff
+description: Staff users — grants is_staff flag (Django admin access)
+member: uid=netadmin,ou=users,dc=monode,dc=local
+member: uid=netops,ou=users,dc=monode,dc=local
+
+dn: cn=admins,ou=groups,dc=monode,dc=local
+objectClass: groupOfNames
+cn: admins
+description: Admin users — grants is_superuser flag
+member: uid=netadmin,ou=users,dc=monode,dc=local
+
+# --- Users -------------------------------------------------------------------
+
+# Network Administrator (superuser)
+dn: uid=netadmin,ou=users,dc=monode,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+uid: netadmin
+cn: Network Administrator
+givenName: Network
+sn: Administrator
+mail: netadmin@monode.local
+userPassword: netadmin123
+telephoneNumber: +90 555 100 0001
+title: Senior Network Engineer
+departmentNumber: Network Operations
+employeeNumber: EMP-001
+physicalDeliveryOfficeName: Istanbul DC-1
+
+# Network Operator (staff, not superuser)
+dn: uid=netops,ou=users,dc=monode,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+uid: netops
+cn: Network Operator
+givenName: Network
+sn: Operator
+mail: netops@monode.local
+userPassword: netops123
+telephoneNumber: +90 555 100 0002
+title: Network Operator
+departmentNumber: Network Operations
+employeeNumber: EMP-002
+physicalDeliveryOfficeName: Istanbul DC-1
+
+# Read-only Viewer (active only — no staff, no admin)
+dn: uid=viewer,ou=users,dc=monode,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+uid: viewer
+cn: Read Only Viewer
+givenName: Read Only
+sn: Viewer
+mail: viewer@monode.local
+userPassword: viewer123
+telephoneNumber: +90 555 100 0003
+title: NOC Analyst
+departmentNumber: NOC
+employeeNumber: EMP-003
+physicalDeliveryOfficeName: Ankara NOC

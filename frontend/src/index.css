@@ -1,0 +1,825 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('@/assets/fonts/Satoshi-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sohne';
+  src: url('@/assets/fonts/Sohne-Kraftig.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================
+   Fabrik Theme System
+   Neutral gray ramp — light/dark only.
+   Color format: OKLCH for perceptual uniformity where needed.
+   ============================================ */
+
+@layer base {
+  /* Shared tokens — mode-independent */
+  :root {
+    --radius: 0.5rem;
+    --destructive: oklch(0.577 0.245 27.325);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --success: oklch(0.723 0.191 142.517);
+    --warning: oklch(0.75 0.183 55.934);
+    --info: oklch(0.623 0.214 259.815);
+    --node-class: oklch(0.623 0.214 259.815);
+    --node-filter: oklch(0.75 0.183 55.934);
+    --node-output: oklch(0.723 0.191 142.517);
+    --node-processor: oklch(0.606 0.25 292.717);
+  }
+
+  /* ===== Light mode — Fontshare whiteTheme exact hex ===== */
+  /* #101010 / #191818 / #303030 / #606060 / #c0c0c0 / #e8e8e8 / #f8f8f8 / #fff */
+  :root {
+    --background: #fff;
+    --foreground: #101010;
+    --card: #f8f8f8;
+    --card-foreground: #101010;
+    --popover: #f8f8f8;
+    --popover-foreground: #101010;
+    --primary: #191818;
+    --primary-foreground: #f8f8f8;
+    --secondary: #e8e8e8;
+    --secondary-foreground: #191818;
+    --muted: #e8e8e8;
+    --muted-foreground: #606060;
+    --accent: #e8e8e8;
+    --accent-foreground: #191818;
+    --destructive-foreground: #fff;
+    --border: #e8e8e8;
+    --input: #e8e8e8;
+    --ring: #c0c0c0;
+    --sidebar: #f8f8f8;
+    --sidebar-foreground: #101010;
+    --sidebar-primary: #191818;
+    --sidebar-primary-foreground: #f8f8f8;
+    --sidebar-accent: #e8e8e8;
+    --sidebar-accent-foreground: #191818;
+    --sidebar-border: #e8e8e8;
+    --sidebar-ring: #c0c0c0;
+  }
+  .dark {
+    --background: #0a0a0a;
+    --foreground: #e8e8e8;
+    --card: #111111;
+    --card-foreground: #e8e8e8;
+    --popover: #1a1a1a;
+    --popover-foreground: #e8e8e8;
+    --primary: #e8e8e8;
+    --primary-foreground: #111111;
+    --secondary: #1a1a1a;
+    --secondary-foreground: #e8e8e8;
+    --muted: #1a1a1a;
+    --muted-foreground: #a0a0a0;
+    --accent: #1a1a1a;
+    --accent-foreground: #e8e8e8;
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: #222222;
+    --input: #1a1a1a;
+    --ring: #444444;
+    --sidebar: #0e0e0e;
+    --sidebar-foreground: #e8e8e8;
+    --sidebar-primary: #e8e8e8;
+    --sidebar-primary-foreground: #111111;
+    --sidebar-accent: #1a1a1a;
+    --sidebar-accent-foreground: #e8e8e8;
+    --sidebar-border: #1e1e1e;
+    --sidebar-ring: #444444;
+  }
+
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* Instant theme application - no flicker */
+  html {
+    /* No transition on root - instant theme change */
+    transition: none;
+  }
+
+  html, body, #root {
+    @apply overflow-hidden;
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* No transition on body - instant background */
+    transition: none;
+  }
+
+  /* Class names use JetBrains Mono — taller x-height and clearer 1/I/l/0/O
+     than DM Mono, which matters when scanning long camelCase identifiers
+     like fvAEPg / infraAttEntityP. Ligatures stay off because ACI names
+     never contain ``=>`` or ``->`` and ligatures hurt code identifier
+     scanning. */
+  .font-mono,
+  code,
+  pre,
+  kbd {
+    font-feature-settings: 'liga' 0, 'calt' 0, 'zero' 1, 'ss01' 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Extremely fast transitions only for interactive elements */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 0s; /* Instant - no flicker */
+    transition-timing-function: ease-in-out;
+  }
+
+  /* Exclude elements that should transition instantly */
+  .react-flow__edge-path,
+  .react-flow__connection-path,
+  [data-no-transition] {
+    transition: none !important;
+  }
+}
+
+/* ===== Theme-Aware Utility Classes ===== */
+@layer utilities {
+  /* Theme-aware text colors - replaces hard-coded text-white, text-gray-* */
+  .text-primary-content {
+    color: var(--foreground);
+  }
+
+  .text-secondary-content {
+    color: var(--muted-foreground);
+  }
+
+  .text-tertiary-content {
+    @apply text-muted-foreground/70;
+  }
+
+  /* Theme-aware backgrounds */
+  .bg-elevated {
+    background-color: var(--card);
+  }
+
+  .bg-subtle {
+    background-color: var(--muted);
+  }
+
+  /* Theme-aware borders */
+  .border-subtle {
+    border-color: var(--border);
+  }
+
+  .border-emphasis {
+    @apply border-muted-foreground/20;
+  }
+
+  /* Theme-aware hover states - replaces hover:bg-white/5, hover:text-white */
+  .hover-elevated {
+    @apply hover:bg-accent transition-colors;
+  }
+
+  .hover-text-primary {
+    @apply hover:text-foreground transition-colors;
+  }
+}
+
+@layer base {
+  /* Custom scrollbar - Professional SaaS design */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.5 0 0 / 0.2);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.5 0 0 / 0.35);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: oklch(0.5 0 0 / 0.5);
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.5 0 0 / 0.2) transparent;
+  }
+
+  /* Utility classes for custom scrollbars */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thumb-slate-300::-webkit-scrollbar-thumb {
+    background-color: rgb(203 213 225 / 0.5);
+  }
+
+  .scrollbar-thumb-slate-300::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(203 213 225 / 0.7);
+  }
+
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .hover\:scrollbar-thumb-slate-400:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(148 163 184 / 0.7);
+  }
+}
+
+/* React Flow n8n-inspired styles */
+.react-flow__node {
+  font-size: 13px;
+}
+
+/* Dot pattern background */
+.react-flow__background {
+  background-color: var(--background);
+}
+
+/* Background pattern - ensure dots are visible */
+/* Note: Using hex color because OKLCH may not work in SVG fill contexts */
+.react-flow__background pattern circle {
+  fill: #9ca3af;
+}
+
+.dark .react-flow__background pattern circle {
+  fill: #2a2a2a;
+}
+
+/* n8n-style handles - Rounded rectangle shape */
+.react-flow__handle {
+  width: 8px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--card);
+  background-color: var(--muted-foreground);
+  transition: all 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  width: 10px;
+  height: 18px;
+  background-color: var(--primary);
+  border-color: var(--card);
+}
+
+.react-flow__handle-connecting {
+  background-color: var(--primary) !important;
+}
+
+.react-flow__handle-valid {
+  background-color: var(--node-output) !important;
+}
+
+/* Hide dynamic connection indicators - prevent gray handle from appearing on hover */
+.react-flow__connection-circle {
+  display: none !important;
+}
+
+.react-flow__connectionindicator {
+  display: none !important;
+}
+
+/* Alternative: If handles should only show on hover, keep them hidden by default */
+.react-flow__handle {
+  opacity: 1 !important; /* Always visible */
+}
+
+/* Prevent dynamic handle positioning - keep handles fixed */
+.react-flow__handle[data-handlepos] {
+  position: absolute !important;
+}
+
+/* Edge styling - optimized for instant rendering */
+.react-flow__edge-path {
+  stroke: var(--muted-foreground);
+  stroke-width: 3;
+  opacity: 0.4;
+  transition: none !important; /* No transitions for instant updates */
+  will-change: d; /* Optimize SVG path updates */
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  opacity: 0.7;
+  stroke-width: 3.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--primary);
+  opacity: 1;
+  stroke-width: 3.5;
+}
+
+/* Connection line optimization - instant updates while dragging */
+.react-flow__connection-path {
+  stroke: var(--primary);
+  transition: none !important;
+  will-change: d;
+}
+
+/* Viewport and Pane optimizations for smooth panning/zooming */
+.react-flow__viewport {
+  will-change: transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
+.react-flow__renderer {
+  will-change: auto;
+  contain: layout style paint;
+}
+
+/* Selection box optimization */
+.react-flow__selection {
+  background-color: rgba(0, 89, 220, 0.08);
+  border: 1px solid var(--primary);
+  will-change: auto;
+}
+
+/* Tooltip text wrapping and sizing - unrestricted width */
+[role="tooltip"] {
+  min-width: 250px !important;
+  max-width: 600px !important;
+  width: max-content !important;
+}
+
+[role="tooltip"] p {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
+  padding: 2px 4px;
+}
+
+/* Override Radix UI tooltip constraints */
+[data-radix-popper-content-wrapper] {
+  max-width: none !important;
+  width: max-content !important;
+}
+
+.z-50[role="tooltip"] {
+  max-width: 600px !important;
+  width: max-content !important;
+}
+
+/* Controls */
+.react-flow__controls {
+  box-shadow: 0 0 0 1px var(--border), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.react-flow__controls button {
+  background-color: var(--secondary) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  width: 32px !important;
+  height: 32px !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-flow__controls button:hover {
+  background-color: var(--primary) !important;
+}
+
+.react-flow__controls button svg {
+  color: var(--foreground) !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.react-flow__controls button:hover svg {
+  color: var(--primary-foreground) !important;
+}
+
+.react-flow__controls button:last-child {
+  border-bottom: none !important;
+}
+
+/* Minimap */
+.react-flow__minimap {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Node-specific handle and edge colors */
+
+/* Start Node - Primary color */
+.react-flow__node-startNode .react-flow__handle {
+  background-color: var(--primary);
+  border-color: var(--card);
+}
+
+/* Class Node - Blue */
+.react-flow__node-classNode .react-flow__handle {
+  background-color: var(--node-class);
+  border-color: var(--card);
+}
+
+/* Filter Node - Amber/Orange */
+.react-flow__node-filterNode .react-flow__handle {
+  background-color: var(--node-filter);
+  border-color: var(--card);
+}
+
+/* Post Processor Node - Purple */
+.react-flow__node-postProcessorNode .react-flow__handle {
+  background-color: var(--node-processor);
+  border-color: var(--card);
+}
+
+/* DN Query Node - Blue */
+.react-flow__node-dnQueryNode .react-flow__handle {
+  background-color: var(--node-class);
+  border-color: var(--card);
+}
+
+/* Output Node - Green */
+.react-flow__node-outputNode .react-flow__handle {
+  background-color: var(--node-output);
+  border-color: var(--card);
+}
+
+/* Pipeline handle — amber accent, visually distinct from normal handles */
+.react-flow__node-outputNode .react-flow__handle.pipeline-handle,
+.react-flow__node-postProcessorNode .react-flow__handle.pipeline-handle {
+  background-color: #f59e0b !important;
+  border-color: #b45309 !important;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.react-flow__node-outputNode .react-flow__handle.pipeline-handle:hover,
+.react-flow__node-postProcessorNode .react-flow__handle.pipeline-handle:hover {
+  background-color: #d97706 !important;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+/* Chrome Performance Optimizations for React Flow */
+.react-flow__node {
+  will-change: transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  contain: layout style;
+  /* Note: 'paint' containment removed to allow NodeActionBar to overflow above nodes */
+}
+
+.react-flow__node.dragging {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.react-flow__edge {
+  will-change: auto;
+  contain: layout style;
+}
+
+.react-flow__edges {
+  will-change: auto;
+  pointer-events: none;
+}
+
+.react-flow__edges .react-flow__edge {
+  pointer-events: all;
+}
+
+/* Edge colors based on source node type */
+[data-source-type="startNode"] .react-flow__edge-path {
+  stroke: var(--primary);
+  opacity: 0.5;
+}
+
+[data-source-type="classNode"] .react-flow__edge-path {
+  stroke: var(--node-class);
+  opacity: 0.5;
+}
+
+[data-source-type="filterNode"] .react-flow__edge-path {
+  stroke: var(--node-filter);
+  opacity: 0.5;
+}
+
+[data-source-type="postProcessorNode"] .react-flow__edge-path {
+  stroke: var(--node-processor);
+  opacity: 0.5;
+}
+
+[data-source-type="outputNode"] .react-flow__edge-path {
+  stroke: var(--node-output);
+  opacity: 0.5;
+}
+
+/* Generate button blink animation */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Orange border blink animation for Generate button */
+@keyframes blink-border-orange {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+  50% {
+    box-shadow: 0 0 0 2px oklch(0.6 0.2 40 / 0.3);
+  }
+}
+
+/* Yellow border blink animation for Test button */
+@keyframes blink-border-yellow {
+  0%, 100% {
+    box-shadow: 0 0 0 2px oklch(0.8 0.18 85);
+  }
+  50% {
+    box-shadow: 0 0 0 2px oklch(0.8 0.18 85 / 0.3);
+  }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide in from right animation - Professional easing */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide down animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in animation */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Green pulse animation for Execution Results button */
+@keyframes pulse-green {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px oklch(0.72 0.19 142 / 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px oklch(0.72 0.19 142));
+  }
+}
+
+/* Shimmer animation for skeleton loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Dot march animation for running query edges - Start to Output (left to right) */
+@keyframes dashMove {
+  0% {
+    stroke-dashoffset: 22;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@layer utilities {
+  /* Animation classes with professional easing curves */
+  .animate-fade-in {
+    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Glass morphism — uses theme card color for tint consistency */
+  .glass {
+    background: color-mix(in oklch, var(--card) 80%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .dark .glass {
+    background: color-mix(in oklch, var(--card) 95%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Header bar — dark background in dark mode, glass card in light mode */
+  .header-bar {
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .header-bar {
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      oklch(0.5 0 0 / 0.1) 0%,
+      oklch(0.5 0 0 / 0.2) 50%,
+      oklch(0.5 0 0 / 0.1) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  /* Neon glow effects for AnimatedLogo */
+  .neon-red {
+    text-shadow:
+      0 0 5px rgba(239, 68, 68, 0.5),
+      0 0 10px rgba(239, 68, 68, 0.4),
+      0 0 15px rgba(239, 68, 68, 0.3),
+      0 0 20px rgba(239, 68, 68, 0.2);
+  }
+
+  .neon-green {
+    text-shadow:
+      0 0 5px rgba(34, 197, 94, 0.5),
+      0 0 10px rgba(34, 197, 94, 0.4),
+      0 0 15px rgba(34, 197, 94, 0.3),
+      0 0 20px rgba(34, 197, 94, 0.2);
+  }
+
+  .neon-blue {
+    text-shadow:
+      0 0 5px rgba(59, 130, 246, 0.5),
+      0 0 10px rgba(59, 130, 246, 0.4),
+      0 0 15px rgba(59, 130, 246, 0.3),
+      0 0 20px rgba(59, 130, 246, 0.2);
+  }
+
+  .neon-yellow {
+    text-shadow:
+      0 0 5px rgba(234, 179, 8, 0.5),
+      0 0 10px rgba(234, 179, 8, 0.4),
+      0 0 15px rgba(234, 179, 8, 0.3),
+      0 0 20px rgba(234, 179, 8, 0.2);
+  }
+
+  /* Blinking cursor animation */
+  @keyframes blink-cursor {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .animate-blink {
+    animation: blink-cursor 1s infinite;
+  }
+
+  /* Subtle pulse for notification state */
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.95;
+    }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+}
+
+/* Radix UI Tabs - ensure proper containment */
+[data-radix-tabs-content][data-state="inactive"] {
+  display: none;
+}
+
+/* cmdk selected item — color-mix guarantees visible contrast across
+   light/dark because muted-foreground always contrasts with the popover
+   surface by design. Tailwind opacity modifiers don't work with bare
+   hex CSS variables, so we use color-mix instead. */
+[cmdk-item][data-selected="true"] {
+  background: color-mix(in oklch, var(--muted-foreground) 15%, transparent);
+}

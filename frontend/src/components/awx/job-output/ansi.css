@@ -1,0 +1,45 @@
+/* awx/job-output/ansi.css
+ *
+ * Anser emits class names like `ansi-red-fg`, `ansi-bright-green-fg`,
+ * `ansi-bold`. Map them to theme-aware colours so light/dark modes stay
+ * readable without touching component code.
+ */
+
+.ansi-black-fg          { color: #19191a; }
+.ansi-red-fg            { color: #d32f2f; }
+.ansi-green-fg          { color: #388e3c; }
+.ansi-yellow-fg         { color: #f57c00; }
+.ansi-blue-fg           { color: #1976d2; }
+.ansi-magenta-fg        { color: #7b1fa2; }
+.ansi-cyan-fg           { color: #0097a7; }
+.ansi-white-fg          { color: #757575; }
+
+.ansi-bright-black-fg   { color: #424242; }
+.ansi-bright-red-fg     { color: #f44336; }
+.ansi-bright-green-fg   { color: #4caf50; }
+.ansi-bright-yellow-fg  { color: #ffa726; }
+.ansi-bright-blue-fg    { color: #2196f3; }
+.ansi-bright-magenta-fg { color: #9c27b0; }
+.ansi-bright-cyan-fg    { color: #00bcd4; }
+.ansi-bright-white-fg   { color: #f5f5f5; }
+
+.dark .ansi-black-fg          { color: #f2f2f2; }
+.dark .ansi-red-fg            { color: #ef4444; }
+.dark .ansi-green-fg          { color: #22c55e; }
+.dark .ansi-yellow-fg         { color: #eab308; }
+.dark .ansi-blue-fg           { color: #3b82f6; }
+.dark .ansi-magenta-fg        { color: #a855f7; }
+.dark .ansi-cyan-fg           { color: #06b6d4; }
+.dark .ansi-white-fg          { color: #a3a3a3; }
+.dark .ansi-bright-black-fg   { color: #737373; }
+.dark .ansi-bright-red-fg     { color: #f87171; }
+.dark .ansi-bright-green-fg   { color: #4ade80; }
+.dark .ansi-bright-yellow-fg  { color: #facc15; }
+.dark .ansi-bright-blue-fg    { color: #60a5fa; }
+.dark .ansi-bright-magenta-fg { color: #c084fc; }
+.dark .ansi-bright-cyan-fg    { color: #22d3ee; }
+.dark .ansi-bright-white-fg   { color: #f5f5f5; }
+
+.ansi-bold   { font-weight: 600; }
+.ansi-italic { font-style: italic; }
+.ansi-underline { text-decoration: underline; }

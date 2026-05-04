@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+  .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .header { padding: 20px 24px; border-bottom: 1px solid #e5e7eb; }
+  .header h1 { margin: 0; font-size: 18px; color: #111827; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-left: 8px; }
+  .badge-info { background: #dbeafe; color: #1e40af; }
+  .badge-success { background: #dcfce7; color: #166534; }
+  .badge-warning { background: #fef3c7; color: #92400e; }
+  .badge-error { background: #fee2e2; color: #991b1b; }
+  .body { padding: 24px; }
+  .body p { margin: 0 0 16px; color: #374151; line-height: 1.5; }
+  .footer { padding: 16px 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center; }
+  .footer p { margin: 0; font-size: 12px; color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>{{ notification.title }}
+      <span class="badge badge-{{ notification.type }}">{{ notification.type }}</span>
+    </h1>
+  </div>
+  <div class="body">
+    <p>Hi {{ user.first_name|default:user.username }},</p>
+    <p>{{ notification.message }}</p>
+  </div>
+  <div class="footer">
+    <p>FABRIK Network Management Platform</p>
+  </div>
+</div>
+</body>
+</html>

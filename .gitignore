@@ -1,0 +1,108 @@
+# =====================================================
+# Fabrik .gitignore
+# =====================================================
+
+# Claude Code local state
+.claude/
+
+# CRITICAL: Environment variables & Secrets
+.env
+.env.*
+*.env
+!.env.template
+!.env.example
+backend/.env
+backend/.env.*
+secrets/
+credentials/
+*.key
+*.pem
+*.crt
+*.p12
+
+# Backup files (may contain sensitive data)
+.backup/
+*.backup
+*.bak
+*_backup.*
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+frontend/.env.production
+frontend/.env.staging
+
+# Backend
+backend/__pycache__/
+backend/*.pyc
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/media/
+backend/staticfiles/
+backend/logs/
+backend/*.log
+backend/venv/
+backend/.venv/
+backend/celerybeat-schedule
+backend/celerybeat.pid
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Database backups (can contain sensitive data)
+*.sql
+*.dump
+*.backup
+*.bak
+*_backup.*
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# IDE
+/elpa/
+*.elc
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Security reports (may contain sensitive info)
+bandit_report.json
+safety_report.json
+security_report.html
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Scripts generated files
+scripts/.venv/
+scripts/cobra_sdk/
+scripts/venv/
+scripts/meta.json
+scripts/meta_enhanced.json
+scripts/*.whl
+scripts/security_analysis/
+keys.txt

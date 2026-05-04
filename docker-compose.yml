@@ -1,0 +1,455 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: fabrik-postgres
+    mem_limit: 512m
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - POSTGRES_DB=${POSTGRES_DB:-fabrik}
+      - POSTGRES_USER=${POSTGRES_USER:-fabrik}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_EXTERNAL_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fabrik-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fabrik"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    container_name: fabrik-redis
+    mem_limit: 256m
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "127.0.0.1:${REDIS_EXTERNAL_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fabrik-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    container_name: fabrik-rabbitmq
+    mem_limit: 1g
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-fabrik}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST:-fabrik}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit vm_memory_high_watermark 0.7
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - fabrik-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  neo4j:
+    image: neo4j:5.26
+    container_name: fabrik-neo4j
+    mem_limit: 3g
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - NEO4J_server_memory_pagecache_size=${NEO4J_PAGECACHE_SIZE:-512M}
+      - NEO4J_server_memory_heap_initial__size=1G
+      - NEO4J_server_memory_heap_max__size=${NEO4J_HEAP_MAX_SIZE:-2G}
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_memory_transaction_total_max=${NEO4J_TX_MEMORY_MAX:-1G}
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687"
+    restart: unless-stopped
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - fabrik-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    image: fabrik-backend:latest
+    container_name: fabrik-backend
+    mem_limit: 512m
+    # Uses the image CMD (entrypoint.sh): migrate → bootstrap_mim → daphne.
+    volumes:
+      - fabrik_mim_cache:/app/mim_cache
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
+      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fabrik-backend:latest
+    container_name: fabrik-celery-worker
+    mem_limit: 2g
+    command: celery -A fabrik worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2} -Q celery,query_exec,scheduled,awx_monitor,awx_exec,maintenance,mim_import
+    volumes:
+      - fabrik_mim_cache:/app/mim_cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
+      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fabrik-backend:latest
+    container_name: fabrik-celery-beat
+    mem_limit: 256m
+    command: celery -A fabrik beat --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
+      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Event Consumer - Job Status Queue (Event-Driven Architecture - Phase 1)
+  event-consumer-job:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fabrik-backend:latest
+    container_name: fabrik-event-consumer-job
+    mem_limit: 256m
+    command: python manage.py run_event_consumer --queue awx.job.status
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    networks:
+      - fabrik-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; import pika; pika.BlockingConnection(pika.URLParameters(os.environ['RABBITMQ_URL'])).close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Event Consumer - Workflow Status Queue
+  event-consumer-workflow:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fabrik-backend:latest
+    container_name: fabrik-event-consumer-workflow
+    mem_limit: 256m
+    command: python manage.py run_event_consumer --queue awx.workflow.status
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    networks:
+      - fabrik-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; import pika; pika.BlockingConnection(pika.URLParameters(os.environ['RABBITMQ_URL'])).close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  event-consumer-output:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fabrik-backend:latest
+    container_name: fabrik-event-consumer-output
+    mem_limit: 256m
+    command: python manage.py run_event_consumer --queue awx.job.output
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    networks:
+      - fabrik-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; import pika; pika.BlockingConnection(pika.URLParameters(os.environ['RABBITMQ_URL'])).close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    image: fabrik-frontend:latest
+    container_name: fabrik-frontend
+    mem_limit: 256m
+    # nginx serves the built SPA and proxies /api, /admin, /static, /ws to backend.
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    environment:
+      - TZ=${TZ:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Mailpit - Local mail server for development/testing
+  # Web UI: http://localhost:8025   SMTP: mailpit:1025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: fabrik-mailpit
+    mem_limit: 128m
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    networks:
+      - fabrik-network
+    restart: unless-stopped
+
+  # Gitea - Lightweight Git service for SCM testing (RECOMMENDED)
+  # Start with: docker compose --profile scm-gitea up -d gitea
+  gitea:
+    image: gitea/gitea:1.25.4
+    container_name: fabrik-gitea
+    environment:
+      - TZ=${TZ:-UTC}
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=postgres:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=fabrik
+      - GITEA__database__PASSWD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      - GITEA__server__DOMAIN=192.168.1.10
+      - GITEA__server__HTTP_PORT=3000
+      - GITEA__server__ROOT_URL=http://192.168.1.10:3000/
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__service__DISABLE_REGISTRATION=true
+    restart: unless-stopped
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fabrik-network
+    profiles:
+      - scm-gitea
+
+
+volumes:
+  postgres_data:
+    name: fabrik_postgres_data
+  redis_data:
+    name: fabrik_redis_data
+  rabbitmq_data:
+    name: fabrik_rabbitmq_data
+  neo4j_data:
+    name: fabrik_neo4j_data
+  neo4j_logs:
+    name: fabrik_neo4j_logs
+  ollama_data:
+    name: fabrik_ollama_data
+  gitea_data:
+    name: fabrik_gitea_data
+  fabrik_mim_cache:
+    name: fabrik_mim_cache
+
+networks:
+  fabrik-network:
+    name: fabrik-network
+    driver: bridge
