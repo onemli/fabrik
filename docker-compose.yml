@@ -379,6 +379,75 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ===========================================================================
+  # OPTIONAL DEV / TEST SERVICES (commented out by default)
+  # ===========================================================================
+  # Uncomment the blocks below if you want to spin up local helpers for
+  # testing email delivery or AWX SCM integrations. They are NOT required
+  # for a normal Fabrik installation and are not started by default.
+  # ---------------------------------------------------------------------------
+
+  # --- Mailpit: catch-all SMTP server with web UI for inspecting outbound mail
+  # Web UI:  http://<host>:8025      SMTP: mailpit:1025 (from inside compose)
+  # Point Fabrik at it by setting these in .env:
+  #   EMAIL_HOST=mailpit
+  #   EMAIL_PORT=1025
+  #   EMAIL_USE_TLS=false
+  #   EMAIL_HOST_USER=
+  #   EMAIL_HOST_PASSWORD=
+  #
+  # mailpit:
+  #   image: axllent/mailpit:latest
+  #   container_name: fabrik-mailpit
+  #   mem_limit: 128m
+  #   environment:
+  #     - TZ=${TZ:-UTC}
+  #   ports:
+  #     - "${MAILPIT_UI_PORT:-8025}:8025"
+  #     - "${MAILPIT_SMTP_PORT:-1025}:1025"
+  #   networks:
+  #     - fabrik-network
+  #   restart: unless-stopped
+
+  # --- Gitea: lightweight self-hosted Git server, useful when you want AWX
+  # to pull playbooks from a local repo instead of GitHub/GitLab.
+  # Start with: docker compose --profile scm-gitea up -d gitea
+  # Web UI: http://<host>:3000      SSH: <host>:2222
+  # Note: also uncomment the gitea_data volume entry under "volumes:" below.
+  #
+  # gitea:
+  #   image: gitea/gitea:1.25.4
+  #   container_name: fabrik-gitea
+  #   environment:
+  #     - TZ=${TZ:-UTC}
+  #     - USER_UID=1000
+  #     - USER_GID=1000
+  #     - GITEA__database__DB_TYPE=postgres
+  #     - GITEA__database__HOST=postgres:5432
+  #     - GITEA__database__NAME=gitea
+  #     - GITEA__database__USER=fabrik
+  #     - GITEA__database__PASSWD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+  #     - GITEA__server__DOMAIN=${GITEA_DOMAIN:-localhost}
+  #     - GITEA__server__HTTP_PORT=3000
+  #     - GITEA__server__ROOT_URL=http://${GITEA_DOMAIN:-localhost}:3000/
+  #     - GITEA__security__INSTALL_LOCK=true
+  #     - GITEA__service__DISABLE_REGISTRATION=true
+  #   restart: unless-stopped
+  #   volumes:
+  #     - gitea_data:/data
+  #     - /etc/timezone:/etc/timezone:ro
+  #     - /etc/localtime:/etc/localtime:ro
+  #   ports:
+  #     - "3000:3000"
+  #     - "2222:22"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - fabrik-network
+  #   profiles:
+  #     - scm-gitea
+
 
 volumes:
   postgres_data:
@@ -393,6 +462,9 @@ volumes:
     name: fabrik_neo4j_logs
   fabrik_mim_cache:
     name: fabrik_mim_cache
+  # Uncomment along with the gitea: service block above if you enable it.
+  # gitea_data:
+  #   name: fabrik_gitea_data
 
 networks:
   fabrik-network:
