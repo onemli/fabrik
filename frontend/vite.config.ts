@@ -26,7 +26,7 @@ export default defineConfig({
           // Data grid (AG Grid) — loaded only in AWX data entry/validation views
           'vendor-table': ['tabulator-tables', 'react-tabulator', '@tanstack/react-table'],
           // Charts — loaded only in analytics/dashboard views
-          'vendor-charts': ['recharts', 'echarts', 'echarts-for-react'],
+          'vendor-charts': ['recharts'],
           // Monaco editor — loaded only in code-editing views
           'vendor-editor': ['@monaco-editor/react'],
           // Radix UI component library — shared across the app
