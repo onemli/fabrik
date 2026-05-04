@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet — open a PR or issue if you want to suggest the next thing.
 
-## [1.0.0] — 2026-04-26
+## [1.0.0] — 2026-05-04
 
 First public release. Apache 2.0. The result of ~10 months of single-engineer
 development against real Cisco ACI fabrics; this is the version we're inviting
