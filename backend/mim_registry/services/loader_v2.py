@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 # Neo4j signed int64 boundary — values outside get stringified.
 NEO4J_INT_MAX = 9_223_372_036_854_775_807
-DEFAULT_BATCH_SIZE = 500
+DEFAULT_BATCH_SIZE = 2000
 
 # Fields whose presence in a class dict confirms devnet format (vs v1 enhanced).
 # Any one of these is a strong signal; we require at least one.

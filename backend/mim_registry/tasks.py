@@ -78,8 +78,8 @@ _CANCEL_POLL_EVERY = 50
     bind=True,
     name='mim_registry.run_devnet_import',
     queue='mim_import',
-    soft_time_limit=3600,
-    time_limit=3900,
+    soft_time_limit=14400,
+    time_limit=14700,
 )
 def run_devnet_import(self, run_id: str):
     channel_layer = get_channel_layer()
@@ -271,7 +271,7 @@ def _phase_import(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoad
     # Two passes guarantees every relationship endpoint already exists in
     # Neo4j, so the MATCH-only Cypher in pass 2 never leaks orphan stubs.
 
-    chunk_size = 200
+    chunk_size = 1000
     last_emit = {'t': 0.0}
 
     def cancel_check() -> bool:
