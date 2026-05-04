@@ -14,11 +14,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import random
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Iterable, Optional, Sequence
 
 import aiohttp
+
+
+def _resolve_proxy_url() -> Optional[str]:
+    # Read proxy explicitly so NO_PROXY (which often globs too broadly in
+    # corporate setups) cannot bypass it for our DevNet calls.
+    for var in ('HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'):
+        value = os.environ.get(var)
+        if value:
+            return value
+    return None
 
 from .version_resolver import build_url, fallback_versions_for
 
@@ -128,6 +139,9 @@ class DevNetScraper:
 
         self._sem = asyncio.Semaphore(concurrency)
         self._stats = ScraperStats()
+        self._proxy_url = _resolve_proxy_url()
+        if self._proxy_url:
+            logger.info('DevNetScraper: using explicit proxy %s', self._proxy_url)
 
     async def run(self, jobs: Iterable[ScraperJob]) -> ScraperStats:
         """Process ``jobs`` end-to-end. Returns final aggregate stats.
@@ -145,9 +159,6 @@ class DevNetScraper:
             connector=connector,
             timeout=self._request_timeout,
             headers={'User-Agent': 'fabrik-mim-importer/1.0'},
-            # Honor HTTP_PROXY / HTTPS_PROXY / NO_PROXY env vars.
-            # aiohttp ignores them by default; corporate-proxy installs need this.
-            trust_env=True,
         ) as session:
             buffer: list[JobResult] = []
 
@@ -283,7 +294,7 @@ class DevNetScraper:
         attempt = 0
         while True:
             try:
-                async with session.get(url, headers=headers) as resp:
+                async with session.get(url, headers=headers, proxy=self._proxy_url) as resp:
                     if resp.status == 200:
                         try:
                             payload = await resp.json(content_type=None)
