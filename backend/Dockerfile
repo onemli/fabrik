@@ -54,12 +54,16 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
 
 WORKDIR /app
 
-# Runtime-only system deps (no gcc, no -dev headers)
+# Runtime system deps. We keep the -dev packages here too because:
+#   1. Their version-suffixed runtime counterparts (e.g. libldap-2.5-0
+#      vs libldap-2.6-0) drift between Debian releases and break builds.
+#   2. -dev packages bundle the runtime .so files; gcc and friends are
+#      what we actually wanted to leave out, and they're not in this list.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         postgresql-client \
-        libldap-2.5-0 \
-        libsasl2-2 \
-        libpq5 \
+        libldap2-dev \
+        libsasl2-dev \
+        libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps from pre-built wheels
