@@ -41,6 +41,14 @@ jobs:
           - 6379:6379
 
     env:
+      # Django reads individual POSTGRES_* env vars (not DATABASE_URL).
+      # In CI the postgres service is reachable via localhost, not via
+      # the docker-compose container name "postgres".
+      POSTGRES_DB: fabrik_test
+      POSTGRES_USER: fabrik
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
       DATABASE_URL: postgresql://fabrik:testpassword@localhost:5432/fabrik_test
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/1
