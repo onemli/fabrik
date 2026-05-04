@@ -145,6 +145,9 @@ class DevNetScraper:
             connector=connector,
             timeout=self._request_timeout,
             headers={'User-Agent': 'fabrik-mim-importer/1.0'},
+            # Honor HTTP_PROXY / HTTPS_PROXY / NO_PROXY env vars.
+            # aiohttp ignores them by default; corporate-proxy installs need this.
+            trust_env=True,
         ) as session:
             buffer: list[JobResult] = []
 
