@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import {
   AlertTriangle,
@@ -127,7 +126,7 @@ export function EditUserDialog({ open, onClose, onSuccess, user, groups }: EditU
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="p-6 space-y-8">
 
               {/* Personal Info */}
@@ -297,7 +296,7 @@ export function EditUserDialog({ open, onClose, onSuccess, user, groups }: EditU
                   </div>
                 ) : (
                   <div className="border rounded-lg bg-muted/10">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 max-h-72 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
                       {filteredGroups.map(group => {
                         const checked = formData.group_ids.includes(group.id)
                         return (
@@ -347,7 +346,7 @@ export function EditUserDialog({ open, onClose, onSuccess, user, groups }: EditU
               </section>
 
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Footer */}
           <div className="px-6 py-4 border-t bg-muted/20 flex items-center justify-between gap-3">

@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   User as UserIcon,
   Mail,
@@ -125,7 +124,7 @@ export function UserFormDialog({
         </div>
 
         {/* Body */}
-        <ScrollArea className="flex-1">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="p-6 space-y-8">
 
             {/* Personal Info */}
@@ -306,7 +305,7 @@ export function UserFormDialog({
                 </div>
               ) : (
                 <div className="border rounded-lg bg-muted/10">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 max-h-72 overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
                     {filteredGroups.map(group => {
                       const checked = groupIds.includes(group.id)
                       return (
@@ -356,7 +355,7 @@ export function UserFormDialog({
             </section>
 
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t bg-muted/20 flex items-center justify-between gap-3">
