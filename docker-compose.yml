@@ -368,11 +368,9 @@ services:
     restart: unless-stopped
     networks:
       - fabrik-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    # No healthcheck — nginx exits if it can't bind, which is enough signal.
+    # The wget-based probe didn't work on nginx:alpine (no wget binary)
+    # and a hand-rolled netcat probe is fragile across Alpine versions.
     logging:
       driver: "json-file"
       options:
