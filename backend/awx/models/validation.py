@@ -273,7 +273,7 @@ class RegexPattern(models.Model):
         return self.name
 
     def clean(self):
-        """Strip whitespace and verify the pattern compiles.
+        r"""Strip whitespace and verify the pattern compiles.
 
         Prevents saving bogus regex like a trailing backtick copied from
         markdown (`^...$` → `^...$\``) or any other malformed pattern.
