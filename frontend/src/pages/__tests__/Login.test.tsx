@@ -50,11 +50,21 @@ vi.mock('@/store/demoStore', () => ({
 // Mock SVG import
 vi.mock('@/assets/fabrik_dark.svg', () => ({ default: 'fabrik_dark.svg' }))
 
-// Mock fetch for LDAP check
-vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-  ok: true,
-  json: () => Promise.resolve({ ldap_enabled: false }),
-}))
+// Mock fetch for platform-info (LDAP + registration flags). Individual tests
+// override this when they need a different platform-info payload.
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
+
+function mockPlatformInfo(overrides: Record<string, unknown> = {}) {
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({
+      ldap_enabled: false,
+      registration_enabled: true,
+      ...overrides,
+    }),
+  })
+}
 
 function renderLogin() {
   return render(
@@ -67,6 +77,7 @@ function renderLogin() {
 describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockPlatformInfo()
   })
 
   it('renders sign-in heading and form fields', () => {
@@ -78,10 +89,21 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
   })
 
-  it('renders register link', () => {
+  it('renders register link when public registration is enabled', async () => {
     renderLogin()
 
-    expect(screen.getByText('Create one')).toBeInTheDocument()
+    expect(await screen.findByText('Create one')).toBeInTheDocument()
+  })
+
+  it('hides register link when public registration is disabled', async () => {
+    mockPlatformInfo({ registration_enabled: false })
+    renderLogin()
+
+    // Wait for the platform-info effect to settle, then assert absence.
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled()
+    })
+    expect(screen.queryByText('Create one')).not.toBeInTheDocument()
   })
 
   it('renders forgot password link', () => {
