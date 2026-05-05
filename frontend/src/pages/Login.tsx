@@ -21,6 +21,7 @@ export default function Login() {
   const { login, ldapLogin, mfaLogin, user, isLoading, error, clearError } = useAuthStore()
   const { isLoaded: platformLoaded, loadPlatformInfo } = useDemoStore()
   const [ldapEnabled, setLdapEnabled] = useState(false)
+  const [registrationEnabled, setRegistrationEnabled] = useState(false)
   const [loginMode, setLoginMode] = useState<LoginMode>('local')
   const [showPassword, setShowPassword] = useState(false)
   const [mfaStep, setMfaStep] = useState(false)
@@ -49,6 +50,7 @@ export default function Login() {
         if (res.ok) {
           const data = await res.json()
           setLdapEnabled(data.ldap_enabled ?? false)
+          setRegistrationEnabled(data.registration_enabled ?? false)
         }
       } catch {
         // Ignore — LDAP tab just won't show
@@ -311,8 +313,9 @@ export default function Login() {
                 </Button>
               </form>
 
-              {/* Register link — hidden for LDAP mode (accounts come from directory) */}
-              {loginMode !== 'ldap' && (
+              {/* Register link — hidden for LDAP mode (accounts come from directory)
+                  and when public registration is disabled by the operator */}
+              {loginMode !== 'ldap' && registrationEnabled && (
               <div className="mt-8 pt-6 border-t border-zinc-800">
                 <p className="text-sm text-zinc-500 text-center">
                   Don't have an account?{' '}

@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 
@@ -36,6 +37,14 @@ class UserRegistrationView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [RegistrationRateThrottle]
     serializer_class = UserRegistrationSerializer
+
+    def create(self, request, *args, **kwargs):
+        if not getattr(settings, 'FABRIK_ALLOW_PUBLIC_REGISTRATION', False):
+            return Response(
+                {'detail': 'Public registration is disabled. Contact your administrator.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().create(request, *args, **kwargs)
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):

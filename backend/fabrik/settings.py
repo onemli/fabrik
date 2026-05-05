@@ -57,6 +57,14 @@ if FABRIK_MODE not in ('PROD', 'DEMO'):
         f"FABRIK_MODE must be 'PROD' or 'DEMO', got '{FABRIK_MODE}'"
     )
 
+# Public registration: when False (default), the /api/users/register/ endpoint
+# returns 403 to anonymous callers. Admins create accounts via the user
+# management UI. Set true only for lab/demo deployments where self-signup
+# is intentional.
+FABRIK_ALLOW_PUBLIC_REGISTRATION = os.getenv(
+    'FABRIK_ALLOW_PUBLIC_REGISTRATION', 'false'
+).lower() == 'true'
+
 # Neo4j Configuration
 NEO4J_URI = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
 NEO4J_USER = os.getenv('NEO4J_USER', 'neo4j')
