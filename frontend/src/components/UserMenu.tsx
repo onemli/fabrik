@@ -27,7 +27,7 @@ import {
 
 // Bumped per release. Documentation URL pins to this version so users reading
 // docs always see the features their running build actually ships.
-const APP_VERSION = '1.0.0'
+const APP_VERSION = '1.0.1'
 const DOCS_URL = `https://docs.fabrikops.com/v${APP_VERSION}/`
 const SUPPORT_URL = 'https://github.com/onemli/fabrik/issues'
 

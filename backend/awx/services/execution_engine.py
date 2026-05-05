@@ -240,7 +240,7 @@ class ExecutionEngine:
             extra_vars['fabrik_user_agent'] = request.metadata.get('user_agent') if request.metadata else None
 
             # Platform info
-            extra_vars['fabrik_platform_version'] = getattr(settings, 'FABRIK_VERSION', '1.0.0')
+            extra_vars['fabrik_platform_version'] = getattr(settings, 'FABRIK_VERSION', '1.0.1')
 
             # Add any additional variables from template
             if template.variable_mappings:

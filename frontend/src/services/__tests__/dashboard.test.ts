@@ -82,13 +82,13 @@ describe('dashboardService', () => {
     it('returns platform info', async () => {
       fetchSpy.mockResolvedValueOnce(jsonResponse(200, {
         demo_mode: false,
-        version: '1.0.0',
+        version: '1.0.1',
         ldap_enabled: true,
       }))
 
       const result = await dashboardService.fetchPlatformInfo()
       expect(result.demo_mode).toBe(false)
-      expect(result.version).toBe('1.0.0')
+      expect(result.version).toBe('1.0.1')
     })
 
     it('throws on error', async () => {

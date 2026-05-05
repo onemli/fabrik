@@ -209,5 +209,5 @@ function handleError(error: any): FormattedError {
 
 ---
 
-**Last Updated**: 2026-01-24
-**Version**: 1.0.0
+**Last Updated**: 2026-05-05
+**Version**: 1.0.1

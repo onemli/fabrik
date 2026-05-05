@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet — open a PR or issue if you want to suggest the next thing.
 
+## [1.0.1] — 2026-05-05
+
+Maintenance release: stack consistency, a UI bug that hid the user-creation
+footer on smaller viewports, and a sane default for self-signup.
+
+### Changed
+- **React runtime upgraded to v19** to match the types and documentation
+  the project already declared. `@testing-library/react` bumped to v16 for
+  compatibility; npm `overrides` added so `react-tabulator` (peer dep
+  declares ^17, runs fine on 19) resolves cleanly.
+- **Public registration off by default.** The `/api/users/register/`
+  endpoint is now gated behind a new `FABRIK_ALLOW_PUBLIC_REGISTRATION`
+  env var (default `false`). Operators who want self-signup for a lab or
+  demo deployment opt in explicitly. The Login page hides the "Create
+  one" link when registration is disabled.
+
+### Fixed
+- **Add User / Edit User dialogs**: the Group Membership area was
+  rendered behind the Create/Cancel footer when total form content
+  exceeded the dialog's max height — caused by Radix `ScrollArea`'s
+  internal `display: table` wrapper not propagating height under flex
+  constraints. Replaced with a native `overflow-y-auto` container.
+- **AWX**: `RegexPattern.clean()` docstring promoted to a raw string to
+  silence a SyntaxWarning under Python 3.12+.
+- **Compose**: removed the nginx healthcheck that depended on `wget`,
+  which isn't shipped in `nginx:alpine`. The container exits on bind
+  failure, which is signal enough.
+
 ## [1.0.0] — 2026-05-04
 
 First public release. Apache 2.0. The result of ~10 months of single-engineer
@@ -71,5 +99,6 @@ This release wouldn't exist without:
 - The handful of network engineers who tried early builds, broke them, and
   told me how.
 
-[Unreleased]: https://github.com/onemli/fabrik/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/onemli/fabrik/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/onemli/fabrik/releases/tag/v1.0.1
 [1.0.0]: https://github.com/onemli/fabrik/releases/tag/v1.0.0
