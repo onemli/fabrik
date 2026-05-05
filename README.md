@@ -9,6 +9,7 @@
 
 **Visualise, query, and automate your Cisco ACI fabric — without writing API calls.**
 
+[![CI](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/onemli/fabrik/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/onemli/fabrik?style=flat-square&color=0ea5e9&label=release)](https://github.com/onemli/fabrik/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-10b981?style=flat-square)](./LICENSE)
 [![Docker Backend](https://img.shields.io/docker/pulls/onemli/fabrik-backend?style=flat-square&label=backend%20pulls&color=2563eb&logo=docker&logoColor=white)](https://hub.docker.com/r/onemli/fabrik-backend)
