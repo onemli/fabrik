@@ -22,6 +22,7 @@ from django.utils import timezone
 from apic_connections.apic_client import APICClient
 from queries.models import ChainExecutionJob, ChainIterationResult
 from queries.services.postprocessor import PostProcessorEngine
+from queries.services.response_flattener import maybe_flatten_response
 
 logger = logging.getLogger(__name__)
 
@@ -317,6 +318,10 @@ class PipelineExecutor:
         if not success:
             raise RuntimeError(f"APIC query failed: {error}")
 
+        # Normalize multi-class chain responses before PostProcessors run.
+        if isinstance(result, dict):
+            result = maybe_flatten_response(result, query_url)
+
         # Apply stage's post-processors
         result = self._apply_stage_postprocessors(stage, result)
         return result
@@ -381,6 +386,9 @@ class PipelineExecutor:
         if not success:
             raise RuntimeError(f"APIC query failed: {error}")
 
+        if isinstance(result, dict):
+            result = maybe_flatten_response(result, query_url)
+
         result = self._apply_stage_postprocessors(stage, result)
         return result
 
@@ -401,6 +409,9 @@ class PipelineExecutor:
 
             success, result, error = self.apic_client.execute_query(query_url)
             if success and isinstance(result, dict):
+                # Defensive flatten: target-subtree-class usually yields flat
+                # imdata, but stays correct if APIC ever returns nested.
+                result = maybe_flatten_response(result, query_url)
                 merged_imdata.extend(result.get('imdata', []))
 
         merged_result = {
@@ -436,6 +447,7 @@ class PipelineExecutor:
 
                 success, result, error = self.apic_client.execute_query(query_url)
                 if success and isinstance(result, dict):
+                    result = maybe_flatten_response(result, query_url)
                     merged_imdata.extend(result.get('imdata', []))
             except Exception as e:
                 logger.warning(f"Stage {stage.index} iterate failed for value '{value}': {e}")

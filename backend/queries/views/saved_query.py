@@ -610,6 +610,13 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
+            # Flatten multi-class chains so the preview shows target objects
+            # (matching what the user expects from the query graph), not the
+            # root envelope with nested children.
+            if isinstance(result, dict):
+                from queries.services.response_flattener import maybe_flatten_response
+                result = maybe_flatten_response(result, query_path)
+
             # Extract results
             results = result.get('imdata', []) if isinstance(result, dict) else []
 

@@ -370,6 +370,16 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
         success, response_data, error = client.execute_query(query_path, method, data)
         client.close()
 
+        # Multi-class chain queries return APIC's nested children layout, which
+        # PostProcessor pipelines and table renderers can't iterate without
+        # descending into each `children` array. Flatten to the target class
+        # here so every UI consumer sees the same shape (flat imdata of target
+        # objects). Single-class queries are detected as such and pass through
+        # unchanged.
+        if success and isinstance(response_data, dict):
+            from queries.services.response_flattener import maybe_flatten_response
+            response_data = maybe_flatten_response(response_data, query_path)
+
         # Audit log
         result_count = len(response_data.get('imdata', [])) if success and isinstance(response_data, dict) else 0
         AuditService.log(

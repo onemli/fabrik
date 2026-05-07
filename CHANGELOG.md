@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet — open a PR or issue if you want to suggest the next thing.
+### Fixed
+- Chain queries that went three or more classes deep — `fvTenant → fvBD → fvSubnet`
+  is the canonical example — were either coming back empty or showing only the
+  top tenant row when post-processors were attached. Upgrade, re-run, and they
+  return the full target class as a flat table like you'd expect.
+
+### Added
+- Per-connection request timeout in the APIC connection form. Range 5–300s,
+  default 30. Bump it for slow fabrics or large `rsp-subtree=full` pulls;
+  shrink it if you'd rather a stuck APIC fail fast.
+- APIC Connections page is a table now — sortable, searchable, paginated.
+  The card grid stopped being usable somewhere around 30 fabrics; this scales
+  to a few hundred without scrolling fatigue. Search hits name, URL, username,
+  description; pagination is 25/50/100/200.
+- Test results stick around. Hit Test, the timestamp and the full controller
+  message are saved on the connection itself, so you can scan the table later
+  and see which fabrics are unhealthy without re-testing the lot.
+
+### Upgrade
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+No migrations. Saved queries that previously returned empty rows on a
+multi-class chain start returning data on their next run.
 
 ## [1.0.1] — 2026-05-05
 

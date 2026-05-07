@@ -262,6 +262,14 @@ def execute_scheduled_task(task_id: str) -> None:
 
                 success, result, error = apic_client.execute_query(query_url)
 
+                # Mirror the UI proxy: flatten multi-class chain responses so
+                # PostProcessors (run below) and stored result_count reflect
+                # the target class, not the root envelope. No-op for single-
+                # class queries.
+                if success and isinstance(result, dict):
+                    from queries.services.response_flattener import maybe_flatten_response
+                    result = maybe_flatten_response(result, query_url)
+
                 if not success:
                     execution.status = ScheduledTaskExecution.STATUS_FAILED
                     execution.error_message = f'Query execution failed: {error}'
@@ -546,6 +554,12 @@ def execute_saved_query_sync(query_id: int, connection_id: int) -> Any:
     success, result, error = apic_client.execute_query(query_url)
     if not success:
         raise Exception(f'Query execution failed: {error}')
+
+    # Flatten multi-class chain responses before PostProcessors run, so
+    # AWX column validation sees the target class as flat imdata.
+    if isinstance(result, dict):
+        from queries.services.response_flattener import maybe_flatten_response
+        result = maybe_flatten_response(result, query_url)
 
     flow_data = query.flow_data or {}
     nodes = flow_data.get('nodes', [])

@@ -852,8 +852,13 @@ class ClassQueryStrategy(QueryStrategy):
         if filter_expr:
             params['query-target-filter'] = filter_expr
 
-        # If we have parent classes, add DN wildcard filter
-        if len(intent.class_chain) > 0:
+        # DN wildcard scoping is only meaningful for single-class queries.
+        # In multi-class chains the base URL is the root class, but
+        # _build_dn_wildcard_filter emits wcard(<target>.dn,...) — and APIC
+        # rejects query-target-filter referencing a class other than the base,
+        # which silently returns zero rows. rsp-subtree-class + rsp-subtree-filter
+        # already scope multi-class chains correctly.
+        if len(intent.class_chain) <= 1:
             dn_filter = self._build_dn_wildcard_filter(intent)
             if dn_filter:
                 if 'query-target-filter' in params:
@@ -866,7 +871,9 @@ class ClassQueryStrategy(QueryStrategy):
         if len(intent.class_chain) > 1:
             child_classes, child_filter = self._build_child_class_query(intent)
             if child_classes:
-                params['rsp-subtree'] = 'children'
+                # Use 'full' so grandchildren are returned too. rsp-subtree-class
+                # still limits the response to the requested classes.
+                params['rsp-subtree'] = 'full'
                 params['rsp-subtree-class'] = ','.join(child_classes)
                 if child_filter:
                     params['rsp-subtree-filter'] = child_filter

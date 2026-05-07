@@ -14,7 +14,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-10b981?style=flat-square)](./LICENSE)
 [![Docker Backend](https://img.shields.io/docker/pulls/onemli/fabrik-backend?style=flat-square&label=backend%20pulls&color=2563eb&logo=docker&logoColor=white)](https://hub.docker.com/r/onemli/fabrik-backend)
 [![Docker Frontend](https://img.shields.io/docker/pulls/onemli/fabrik-frontend?style=flat-square&label=frontend%20pulls&color=2563eb&logo=docker&logoColor=white)](https://hub.docker.com/r/onemli/fabrik-frontend)
-[![Docs](https://img.shields.io/badge/docs-fabrikops.com-7c3aed?style=flat-square)](https://docs.fabrikops.com)
+[![Docs](https://img.shields.io/badge/docs-fabrikops.com-7c3aed?style=flat-square)](https://docs.fabrikops.com/fabrik/)
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white)](https://www.djangoproject.com/)
@@ -22,7 +22,11 @@
 [![Neo4j](https://img.shields.io/badge/Neo4j-5-018BFF?style=flat-square&logo=neo4j&logoColor=white)](https://neo4j.com/)
 [![Cisco ACI](https://img.shields.io/badge/Cisco%20ACI-5.2.x%20%7C%206.0.x%20%7C%206.1.x-1BA0D7?style=flat-square&logo=cisco&logoColor=white)](https://www.cisco.com/c/en/us/solutions/data-center-virtualization/application-centric-infrastructure/index.html)
 
-[**Documentation**](https://docs.fabrikops.com) · [**Quickstart**](https://docs.fabrikops.com/quickstart) · [**Releases**](https://github.com/onemli/fabrik/releases) · [**Discussions**](https://github.com/onemli/fabrik/discussions) · [**Report a bug**](https://github.com/onemli/fabrik/issues)
+[**Documentation**](https://docs.fabrikops.com/fabrik/) · [**Quickstart**](https://docs.fabrikops.com/fabrik/getting-started/) · [**Releases**](https://github.com/onemli/fabrik/releases) · [**Discussions**](https://github.com/onemli/fabrik/discussions) · [**Report a bug**](https://github.com/onemli/fabrik/issues)
+
+<br>
+
+<img src="fabrik_basic.gif" alt="Fabrik query builder demo" width="100%">
 
 </div>
 
@@ -37,7 +41,7 @@ Fabrik is a self-hosted operations platform for Cisco ACI that replaces the APIC
 - **Automation orchestration.** Drive AWX/Ansible Tower job templates from saved queries. CSV bulk input or structured forms; AWX pulls the playbooks from your own Git repository (GitLab / GitHub / Gitea).
 - **MIM browser.** Search 17,500+ ACI classes by name, label, description, DN pattern, or property — with AI-assisted suggestions validated against the live MIM.
 
-> Full documentation, screenshots, and tutorials live at **[docs.fabrikops.com](https://docs.fabrikops.com)**.
+> Full documentation, screenshots, and tutorials live at **[docs.fabrikops.com](https://docs.fabrikops.com/fabrik/)**.
 
 ---
 
@@ -67,7 +71,7 @@ docker compose exec backend python manage.py createsuperuser
 
 Open **`http://<server-host>`** (or whatever hostname / reverse-proxy URL you've put in front of the frontend container — the frontend serves on port 80 by default), sign in, then go to **Settings → MIM Management** to import the ACI schema (~25 minutes, runs in the background).
 
-That's it. Detailed walkthrough, production deployment, reverse proxy, backups, and upgrades on **[docs.fabrikops.com](https://docs.fabrikops.com)**.
+That's it. Detailed walkthrough, production deployment, reverse proxy, backups, and upgrades on **[docs.fabrikops.com](https://docs.fabrikops.com/fabrik/)**.
 
 ---
 
