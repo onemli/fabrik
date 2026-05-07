@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="frontend/src/assets/fabrik_dark.svg">
-  <img src="frontend/src/assets/fabrik_light.svg" alt="Fabrik" width="280">
+  <img src="frontend/src/assets/fabrik_light.svg" alt="Fabrik" width="220">
 </picture>
 
 # The Fabric, Finally Legible.
@@ -38,7 +38,7 @@ Fabrik is a self-hosted operations platform for Cisco ACI that replaces the APIC
 
 - **Visual query builder.** Drag classes, attach filters, run queries — Fabrik translates the diagram into APIC REST calls and returns structured results.
 - **Configuration time machine.** Snapshot anything you can query. Diff snapshots, track a single DN over time, detect drift before it becomes an incident.
-- **Automation orchestration.** Drive AWX/Ansible Tower job templates from saved queries. CSV bulk input or structured forms; AWX pulls the playbooks from your own Git repository (GitLab / GitHub / Gitea).
+- **Automation orchestration.** Drive AWX/Ansible Tower job templates and workflows from automation requests. Structured table input with field validation backed by live APIC queries. AWX pulls the playbooks from your own Git repository (GitLab / GitHub / Gitea).
 - **MIM browser.** Search 17,500+ ACI classes by name, label, description, DN pattern, or property — with AI-assisted suggestions validated against the live MIM.
 
 > Full documentation, screenshots, and tutorials live at **[docs.fabrikops.com](https://docs.fabrikops.com/fabrik/)**.
