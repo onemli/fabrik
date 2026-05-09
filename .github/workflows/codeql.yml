@@ -8,6 +8,7 @@ on:
   schedule:
     # Weekly run so advisories that land between PRs still get caught.
     - cron: '17 5 * * 1'
+  workflow_dispatch:
 
 permissions: read-all
 
