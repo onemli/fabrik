@@ -16,6 +16,7 @@ class TestSuggestClasses:
 
     def _enable_ai(self):
         from queries.models import AIQueryBuilderSettings
+
         settings = AIQueryBuilderSettings.get_settings()
         settings.enabled = True
         settings.save()
@@ -31,6 +32,7 @@ class TestSuggestClasses:
 
     def test_ai_disabled_returns_503(self, authenticated_client):
         from queries.models import AIQueryBuilderSettings
+
         settings = AIQueryBuilderSettings.get_settings()
         settings.enabled = False
         settings.save()
@@ -83,9 +85,7 @@ class TestSuggestClasses:
             {'className': name, 'label': name} if name != 'fakeParent' else None
         )
         # Only fvBD and fvAp are children of fvTenant
-        mock_mim.get_class_children.return_value = [
-            {'className': 'fvBD'}, {'className': 'fvAp'}
-        ]
+        mock_mim.get_class_children.return_value = [{'className': 'fvBD'}, {'className': 'fvAp'}]
 
         response = authenticated_client.post(
             '/api/mim/classes/suggest/',
@@ -166,7 +166,9 @@ class TestValidateConnection:
     def test_valid_parent_child(self, MockMIM, admin_client):
         mock_mim = MockMIM.return_value
         mock_mim.get_class_children.return_value = [
-            {'className': 'fvBD'}, {'className': 'fvAp'}, {'className': 'fvCtx'}
+            {'className': 'fvBD'},
+            {'className': 'fvAp'},
+            {'className': 'fvCtx'},
         ]
 
         response = admin_client.post(
@@ -180,9 +182,7 @@ class TestValidateConnection:
     @patch('mim.services.MIMService')
     def test_invalid_parent_child(self, MockMIM, admin_client):
         mock_mim = MockMIM.return_value
-        mock_mim.get_class_children.return_value = [
-            {'className': 'fvBD'}, {'className': 'fvAp'}
-        ]
+        mock_mim.get_class_children.return_value = [{'className': 'fvBD'}, {'className': 'fvAp'}]
 
         response = admin_client.post(
             '/api/queries/saved-queries/validate-connection/',
@@ -217,9 +217,7 @@ class TestGetChildClasses:
     @patch('mim.services.MIMService')
     def test_returns_children(self, MockMIM, admin_client):
         mock_mim = MockMIM.return_value
-        mock_mim.get_class_children.return_value = [
-            {'className': 'fvBD'}, {'className': 'fvAp'}
-        ]
+        mock_mim.get_class_children.return_value = [{'className': 'fvBD'}, {'className': 'fvAp'}]
 
         response = admin_client.get(
             '/api/queries/saved-queries/child-classes/',

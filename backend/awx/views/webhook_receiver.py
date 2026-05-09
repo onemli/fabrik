@@ -33,11 +33,7 @@ class WebhookSecurityError(Exception):
     """Webhook security validation error"""
 
 
-def validate_webhook_signature(
-    payload: bytes,
-    signature_header: str,
-    secret: str
-) -> bool:
+def validate_webhook_signature(payload: bytes, signature_header: str, secret: str) -> bool:
     """Return True if the HMAC-SHA256 signature on the webhook payload is valid.
 
     We use hmac.compare_digest for the final comparison to prevent timing
@@ -52,21 +48,17 @@ def validate_webhook_signature(
         algorithm, signature = signature_header.split('=', 1)
 
         if algorithm != 'sha256':
-            logger.warning(f"Unsupported signature algorithm: {algorithm}")
+            logger.warning(f'Unsupported signature algorithm: {algorithm}')
             return False
 
         # Calculate expected signature
-        expected_signature = hmac.new(
-            secret.encode('utf-8'),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
+        expected_signature = hmac.new(secret.encode('utf-8'), payload, hashlib.sha256).hexdigest()
 
         # Constant-time comparison to prevent timing attacks
         return hmac.compare_digest(signature, expected_signature)
 
     except Exception:
-        logger.exception("Error validating webhook signature")
+        logger.exception('Error validating webhook signature')
         return False
 
 
@@ -120,10 +112,10 @@ def parse_awx_webhook_payload(body: Dict[str, Any]) -> Tuple[str, Dict[str, Any]
         'started': body.get('started'),
         'finished': body.get('finished'),
         'elapsed': body.get('elapsed'),
-        'raw_payload': body  # Keep full payload for debugging
+        'raw_payload': body,  # Keep full payload for debugging
     }
 
-    return f"{routing_key_prefix}.{awx_status}", normalized_data
+    return f'{routing_key_prefix}.{awx_status}', normalized_data
 
 
 @csrf_exempt
@@ -163,55 +155,44 @@ def awx_webhook_receiver(request: Request) -> Response:
                 # Method 1: HMAC-SHA256 signature (recommended, most secure)
                 if not validate_webhook_signature(raw_body, signature_header, webhook_secret):
                     logger.warning(
-                        f"Invalid HMAC signature from IP: {request.META.get('REMOTE_ADDR')}"
+                        f'Invalid HMAC signature from IP: {request.META.get("REMOTE_ADDR")}'
                     )
                     return Response(
-                        {'error': 'Invalid HMAC signature'},
-                        status=status.HTTP_401_UNAUTHORIZED
+                        {'error': 'Invalid HMAC signature'}, status=status.HTTP_401_UNAUTHORIZED
                     )
 
             elif signature_header:
                 # Method 2: Simple token validation (X-AWX-Signature as plain token)
                 if signature_header != webhook_secret:
                     logger.warning(
-                        f"Invalid token signature from IP: {request.META.get('REMOTE_ADDR')}"
+                        f'Invalid token signature from IP: {request.META.get("REMOTE_ADDR")}'
                     )
                     return Response(
-                        {'error': 'Invalid token signature'},
-                        status=status.HTTP_401_UNAUTHORIZED
+                        {'error': 'Invalid token signature'}, status=status.HTTP_401_UNAUTHORIZED
                     )
 
             elif token_header:
                 # Method 3: Alternative header (X-AWX-Token)
                 if token_header != webhook_secret:
-                    logger.warning(
-                        f"Invalid token from IP: {request.META.get('REMOTE_ADDR')}"
-                    )
-                    return Response(
-                        {'error': 'Invalid token'},
-                        status=status.HTTP_401_UNAUTHORIZED
-                    )
+                    logger.warning(f'Invalid token from IP: {request.META.get("REMOTE_ADDR")}')
+                    return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
             else:
                 # No authentication header provided but secret is configured
                 logger.warning(
-                    f"Webhook rejected: no auth header from IP: {request.META.get('REMOTE_ADDR')} "
-                    f"(secret is configured but no auth header provided)"
+                    f'Webhook rejected: no auth header from IP: {request.META.get("REMOTE_ADDR")} '
+                    f'(secret is configured but no auth header provided)'
                 )
                 return Response(
-                    {'error': 'Authentication required'},
-                    status=status.HTTP_401_UNAUTHORIZED
+                    {'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED
                 )
 
         # Parse JSON payload
         try:
             payload = json.loads(raw_body)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in webhook payload: {str(e)}")
-            return Response(
-                {'error': 'Invalid JSON payload'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            logger.error(f'Invalid JSON in webhook payload: {str(e)}')
+            return Response({'error': 'Invalid JSON payload'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extract event type and normalize data
         routing_key, event_data = parse_awx_webhook_payload(payload)
@@ -234,12 +215,12 @@ def awx_webhook_receiver(request: Request) -> Response:
                         monitor.sync_single_execution(execution)
 
             except Exception as sync_err:
-                logger.exception(f"Failed to sync job {awx_job_id} from webhook: {sync_err}")
+                logger.exception(f'Failed to sync job {awx_job_id} from webhook: {sync_err}')
 
         # Log webhook receipt
         logger.info(
-            f"Webhook received: job_id={event_data.get('awx_job_id')}, "
-            f"status={event_data.get('status')}, routing_key={routing_key}"
+            f'Webhook received: job_id={event_data.get("awx_job_id")}, '
+            f'status={event_data.get("status")}, routing_key={routing_key}'
         )
 
         # Audit log (optional - don't fail if audit fails)
@@ -250,24 +231,26 @@ def awx_webhook_receiver(request: Request) -> Response:
                 category='awx_webhook',
                 resource_type='AWXJob',
                 resource_id=str(event_data.get('awx_job_id', 'unknown')),
-                description=f"Webhook received: {routing_key}"
+                description=f'Webhook received: {routing_key}',
             )
         except Exception as audit_error:
-            logger.warning(f"Failed to create audit log: {str(audit_error)}")
+            logger.warning(f'Failed to create audit log: {str(audit_error)}')
 
-        return Response({
-            'status': 'received',
-            'event_type': event_data.get('event_type'),
-            'job_id': event_data.get('awx_job_id'),
-            'routing_key': routing_key,
-            'queued': True
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'status': 'received',
+                'event_type': event_data.get('event_type'),
+                'job_id': event_data.get('awx_job_id'),
+                'routing_key': routing_key,
+                'queued': True,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     except Exception as e:
-        logger.exception(f"Error processing webhook: {str(e)}")
+        logger.exception(f'Error processing webhook: {str(e)}')
         return Response(
-            {'error': 'Internal server error'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -296,13 +279,10 @@ def webhook_health_check(request: Request) -> Response:
         return Response(response_data, status=status.HTTP_200_OK)
 
     except Exception as e:
-        logger.exception(f"Health check failed: {str(e)}")
+        logger.exception(f'Health check failed: {str(e)}')
         return Response(
-            {
-                'webhook_receiver': 'unhealthy',
-                'error': 'Health check failed'
-            },
-            status=status.HTTP_503_SERVICE_UNAVAILABLE
+            {'webhook_receiver': 'unhealthy', 'error': 'Health check failed'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
 
@@ -332,8 +312,7 @@ def test_webhook_event(request: Request) -> Response:
 
     if not request.user.is_staff:
         return Response(
-            {'error': 'Unauthorized - staff access required'},
-            status=status.HTTP_403_FORBIDDEN
+            {'error': 'Unauthorized - staff access required'}, status=status.HTTP_403_FORBIDDEN
         )
 
     try:
@@ -342,10 +321,7 @@ def test_webhook_event(request: Request) -> Response:
         job_type = request.data.get('type', 'job')
 
         if not job_id:
-            return Response(
-                {'error': 'job_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'job_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Create test payload
         test_payload = {
@@ -354,20 +330,22 @@ def test_webhook_event(request: Request) -> Response:
             'type': job_type,
             'url': f'https://awx.example.com/api/v2/jobs/{job_id}/',
             'created_by': request.user.username,
-            'test_event': True
+            'test_event': True,
         }
 
         routing_key, event_data = parse_awx_webhook_payload(test_payload)
 
-        return Response({
-            'status': 'test_event_published',
-            'routing_key': routing_key,
-            'event_data': event_data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'status': 'test_event_published',
+                'routing_key': routing_key,
+                'event_data': event_data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     except Exception as e:
-        logger.exception(f"Test webhook failed: {str(e)}")
+        logger.exception(f'Test webhook failed: {str(e)}')
         return Response(
-            {'error': 'Test webhook failed'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {'error': 'Test webhook failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

@@ -67,7 +67,7 @@ class Notification(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user} - {self.title} ({self.type})"
+        return f'{self.user} - {self.title} ({self.type})'
 
     def mark_as_read(self):
         if not self.is_read:
@@ -79,7 +79,8 @@ class Notification(models.Model):
 class NotificationPreference(models.Model):
     # Per-user notification preferences — auto-created on first access
     user = models.OneToOneField(
-        User, on_delete=models.CASCADE,
+        User,
+        on_delete=models.CASCADE,
         related_name='notification_preferences',
     )
 
@@ -104,7 +105,8 @@ class NotificationPreference(models.Model):
 
     # Minimum severity for email delivery
     email_min_severity = models.CharField(
-        max_length=20, default='warning',
+        max_length=20,
+        default='warning',
         choices=Notification.TYPE_CHOICES,
     )
 
@@ -116,7 +118,7 @@ class NotificationPreference(models.Model):
         db_table = 'notifications_preference'
 
     def __str__(self):
-        return f"NotificationPreference({self.user})"
+        return f'NotificationPreference({self.user})'
 
 
 class NotificationBuffer(models.Model):
@@ -142,7 +144,8 @@ class EscalationRule(models.Model):
     name = models.CharField(max_length=200)
     source = models.CharField(max_length=50, blank=True, default='')
     min_severity = models.CharField(
-        max_length=20, default='error',
+        max_length=20,
+        default='error',
         choices=Notification.TYPE_CHOICES,
     )
     escalate_after_minutes = models.IntegerField(default=30)
@@ -155,4 +158,4 @@ class EscalationRule(models.Model):
         db_table = 'notifications_escalation_rule'
 
     def __str__(self):
-        return f"EscalationRule({self.name})"
+        return f'EscalationRule({self.name})'

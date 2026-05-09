@@ -9,8 +9,12 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from awx.models import (
-    AWXConnection, TemplateCategory, AutomationTemplate,
-    AutomationRequest, AutomationExecution, ValidationList,
+    AWXConnection,
+    TemplateCategory,
+    AutomationTemplate,
+    AutomationRequest,
+    AutomationExecution,
+    ValidationList,
     JobOutputChunk,
 )
 
@@ -18,6 +22,7 @@ User = get_user_model()
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 def make_user(username='user1'):
     return User.objects.create_user(
@@ -27,7 +32,8 @@ def make_user(username='user1'):
 
 def make_connection(user, name='AWX Test', url='https://awx.test'):
     return AWXConnection.objects.create(
-        name=name, url=url,
+        name=name,
+        url=url,
         auth_type=AWXConnection.AUTH_TYPE_TOKEN,
         created_by=user,
     )
@@ -46,13 +52,15 @@ def make_template(user, connection, category, **kwargs):
         awx_connection=connection,
         category=category,
         execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
-        table_schemas=[{
-            'name': 'Sheet1',
-            'awx_variable_name': 'sheet1',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True},
-            ],
-        }],
+        table_schemas=[
+            {
+                'name': 'Sheet1',
+                'awx_variable_name': 'sheet1',
+                'columns': [
+                    {'name': 'tenant_name', 'type': 'text', 'required': True},
+                ],
+            }
+        ],
         variable_mappings={'tenant_name': 'tenant'},
         created_by=user,
     )
@@ -74,8 +82,8 @@ def make_request(user, template, connection, **kwargs):
 
 # ── AWXConnection ─────────────────────────────────────────────────────────────
 
-class AWXConnectionEncryptionTests(TestCase):
 
+class AWXConnectionEncryptionTests(TestCase):
     def setUp(self):
         self.user = make_user()
         self.conn = make_connection(self.user)
@@ -131,8 +139,8 @@ class AWXConnectionEncryptionTests(TestCase):
 
 # ── TemplateCategory ──────────────────────────────────────────────────────────
 
-class TemplateCategoryTests(TestCase):
 
+class TemplateCategoryTests(TestCase):
     def setUp(self):
         self.user = make_user()
 
@@ -154,14 +162,15 @@ class TemplateCategoryTests(TestCase):
     def test_name_is_unique(self):
         make_category(self.user, name='Unique')
         from django.db import IntegrityError
+
         with self.assertRaises(IntegrityError):
             make_category(self.user, name='Unique')
 
 
 # ── AutomationTemplate ────────────────────────────────────────────────────────
 
-class AutomationTemplateValidationTests(TestCase):
 
+class AutomationTemplateValidationTests(TestCase):
     def setUp(self):
         self.user = make_user()
         self.conn = make_connection(self.user)
@@ -187,16 +196,25 @@ class AutomationTemplateValidationTests(TestCase):
 
     def test_validate_regex_valid(self):
         tmpl = make_template(
-            self.user, self.conn, self.cat,
+            self.user,
+            self.conn,
+            self.cat,
             name='Regex Template',
-            table_schemas=[{
-                'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-                'columns': [{
-                    'name': 'vlan_id', 'type': 'text', 'required': True,
-                    'validation_mode': 'regex',
-                    'validation': r'^\d{1,4}$',
-                }],
-            }],
+            table_schemas=[
+                {
+                    'name': 'Sheet1',
+                    'awx_variable_name': 'sheet1',
+                    'columns': [
+                        {
+                            'name': 'vlan_id',
+                            'type': 'text',
+                            'required': True,
+                            'validation_mode': 'regex',
+                            'validation': r'^\d{1,4}$',
+                        }
+                    ],
+                }
+            ],
             variable_mappings={'vlan_id': 'vlan'},
         )
         is_valid, errors = tmpl.validate_input_data({'data': [{'vlan_id': '100'}]})
@@ -204,16 +222,25 @@ class AutomationTemplateValidationTests(TestCase):
 
     def test_validate_regex_invalid(self):
         tmpl = make_template(
-            self.user, self.conn, self.cat,
+            self.user,
+            self.conn,
+            self.cat,
             name='Regex Template 2',
-            table_schemas=[{
-                'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-                'columns': [{
-                    'name': 'vlan_id', 'type': 'text', 'required': True,
-                    'validation_mode': 'regex',
-                    'validation': r'^\d{1,4}$',
-                }],
-            }],
+            table_schemas=[
+                {
+                    'name': 'Sheet1',
+                    'awx_variable_name': 'sheet1',
+                    'columns': [
+                        {
+                            'name': 'vlan_id',
+                            'type': 'text',
+                            'required': True,
+                            'validation_mode': 'regex',
+                            'validation': r'^\d{1,4}$',
+                        }
+                    ],
+                }
+            ],
             variable_mappings={'vlan_id': 'vlan'},
         )
         is_valid, errors = tmpl.validate_input_data({'data': [{'vlan_id': 'not-a-number'}]})
@@ -221,16 +248,25 @@ class AutomationTemplateValidationTests(TestCase):
 
     def test_validate_static_list_valid(self):
         tmpl = make_template(
-            self.user, self.conn, self.cat,
+            self.user,
+            self.conn,
+            self.cat,
             name='Static List Template',
-            table_schemas=[{
-                'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-                'columns': [{
-                    'name': 'env', 'type': 'select', 'required': True,
-                    'validation_mode': 'static_list',
-                    'validation_list': ['prod', 'staging', 'dev'],
-                }],
-            }],
+            table_schemas=[
+                {
+                    'name': 'Sheet1',
+                    'awx_variable_name': 'sheet1',
+                    'columns': [
+                        {
+                            'name': 'env',
+                            'type': 'select',
+                            'required': True,
+                            'validation_mode': 'static_list',
+                            'validation_list': ['prod', 'staging', 'dev'],
+                        }
+                    ],
+                }
+            ],
             variable_mappings={'env': 'environment'},
         )
         is_valid, errors = tmpl.validate_input_data({'data': [{'env': 'prod'}]})
@@ -238,16 +274,25 @@ class AutomationTemplateValidationTests(TestCase):
 
     def test_validate_static_list_invalid_value(self):
         tmpl = make_template(
-            self.user, self.conn, self.cat,
+            self.user,
+            self.conn,
+            self.cat,
             name='Static List Template 2',
-            table_schemas=[{
-                'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-                'columns': [{
-                    'name': 'env', 'type': 'select', 'required': True,
-                    'validation_mode': 'static_list',
-                    'validation_list': ['prod', 'staging', 'dev'],
-                }],
-            }],
+            table_schemas=[
+                {
+                    'name': 'Sheet1',
+                    'awx_variable_name': 'sheet1',
+                    'columns': [
+                        {
+                            'name': 'env',
+                            'type': 'select',
+                            'required': True,
+                            'validation_mode': 'static_list',
+                            'validation_list': ['prod', 'staging', 'dev'],
+                        }
+                    ],
+                }
+            ],
             variable_mappings={'env': 'environment'},
         )
         is_valid, errors = tmpl.validate_input_data({'data': [{'env': 'unknown'}]})
@@ -255,28 +300,39 @@ class AutomationTemplateValidationTests(TestCase):
 
     def test_validate_static_list_case_insensitive(self):
         tmpl = make_template(
-            self.user, self.conn, self.cat,
+            self.user,
+            self.conn,
+            self.cat,
             name='Case Insensitive',
-            table_schemas=[{
-                'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-                'columns': [{
-                    'name': 'env', 'type': 'select', 'required': True,
-                    'validation_mode': 'static_list',
-                    'validation_list': ['prod'],
-                    'validation_case_sensitive': False,
-                }],
-            }],
+            table_schemas=[
+                {
+                    'name': 'Sheet1',
+                    'awx_variable_name': 'sheet1',
+                    'columns': [
+                        {
+                            'name': 'env',
+                            'type': 'select',
+                            'required': True,
+                            'validation_mode': 'static_list',
+                            'validation_list': ['prod'],
+                            'validation_case_sensitive': False,
+                        }
+                    ],
+                }
+            ],
             variable_mappings={'env': 'environment'},
         )
         is_valid, errors = tmpl.validate_input_data({'data': [{'env': 'PROD'}]})
         self.assertTrue(is_valid)
 
     def test_validate_multiple_rows(self):
-        input_data = {'data': [
-            {'tenant_name': 'TenantA'},
-            {'tenant_name': ''},   # invalid
-            {'tenant_name': 'TenantC'},
-        ]}
+        input_data = {
+            'data': [
+                {'tenant_name': 'TenantA'},
+                {'tenant_name': ''},  # invalid
+                {'tenant_name': 'TenantC'},
+            ]
+        }
         is_valid, errors = self.template.validate_input_data(input_data)
         self.assertFalse(is_valid)
         # Should report row 2 error
@@ -301,8 +357,8 @@ class AutomationTemplateValidationTests(TestCase):
 
 # ── AutomationExecution ───────────────────────────────────────────────────────
 
-class AutomationExecutionTests(TestCase):
 
+class AutomationExecutionTests(TestCase):
     def setUp(self):
         self.user = make_user()
         self.conn = make_connection(self.user)
@@ -363,8 +419,8 @@ class AutomationExecutionTests(TestCase):
 
 # ── ValidationList ────────────────────────────────────────────────────────────
 
-class ValidationListTests(TestCase):
 
+class ValidationListTests(TestCase):
     def setUp(self):
         self.user = make_user()
 
@@ -378,19 +434,14 @@ class ValidationListTests(TestCase):
         self.assertEqual(len(vl.values), 3)
 
     def test_name_is_unique(self):
-        ValidationList.objects.create(
-            name='Unique List', values=[], created_by=self.user
-        )
+        ValidationList.objects.create(name='Unique List', values=[], created_by=self.user)
         from django.db import IntegrityError
+
         with self.assertRaises(IntegrityError):
-            ValidationList.objects.create(
-                name='Unique List', values=[], created_by=self.user
-            )
+            ValidationList.objects.create(name='Unique List', values=[], created_by=self.user)
 
     def test_increment_usage(self):
-        vl = ValidationList.objects.create(
-            name='Counter Test', values=[], created_by=self.user
-        )
+        vl = ValidationList.objects.create(name='Counter Test', values=[], created_by=self.user)
         initial = vl.usage_count if hasattr(vl, 'usage_count') else 0
         vl.increment_usage()
         vl.refresh_from_db()
@@ -398,16 +449,14 @@ class ValidationListTests(TestCase):
             self.assertEqual(vl.usage_count, initial + 1)
 
     def test_case_sensitive_default_false(self):
-        vl = ValidationList.objects.create(
-            name='Case Test', values=[], created_by=self.user
-        )
+        vl = ValidationList.objects.create(name='Case Test', values=[], created_by=self.user)
         self.assertFalse(vl.case_sensitive)
 
 
 # ── JobOutputChunk ────────────────────────────────────────────────────────────
 
-class JobOutputChunkTests(TestCase):
 
+class JobOutputChunkTests(TestCase):
     def setUp(self):
         self.user = make_user()
         self.conn = make_connection(self.user)
@@ -415,6 +464,7 @@ class JobOutputChunkTests(TestCase):
         self.tmpl = make_template(self.user, self.conn, self.cat)
         self.req = make_request(self.user, self.tmpl, self.conn)
         from django.utils import timezone
+
         self.execution = AutomationExecution.objects.create(
             automation_request=self.req,
             awx_connection=self.conn,
@@ -442,6 +492,7 @@ class JobOutputChunkTests(TestCase):
     def test_unique_constraint_execution_counter(self):
         self._chunk(1)
         from django.db import IntegrityError
+
         with self.assertRaises(IntegrityError):
             self._chunk(1)
 

@@ -133,8 +133,7 @@ def categorize_nodes(flow_data: Dict[str, Any]) -> Dict[str, List[Any]]:
 
 
 def detect_version_change_type(
-    old_flow_data: Optional[Dict[str, Any]],
-    new_flow_data: Dict[str, Any]
+    old_flow_data: Optional[Dict[str, Any]], new_flow_data: Dict[str, Any]
 ) -> Tuple[str, List[str]]:
     """Figure out whether a save requires a major bump, minor bump, or nothing.
 
@@ -168,9 +167,9 @@ def detect_version_change_type(
         is_major = True
         diff = new_structural_count - old_structural_count
         if diff > 0:
-            changes.append(f"Added {diff} class node(s)")
+            changes.append(f'Added {diff} class node(s)')
         else:
-            changes.append(f"Removed {abs(diff)} class node(s)")
+            changes.append(f'Removed {abs(diff)} class node(s)')
 
     old_edge_set = {(e.get('source'), e.get('target')) for e in old_flow_data.get('edges', [])}
     new_edge_set = {(e.get('source'), e.get('target')) for e in new_flow_data.get('edges', [])}
@@ -180,25 +179,27 @@ def detect_version_change_type(
         added_edges = new_edge_set - old_edge_set
         removed_edges = old_edge_set - new_edge_set
         if added_edges:
-            changes.append(f"Added {len(added_edges)} connection(s)")
+            changes.append(f'Added {len(added_edges)} connection(s)')
         if removed_edges:
-            changes.append(f"Removed {len(removed_edges)} connection(s)")
+            changes.append(f'Removed {len(removed_edges)} connection(s)')
 
     # Check scope/queryTarget changes on existing class nodes (matched by node ID)
     for old_node in old_categories['structural_nodes']:
         old_id = old_node.get('id')
         new_node = next(
-            (n for n in new_categories['structural_nodes'] if n.get('id') == old_id),
-            None
+            (n for n in new_categories['structural_nodes'] if n.get('id') == old_id), None
         )
         if new_node:
             old_data = old_node.get('data', {})
             new_data = new_node.get('data', {})
 
-            if (old_data.get('scope') != new_data.get('scope') or
-                    old_data.get('queryTarget') != new_data.get('queryTarget')):
+            if old_data.get('scope') != new_data.get('scope') or old_data.get(
+                'queryTarget'
+            ) != new_data.get('queryTarget'):
                 is_major = True
-                changes.append(f"Modified class node '{new_data.get('className', 'unknown')}' properties")
+                changes.append(
+                    f"Modified class node '{new_data.get('className', 'unknown')}' properties"
+                )
 
     # --- Filter checks (minor version) ---
 
@@ -209,23 +210,20 @@ def detect_version_change_type(
         is_minor = True
         diff = new_filter_count - old_filter_count
         if diff > 0:
-            changes.append(f"Added {diff} filter node(s)")
+            changes.append(f'Added {diff} filter node(s)')
         else:
-            changes.append(f"Removed {abs(diff)} filter node(s)")
+            changes.append(f'Removed {abs(diff)} filter node(s)')
 
     for old_node in old_categories['filter_nodes']:
         old_id = old_node.get('id')
-        new_node = next(
-            (n for n in new_categories['filter_nodes'] if n.get('id') == old_id),
-            None
-        )
+        new_node = next((n for n in new_categories['filter_nodes'] if n.get('id') == old_id), None)
         if new_node:
             old_filters = old_node.get('data', {}).get('filters', [])
             new_filters = new_node.get('data', {}).get('filters', [])
 
             if old_filters != new_filters:
                 is_minor = True
-                changes.append("Modified filter conditions")
+                changes.append('Modified filter conditions')
 
     # --- Post-processor checks (minor version) ---
 
@@ -236,15 +234,14 @@ def detect_version_change_type(
         is_minor = True
         diff = new_processor_count - old_processor_count
         if diff > 0:
-            changes.append(f"Added {diff} post-processor node(s)")
+            changes.append(f'Added {diff} post-processor node(s)')
         else:
-            changes.append(f"Removed {abs(diff)} post-processor node(s)")
+            changes.append(f'Removed {abs(diff)} post-processor node(s)')
 
     for old_node in old_categories['processor_nodes']:
         old_id = old_node.get('id')
         new_node = next(
-            (n for n in new_categories['processor_nodes'] if n.get('id') == old_id),
-            None
+            (n for n in new_categories['processor_nodes'] if n.get('id') == old_id), None
         )
         if new_node:
             old_processors = old_node.get('data', {}).get('processors', [])
@@ -252,7 +249,7 @@ def detect_version_change_type(
 
             if old_processors != new_processors:
                 is_minor = True
-                changes.append("Modified post-processor configuration")
+                changes.append('Modified post-processor configuration')
 
     if is_major:
         return 'major', changes
@@ -262,11 +259,7 @@ def detect_version_change_type(
         return 'none', ['No changes detected']
 
 
-def increment_version(
-    current_major: int,
-    current_minor: int,
-    change_type: str
-) -> Tuple[int, int]:
+def increment_version(current_major: int, current_minor: int, change_type: str) -> Tuple[int, int]:
     """Apply a major or minor bump to the current version numbers.
 
     Major bump resets minor to 0 — same convention as semver. So v1.5
@@ -285,7 +278,7 @@ def create_version_history_entry(
     version_hash: str,
     changes: List[str],
     user_id: Optional[int] = None,
-    username: Optional[str] = None
+    username: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build the dict that gets appended to SavedQuery.version_history.
 
@@ -304,4 +297,4 @@ def create_version_history_entry(
 
 def format_version(major: int, minor: int) -> str:
     """Turn version numbers into a readable string like 'v2.1'."""
-    return f"v{major}.{minor}"
+    return f'v{major}.{minor}'

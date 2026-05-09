@@ -22,8 +22,8 @@ from queries.services.optimizer import (
 # Helpers — build minimal React Flow canvas structures
 # ======================================================================
 
-def _class_node(node_id, class_name, scope='self', property_include='all',
-                supplemental_data=None):
+
+def _class_node(node_id, class_name, scope='self', property_include='all', supplemental_data=None):
     data = {'className': class_name, 'scope': scope, 'propertyInclude': property_include}
     if supplemental_data:
         data['supplementalData'] = supplemental_data
@@ -70,9 +70,9 @@ def _flow(nodes, edges):
 # QueryIntent — Parsing
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestQueryIntentParsing:
-
     def test_single_class_node(self):
         flow = _flow(
             [_class_node('c1', 'fvTenant'), _output_node()],
@@ -84,14 +84,14 @@ class TestQueryIntentParsing:
 
     def test_no_class_node_raises(self):
         flow = _flow([_output_node()], [])
-        with pytest.raises(ValueError, match="No valid ClassNode"):
+        with pytest.raises(ValueError, match='No valid ClassNode'):
             QueryIntent(flow)
 
     def test_class_node_without_class_name_raises(self):
         node = _class_node('c1', 'fvTenant')
         node['data']['className'] = ''
         flow = _flow([node, _output_node()], [_edge('e1', 'c1', 'out')])
-        with pytest.raises(ValueError, match="className"):
+        with pytest.raises(ValueError, match='className'):
             QueryIntent(flow)
 
     def test_two_class_chain(self):
@@ -155,9 +155,9 @@ class TestQueryIntentParsing:
 # QueryIntent — Filter Detection
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestQueryIntentFilters:
-
     def test_filter_connected_to_class(self):
         """ClassNode → FilterNode should be detected"""
         flow = _flow(
@@ -226,9 +226,9 @@ class TestQueryIntentFilters:
 # QueryIntent — DN Construction
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestQueryIntentDN:
-
     def test_can_build_dn_single_class_with_eq_filter(self):
         flow = _flow(
             [
@@ -340,15 +340,19 @@ class TestQueryIntentDN:
 # MOQueryStrategy
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestMOQueryStrategy:
-
     def _intent(self, nodes, edges):
         return QueryIntent(_flow(nodes, edges))
 
     def test_can_handle_with_full_dn(self):
         intent = self._intent(
-            [_class_node('c1', 'fvTenant'), _filter_node('f1', 'name', 'eq', 'prod'), _output_node()],
+            [
+                _class_node('c1', 'fvTenant'),
+                _filter_node('f1', 'name', 'eq', 'prod'),
+                _output_node(),
+            ],
             [_edge('e1', 'c1', 'f1'), _edge('e2', 'f1', 'out')],
         )
         strategy = MOQueryStrategy()
@@ -364,7 +368,11 @@ class TestMOQueryStrategy:
 
     def test_execute_full_dn(self):
         intent = self._intent(
-            [_class_node('c1', 'fvTenant'), _filter_node('f1', 'name', 'eq', 'prod'), _output_node()],
+            [
+                _class_node('c1', 'fvTenant'),
+                _filter_node('f1', 'name', 'eq', 'prod'),
+                _output_node(),
+            ],
             [_edge('e1', 'c1', 'f1'), _edge('e2', 'f1', 'out')],
         )
         strategy = MOQueryStrategy()
@@ -423,8 +431,7 @@ class TestMOQueryStrategy:
     def test_execute_with_supplemental_data(self):
         intent = self._intent(
             [
-                _class_node('c1', 'fvTenant',
-                            supplemental_data={'health': True, 'faults': True}),
+                _class_node('c1', 'fvTenant', supplemental_data={'health': True, 'faults': True}),
                 _filter_node('f1', 'name', 'eq', 'prod'),
                 _output_node(),
             ],
@@ -438,7 +445,11 @@ class TestMOQueryStrategy:
 
     def test_execute_with_pagination(self):
         flow = _flow(
-            [_class_node('c1', 'fvTenant'), _filter_node('f1', 'name', 'eq', 'prod'), _output_node()],
+            [
+                _class_node('c1', 'fvTenant'),
+                _filter_node('f1', 'name', 'eq', 'prod'),
+                _output_node(),
+            ],
             [_edge('e1', 'c1', 'f1'), _edge('e2', 'f1', 'out')],
         )
         intent = QueryIntent(flow, enable_pagination=True, page=2, page_size=25)
@@ -449,7 +460,11 @@ class TestMOQueryStrategy:
 
     def test_estimate_cost(self):
         intent = self._intent(
-            [_class_node('c1', 'fvTenant'), _filter_node('f1', 'name', 'eq', 'prod'), _output_node()],
+            [
+                _class_node('c1', 'fvTenant'),
+                _filter_node('f1', 'name', 'eq', 'prod'),
+                _output_node(),
+            ],
             [_edge('e1', 'c1', 'f1'), _edge('e2', 'f1', 'out')],
         )
         strategy = MOQueryStrategy()
@@ -458,12 +473,30 @@ class TestMOQueryStrategy:
     def test_operator_expressions(self):
         """Test all operator expression builders"""
         strategy = MOQueryStrategy()
-        assert strategy._build_operator_expression('eq', 'fvTenant.name', 'prod') == 'eq(fvTenant.name,"prod")'
-        assert strategy._build_operator_expression('ne', 'fvTenant.name', 'prod') == 'ne(fvTenant.name,"prod")'
-        assert strategy._build_operator_expression('gt', 'fvTenant.name', '5') == 'gt(fvTenant.name,"5")'
-        assert strategy._build_operator_expression('lt', 'fvTenant.name', '5') == 'lt(fvTenant.name,"5")'
-        assert strategy._build_operator_expression('ge', 'fvTenant.name', '5') == 'ge(fvTenant.name,"5")'
-        assert strategy._build_operator_expression('le', 'fvTenant.name', '5') == 'le(fvTenant.name,"5")'
+        assert (
+            strategy._build_operator_expression('eq', 'fvTenant.name', 'prod')
+            == 'eq(fvTenant.name,"prod")'
+        )
+        assert (
+            strategy._build_operator_expression('ne', 'fvTenant.name', 'prod')
+            == 'ne(fvTenant.name,"prod")'
+        )
+        assert (
+            strategy._build_operator_expression('gt', 'fvTenant.name', '5')
+            == 'gt(fvTenant.name,"5")'
+        )
+        assert (
+            strategy._build_operator_expression('lt', 'fvTenant.name', '5')
+            == 'lt(fvTenant.name,"5")'
+        )
+        assert (
+            strategy._build_operator_expression('ge', 'fvTenant.name', '5')
+            == 'ge(fvTenant.name,"5")'
+        )
+        assert (
+            strategy._build_operator_expression('le', 'fvTenant.name', '5')
+            == 'le(fvTenant.name,"5")'
+        )
 
     def test_contains_operator(self):
         strategy = MOQueryStrategy()
@@ -485,9 +518,9 @@ class TestMOQueryStrategy:
 # ClassQueryStrategy
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestClassQueryStrategy:
-
     def _intent(self, nodes, edges):
         return QueryIntent(_flow(nodes, edges))
 
@@ -572,16 +605,20 @@ class TestClassQueryStrategy:
 # QueryExecutor — Strategy Selection
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestQueryExecutor:
-
     def _intent(self, nodes, edges):
         return QueryIntent(_flow(nodes, edges))
 
     def test_selects_mo_when_dn_available(self):
         """MO strategy should be selected when full DN can be built"""
         intent = self._intent(
-            [_class_node('c1', 'fvTenant'), _filter_node('f1', 'name', 'eq', 'prod'), _output_node()],
+            [
+                _class_node('c1', 'fvTenant'),
+                _filter_node('f1', 'name', 'eq', 'prod'),
+                _output_node(),
+            ],
             [_edge('e1', 'c1', 'f1'), _edge('e2', 'f1', 'out')],
         )
         executor = QueryExecutor()
@@ -645,9 +682,9 @@ class TestQueryExecutor:
 # Pipeline edge skipping
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestPipelineEdgeSkipping:
-
     def test_pipeline_edge_skipped_in_chain_traversal(self):
         """Pipeline edges should not be followed when building class chain"""
         flow = _flow(
@@ -658,8 +695,7 @@ class TestPipelineEdgeSkipping:
             ],
             [
                 # Pipeline edge (not containment) between c1 and c2
-                {'id': 'pe1', 'source': 'c1', 'target': 'c2',
-                 'data': {'edgeType': 'pipeline'}},
+                {'id': 'pe1', 'source': 'c1', 'target': 'c2', 'data': {'edgeType': 'pipeline'}},
                 _edge('e2', 'c2', 'out'),
             ],
         )

@@ -22,6 +22,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Auto-discover tasks in every installed Django app's tasks.py
 from django.conf import settings
+
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 # Celery Beat Schedule - Enterprise Task Management
@@ -38,7 +39,6 @@ app.conf.beat_schedule = {
         'task': 'queries.check_scheduled_tasks',
         'schedule': crontab(minute='*'),  # Every minute
     },
-
     # ============================================================================
     # Real-time Monitoring (CRITICAL - AWX Status Polling)
     # ============================================================================
@@ -50,7 +50,6 @@ app.conf.beat_schedule = {
         'task': 'awx.sync_running_jobs',
         'schedule': 30.0,  # Every 30 seconds - event consumers handle real-time updates
     },
-
     # ============================================================================
     # Maintenance Tasks
     # ============================================================================
@@ -59,38 +58,32 @@ app.conf.beat_schedule = {
         'task': 'awx.cleanup_stale_executions',
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
     },
-
     # Purge old notifications based on retention settings
     'cleanup-old-notifications': {
         'task': 'notifications.cleanup_old_notifications',
         'schedule': crontab(hour=4, minute=0),  # Daily at 04:00
     },
-
     # Flush notification digests for users with batching enabled
     'flush-notification-digests': {
         'task': 'notifications.flush_notification_digests',
         'schedule': 60.0,  # Every 60 seconds
     },
-
     # Escalate unread critical notifications to designated targets
     'check-escalations': {
         'task': 'notifications.check_escalations',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
-
     # Cleanup expired password reset codes (daily at 05:00)
     'cleanup-expired-reset-codes': {
         'task': 'users.cleanup_expired_reset_codes',
         'schedule': crontab(hour=5, minute=0),
     },
-
     # Sweep ephemeral workflow_job_template clones that the immediate
     # post-terminal hook (delete_workflow_clone) failed to remove.
     'cleanup-orphaned-workflow-clones': {
         'task': 'awx.cleanup_orphaned_workflow_clones',
         'schedule': crontab(minute=0),  # Hourly on the hour
     },
-
 }
 
 # Celery Configuration
@@ -101,11 +94,9 @@ app.conf.update(
     result_serializer='json',
     timezone='UTC',
     enable_utc=True,
-
     # Result backend
     result_backend='redis://redis:6379/0',
     result_expires=3600,  # Results expire after 1 hour
-
     # Task routing — dedicated queues per domain
     task_routes={
         # Critical path — query execution
@@ -127,14 +118,12 @@ app.conf.update(
         'users.delete_recovery_user': {'queue': 'maintenance'},
         'users.cleanup_expired_reset_codes': {'queue': 'maintenance'},
     },
-
     # Worker settings
     worker_prefetch_multiplier=4,
     worker_max_tasks_per_child=1000,
-
     # Task time limits
     task_soft_time_limit=300,  # 5 minutes soft limit
-    task_time_limit=600,       # 10 minutes hard limit
+    task_time_limit=600,  # 10 minutes hard limit
 )
 
 

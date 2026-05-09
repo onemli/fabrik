@@ -34,27 +34,22 @@ SINGLE_WORD_ALIASES: dict[str, tuple[str, ...]] = {
     'subnet': ('fvSubnet',),
     'endpoint': ('fvCEp', 'fvIp'),
     'mac': ('fvCEp',),
-
     # Contracts / policy
     'contract': ('vzBrCP',),
     'subject': ('vzSubj',),
     'taboo': ('vzTaboo',),
-
     # L3Out
     'l3out': ('l3extOut',),
-
     # Fabric / access policies
     'aaep': ('infraAttEntityP',),
     'leaf': ('fabricNode',),
     'spine': ('fabricNode',),
     'pod': ('fabricPod',),
     'fabric': ('fabricInst',),
-
     # Routing protocols
     'bgp': ('bgpPeerP', 'bgpPeerEntry', 'bgpInst'),
     'ospf': ('ospfIfP', 'ospfInst'),
     'eigrp': ('eigrpIfP',),
-
     # Misc commonly-asked
     'image': ('firmwareFirmware',),
     'firmware': ('firmwareFirmware',),
@@ -74,10 +69,8 @@ _MULTI_WORD_RAW: dict[str, tuple[str, ...]] = {
     'application epg': ('fvAEPg',),
     'app epg': ('fvAEPg',),
     'useg epg': ('fvAEPg',),
-
     'filter entry': ('vzEntry',),
     'oob contract': ('vzOOBBrCP',),
-
     'l3 out': ('l3extOut',),
     'external epg': ('l3extInstP',),
     'l3 epg': ('l3extInstP',),
@@ -87,7 +80,6 @@ _MULTI_WORD_RAW: dict[str, tuple[str, ...]] = {
     'logical interface': ('l3extLIfP',),
     'bgp peer': ('bgpPeerP', 'bgpPeerEntry'),
     'ospf interface': ('ospfIfP',),
-
     'attachable entity profile': ('infraAttEntityP',),
     'access entity profile': ('infraAttEntityP',),
     'vlan pool': ('fvnsVlanInstP',),
@@ -103,7 +95,6 @@ _MULTI_WORD_RAW: dict[str, tuple[str, ...]] = {
     'pod profile': ('fabricPodP',),
     'interface policy group': ('infraAccPortGrp', 'infraAccBndlGrp'),
     'access policy': ('infraInfra',),
-
     'config snapshot': ('configSnapshot',),
     'config export': ('configExportP',),
     'config import': ('configImportP',),

@@ -57,78 +57,66 @@ class UserProfile(models.Model):
         on_delete=models.CASCADE,
         related_name='profile',
         primary_key=True,
-        help_text="Associated user account"
+        help_text='Associated user account',
     )
 
     display_timezone = models.CharField(
         max_length=50,
         choices=TIMEZONE_CHOICES,
         default=getattr(settings, 'DEFAULT_USER_TIMEZONE', 'Europe/Istanbul'),
-        help_text="Timezone for displaying dates and times in the UI"
+        help_text='Timezone for displaying dates and times in the UI',
     )
 
     date_format = models.CharField(
         max_length=20,
         choices=DATE_FORMAT_CHOICES,
         default='DD/MM/YYYY',
-        help_text="Preferred date format"
+        help_text='Preferred date format',
     )
 
     time_format = models.CharField(
         max_length=10,
         choices=TIME_FORMAT_CHOICES,
         default='24h',
-        help_text="Preferred time format (12-hour or 24-hour)"
+        help_text='Preferred time format (12-hour or 24-hour)',
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When this profile was created"
-    )
+    created_at = models.DateTimeField(auto_now_add=True, help_text='When this profile was created')
 
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        help_text="When this profile was last updated"
-    )
+    updated_at = models.DateTimeField(auto_now=True, help_text='When this profile was last updated')
 
     failed_login_attempts = models.PositiveIntegerField(
-        default=0,
-        help_text="Consecutive failed login attempts"
+        default=0, help_text='Consecutive failed login attempts'
     )
 
     locked_until = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Account locked until this datetime (None = not locked)"
+        null=True, blank=True, help_text='Account locked until this datetime (None = not locked)'
     )
 
     session_timeout_minutes = models.PositiveIntegerField(
-        default=480,
-        help_text="Auto-logout after this many minutes of inactivity (0 = never)"
+        default=480, help_text='Auto-logout after this many minutes of inactivity (0 = never)'
     )
 
     # Email verification — soft, never blocks login
     email_verified = models.BooleanField(
-        default=False,
-        help_text="Whether the user has verified their email address"
+        default=False, help_text='Whether the user has verified their email address'
     )
     email_verified_at = models.DateTimeField(
-        null=True, blank=True,
-        help_text="When the email was verified"
+        null=True, blank=True, help_text='When the email was verified'
     )
 
     # MFA / TOTP
     totp_secret = models.CharField(
-        max_length=64, blank=True, default='',
-        help_text="Base32-encoded TOTP secret (empty = MFA not set up)"
+        max_length=64,
+        blank=True,
+        default='',
+        help_text='Base32-encoded TOTP secret (empty = MFA not set up)',
     )
     totp_enabled = models.BooleanField(
-        default=False,
-        help_text="Whether TOTP MFA is active for this user"
+        default=False, help_text='Whether TOTP MFA is active for this user'
     )
     backup_codes = models.JSONField(
-        default=list, blank=True,
-        help_text="Hashed backup codes for MFA recovery"
+        default=list, blank=True, help_text='Hashed backup codes for MFA recovery'
     )
 
     AUTH_SOURCE_LOCAL = 'local'
@@ -141,7 +129,7 @@ class UserProfile(models.Model):
         max_length=10,
         choices=AUTH_SOURCE_CHOICES,
         default=AUTH_SOURCE_LOCAL,
-        help_text="Where this user authenticates — local Django DB or LDAP"
+        help_text='Where this user authenticates — local Django DB or LDAP',
     )
 
     # Faz 3.4 — opt-out toggle for the org-wide "Trending classes" aggregate
@@ -149,8 +137,7 @@ class UserProfile(models.Model):
     # names (no per-user breakdown is exposed). Users can flip it off in
     # Settings; the trending query then ignores their RecentClass rows.
     share_class_telemetry = models.BooleanField(
-        default=True,
-        help_text="Include this user's class usage in org-wide trending aggregates"
+        default=True, help_text="Include this user's class usage in org-wide trending aggregates"
     )
 
     class Meta:
@@ -163,7 +150,7 @@ class UserProfile(models.Model):
         return f"{self.user.username}'s profile"
 
     def __repr__(self):
-        return f"<UserProfile: {self.user.username} (TZ: {self.display_timezone})>"
+        return f'<UserProfile: {self.user.username} (TZ: {self.display_timezone})>'
 
     # --- TOTP helpers ---
 
@@ -205,10 +192,7 @@ class UserProfile(models.Model):
     def generate_backup_codes(self, count=8) -> list[str]:
         """Generate backup codes, store their hashes, return plain texts."""
         alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-        plain_codes = [
-            ''.join(secrets.choice(alphabet) for _ in range(8))
-            for _ in range(count)
-        ]
+        plain_codes = [''.join(secrets.choice(alphabet) for _ in range(8)) for _ in range(count)]
         self.backup_codes = [make_password(c) for c in plain_codes]
         self.save(update_fields=['backup_codes'])
         return plain_codes
@@ -236,10 +220,10 @@ class PasswordResetCode(models.Model):
     )
     code_hash = models.CharField(
         max_length=128,
-        help_text="Hashed reset code (never store plain text)",
+        help_text='Hashed reset code (never store plain text)',
     )
     expires_at = models.DateTimeField(
-        help_text="Code expires after this datetime",
+        help_text='Code expires after this datetime',
     )
     used = models.BooleanField(default=False)
     created_by = models.ForeignKey(
@@ -247,7 +231,7 @@ class PasswordResetCode(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_reset_codes',
-        help_text="Admin who generated this code",
+        help_text='Admin who generated this code',
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -259,7 +243,7 @@ class PasswordResetCode(models.Model):
         ]
 
     def __str__(self):
-        return f"ResetCode for {self.user.username} (expires {self.expires_at})"
+        return f'ResetCode for {self.user.username} (expires {self.expires_at})'
 
     @staticmethod
     def generate_code() -> str:
@@ -310,21 +294,27 @@ class GroupQuota(models.Model):
 
     # Resource limits (0 = unlimited)
     max_saved_queries = models.PositiveIntegerField(
-        default=0, help_text="Max saved queries (0=unlimited)")
+        default=0, help_text='Max saved queries (0=unlimited)'
+    )
     max_scheduled_tasks = models.PositiveIntegerField(
-        default=0, help_text="Max scheduled tasks (0=unlimited)")
+        default=0, help_text='Max scheduled tasks (0=unlimited)'
+    )
     max_apic_connections = models.PositiveIntegerField(
-        default=0, help_text="Max APIC connections (0=unlimited)")
+        default=0, help_text='Max APIC connections (0=unlimited)'
+    )
     max_awx_requests_daily = models.PositiveIntegerField(
-        default=0, help_text="Max AWX requests per day (0=unlimited)")
-    max_awx_concurrent = models.PositiveIntegerField(
-        default=5, help_text="Max concurrent AWX jobs")
+        default=0, help_text='Max AWX requests per day (0=unlimited)'
+    )
+    max_awx_concurrent = models.PositiveIntegerField(default=5, help_text='Max concurrent AWX jobs')
     max_query_results = models.PositiveIntegerField(
-        default=0, help_text="Max result rows returned (0=unlimited)")
+        default=0, help_text='Max result rows returned (0=unlimited)'
+    )
     max_export_rows = models.PositiveIntegerField(
-        default=50000, help_text="Max CSV/JSON export rows")
+        default=50000, help_text='Max CSV/JSON export rows'
+    )
     query_execution_daily = models.PositiveIntegerField(
-        default=0, help_text="Max background query executions per day (0=unlimited)")
+        default=0, help_text='Max background query executions per day (0=unlimited)'
+    )
 
     # Feature toggles
     can_create_queries = models.BooleanField(default=True)
@@ -338,7 +328,8 @@ class GroupQuota(models.Model):
 
     # AI analysis daily limit (0 = unlimited)
     ai_analysis_daily = models.PositiveIntegerField(
-        default=0, help_text="Max AI analyses per day (0=unlimited)")
+        default=0, help_text='Max AI analyses per day (0=unlimited)'
+    )
 
     class Meta:
         db_table = 'users_group_quota'
@@ -346,7 +337,7 @@ class GroupQuota(models.Model):
         verbose_name_plural = 'Group Quotas'
 
     def __str__(self):
-        return f"Quota for {self.group.name}"
+        return f'Quota for {self.group.name}'
 
 
 @receiver(post_save, sender=User)

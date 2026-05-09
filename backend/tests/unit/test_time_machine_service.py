@@ -2,6 +2,7 @@
 Unit tests for Time Machine Service
 Tests snapshot capture, duplicate detection, and comparison
 """
+
 import pytest
 from time_machine.services import time_machine_service
 from time_machine.models import QueryExecutionSnapshot, TimeMachineSettings
@@ -23,8 +24,8 @@ class TestTimeMachineSnapshotCapture:
             'totalCount': '2',
             'imdata': [
                 {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
-                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}}
-            ]
+                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
+            ],
         }
 
         result = time_machine_service.capture_snapshot(
@@ -34,7 +35,7 @@ class TestTimeMachineSnapshotCapture:
             apic_connection_name=connection.name,
             saved_query_id=query.id,
             query_name=query.name,
-            class_name='fvTenant'
+            class_name='fvTenant',
         )
 
         assert result['success'] is True
@@ -55,9 +56,7 @@ class TestTimeMachineSnapshotCapture:
 
         result_data = {
             'totalCount': '1',
-            'imdata': [
-                {'fvBD': {'attributes': {'name': 'bd1', 'dn': 'uni/tn-tenant1/BD-bd1'}}}
-            ]
+            'imdata': [{'fvBD': {'attributes': {'name': 'bd1', 'dn': 'uni/tn-tenant1/BD-bd1'}}}],
         }
 
         result = time_machine_service.capture_snapshot(
@@ -67,7 +66,7 @@ class TestTimeMachineSnapshotCapture:
             apic_connection_name=connection.name,
             saved_query_id=None,
             query_name=None,
-            class_name='fvBD'
+            class_name='fvBD',
         )
 
         assert result['success'] is True
@@ -90,7 +89,7 @@ class TestTimeMachineSnapshotCapture:
             apic_connection_name=connection.name,
             saved_query_id=query.id,
             query_name=query.name,
-            execution_time_ms=1500
+            execution_time_ms=1500,
         )
 
         assert result['success'] is True
@@ -100,6 +99,7 @@ class TestTimeMachineSnapshotCapture:
     def test_capture_snapshot_with_scheduled_task_info(self):
         """Test capturing snapshot from scheduled task"""
         import uuid
+
         user = UserFactory()
         query = TimeMachineEnabledQueryFactory(created_by=user)
         connection = APICConnectionFactory(created_by=user)
@@ -116,7 +116,7 @@ class TestTimeMachineSnapshotCapture:
             saved_query_id=query.id,
             query_name=query.name,
             scheduled_task_id=task_id,
-            scheduled_task_execution_id=execution_id
+            scheduled_task_execution_id=execution_id,
         )
 
         assert result['success'] is True
@@ -138,9 +138,7 @@ class TestTimeMachineDuplicateDetection:
 
         result_data = {
             'totalCount': '1',
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}],
         }
 
         # First snapshot
@@ -150,7 +148,7 @@ class TestTimeMachineDuplicateDetection:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         assert result1['success'] is True
@@ -163,7 +161,7 @@ class TestTimeMachineDuplicateDetection:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         assert result2['success'] is True
@@ -182,17 +180,15 @@ class TestTimeMachineDuplicateDetection:
 
         result_data1 = {
             'totalCount': '1',
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}],
         }
 
         result_data2 = {
             'totalCount': '2',
             'imdata': [
                 {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
-                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}}
-            ]
+                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
+            ],
         }
 
         # First snapshot
@@ -202,7 +198,7 @@ class TestTimeMachineDuplicateDetection:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         # Second snapshot with different data
@@ -212,7 +208,7 @@ class TestTimeMachineDuplicateDetection:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         assert result1['success'] is True
@@ -236,9 +232,7 @@ class TestTimeMachineDuplicateDetection:
 
         result_data = {
             'totalCount': '1',
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}],
         }
 
         # Create two identical snapshots
@@ -248,7 +242,7 @@ class TestTimeMachineDuplicateDetection:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         result2 = time_machine_service.capture_snapshot(
@@ -257,7 +251,7 @@ class TestTimeMachineDuplicateDetection:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         assert result1['success'] is True
@@ -292,7 +286,7 @@ class TestTimeMachineSizeLimits:
             'imdata': [
                 {'fvTenant': {'attributes': {'name': f'tenant{i}', 'dn': f'uni/tn-tenant{i}'}}}
                 for i in range(100)
-            ]
+            ],
         }
 
         result = time_machine_service.capture_snapshot(
@@ -301,7 +295,7 @@ class TestTimeMachineSizeLimits:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         assert result['success'] is False
@@ -326,7 +320,7 @@ class TestTimeMachineSizeLimits:
             'imdata': [
                 {'fvTenant': {'attributes': {'name': f'tenant{i}', 'dn': f'uni/tn-tenant{i}'}}}
                 for i in range(100)
-            ]
+            ],
         }
 
         result = time_machine_service.capture_snapshot(
@@ -335,7 +329,7 @@ class TestTimeMachineSizeLimits:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         assert result['success'] is True
@@ -353,9 +347,7 @@ class TestTimeMachineComparison:
         connection = APICConnectionFactory(created_by=user)
 
         result_data = {
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}]
         }
 
         # Create two snapshots with same data
@@ -365,7 +357,7 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         # Disable duplicate detection for second snapshot
@@ -379,13 +371,12 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         # Compare
         comparison = time_machine_service.compare_snapshots(
-            snap1_result['snapshot_id'],
-            snap2_result['snapshot_id']
+            snap1_result['snapshot_id'], snap2_result['snapshot_id']
         )
 
         assert comparison['identical'] is True
@@ -401,15 +392,13 @@ class TestTimeMachineComparison:
         connection = APICConnectionFactory(created_by=user)
 
         result_data1 = {
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}]
         }
 
         result_data2 = {
             'imdata': [
                 {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
-                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}}
+                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
             ]
         }
 
@@ -419,7 +408,7 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         snap2_result = time_machine_service.capture_snapshot(
@@ -428,12 +417,11 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         comparison = time_machine_service.compare_snapshots(
-            snap1_result['snapshot_id'],
-            snap2_result['snapshot_id']
+            snap1_result['snapshot_id'], snap2_result['snapshot_id']
         )
 
         assert comparison['identical'] is False
@@ -450,14 +438,12 @@ class TestTimeMachineComparison:
         result_data1 = {
             'imdata': [
                 {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
-                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}}
+                {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
             ]
         }
 
         result_data2 = {
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}]
         }
 
         snap1_result = time_machine_service.capture_snapshot(
@@ -466,7 +452,7 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         snap2_result = time_machine_service.capture_snapshot(
@@ -475,12 +461,11 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         comparison = time_machine_service.compare_snapshots(
-            snap1_result['snapshot_id'],
-            snap2_result['snapshot_id']
+            snap1_result['snapshot_id'], snap2_result['snapshot_id']
         )
 
         assert comparison['identical'] is False
@@ -495,13 +480,29 @@ class TestTimeMachineComparison:
 
         result_data1 = {
             'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1', 'descr': 'Old description'}}}
+                {
+                    'fvTenant': {
+                        'attributes': {
+                            'name': 'tenant1',
+                            'dn': 'uni/tn-tenant1',
+                            'descr': 'Old description',
+                        }
+                    }
+                }
             ]
         }
 
         result_data2 = {
             'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1', 'descr': 'New description'}}}
+                {
+                    'fvTenant': {
+                        'attributes': {
+                            'name': 'tenant1',
+                            'dn': 'uni/tn-tenant1',
+                            'descr': 'New description',
+                        }
+                    }
+                }
             ]
         }
 
@@ -511,7 +512,7 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         snap2_result = time_machine_service.capture_snapshot(
@@ -520,12 +521,11 @@ class TestTimeMachineComparison:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query.id,
-            query_name=query.name
+            query_name=query.name,
         )
 
         comparison = time_machine_service.compare_snapshots(
-            snap1_result['snapshot_id'],
-            snap2_result['snapshot_id']
+            snap1_result['snapshot_id'], snap2_result['snapshot_id']
         )
 
         assert comparison['identical'] is False
@@ -556,7 +556,7 @@ class TestTimeMachineQueries:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query1.id,
-            query_name=query1.name
+            query_name=query1.name,
         )
 
         time_machine_service.capture_snapshot(
@@ -565,7 +565,7 @@ class TestTimeMachineQueries:
             apic_connection_id=connection.id,
             apic_connection_name=connection.name,
             saved_query_id=query2.id,
-            query_name=query2.name
+            query_name=query2.name,
         )
 
         queries = time_machine_service.list_queries_with_snapshots(user.id)
@@ -590,7 +590,7 @@ class TestTimeMachineQueries:
                 apic_connection_id=connection.id,
                 apic_connection_name=connection.name,
                 saved_query_id=query.id,
-                query_name=query.name
+                query_name=query.name,
             )
             # Disable duplicate detection for subsequent snapshots
             settings = TimeMachineSettings.get_for_user(user)
@@ -614,9 +614,7 @@ class TestTimeMachineQueries:
 
         result_data = {
             'totalCount': '1',
-            'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]
+            'imdata': [{'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}],
         }
 
         snap_result = time_machine_service.capture_snapshot(
@@ -626,7 +624,7 @@ class TestTimeMachineQueries:
             apic_connection_name=connection.name,
             saved_query_id=query.id,
             query_name=query.name,
-            execution_time_ms=1234
+            execution_time_ms=1234,
         )
 
         detail = time_machine_service.get_snapshot_detail(snap_result['snapshot_id'])
@@ -705,6 +703,7 @@ class TestAttributeTimelineJsonPath:
     def _seed(self, query, connection, user, payloads):
         from datetime import timedelta
         from django.utils import timezone
+
         snaps = []
         for i, payload in enumerate(payloads):
             snap = QueryExecutionSnapshot.objects.create(
@@ -712,7 +711,9 @@ class TestAttributeTimelineJsonPath:
                 query_name=query.name,
                 class_name='fvTenant',
                 result_data=payload,
-                result_count=len(payload.get('imdata', payload) if isinstance(payload, dict) else payload),
+                result_count=len(
+                    payload.get('imdata', payload) if isinstance(payload, dict) else payload
+                ),
                 result_size_bytes=100,
                 executed_by=user,
                 apic_connection_id=connection.id,
@@ -730,11 +731,24 @@ class TestAttributeTimelineJsonPath:
         query = TimeMachineEnabledQueryFactory(created_by=user)
         connection = APICConnectionFactory(created_by=user)
         target = 'uni/tn-prod'
-        self._seed(query, connection, user, [
-            {'imdata': [{'fvTenant': {'attributes': {'dn': target, 'name': 'prod', 'descr': 'v1'}}}]},
-            {'imdata': [{'fvTenant': {'attributes': {'dn': target, 'name': 'prod', 'descr': 'v2'}}}]},
-            {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-other', 'name': 'other'}}}]},
-        ])
+        self._seed(
+            query,
+            connection,
+            user,
+            [
+                {
+                    'imdata': [
+                        {'fvTenant': {'attributes': {'dn': target, 'name': 'prod', 'descr': 'v1'}}}
+                    ]
+                },
+                {
+                    'imdata': [
+                        {'fvTenant': {'attributes': {'dn': target, 'name': 'prod', 'descr': 'v2'}}}
+                    ]
+                },
+                {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-other', 'name': 'other'}}}]},
+            ],
+        )
 
         result = time_machine_service.get_attribute_timeline(query.id, target, limit=10)
 
@@ -752,9 +766,14 @@ class TestAttributeTimelineJsonPath:
         query = TimeMachineEnabledQueryFactory(created_by=user)
         connection = APICConnectionFactory(created_by=user)
         target = 'uni/tn-flat'
-        self._seed(query, connection, user, [
-            [{'fvTenant': {'attributes': {'dn': target, 'name': 'flat'}}}],
-        ])
+        self._seed(
+            query,
+            connection,
+            user,
+            [
+                [{'fvTenant': {'attributes': {'dn': target, 'name': 'flat'}}}],
+            ],
+        )
 
         result = time_machine_service.get_attribute_timeline(query.id, target, limit=5)
 
@@ -766,10 +785,15 @@ class TestAttributeTimelineJsonPath:
         user = UserFactory()
         query = TimeMachineEnabledQueryFactory(created_by=user)
         connection = APICConnectionFactory(created_by=user)
-        self._seed(query, connection, user, [
-            {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-a'}}}]},
-            {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-b'}}}]},
-        ])
+        self._seed(
+            query,
+            connection,
+            user,
+            [
+                {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-a'}}}]},
+                {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-b'}}}]},
+            ],
+        )
 
         result = time_machine_service.get_attribute_timeline(query.id, 'uni/tn-missing', limit=5)
 

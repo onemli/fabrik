@@ -47,14 +47,19 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='clone-user', email='c@example.com', password='x',
+            username='clone-user',
+            email='c@example.com',
+            password='x',
         )
         self.category = TemplateCategory.objects.create(
-            name='Clone Cat', created_by=self.user,
+            name='Clone Cat',
+            created_by=self.user,
         )
         self.connection = AWXConnection.objects.create(
-            name='AWX', url='https://awx.example.com',
-            auth_type=AWXConnection.AUTH_TYPE_TOKEN, created_by=self.user,
+            name='AWX',
+            url='https://awx.example.com',
+            auth_type=AWXConnection.AUTH_TYPE_TOKEN,
+            created_by=self.user,
         )
         self.connection.set_token('t')
         self.connection.save()
@@ -77,11 +82,15 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
         # Reasonable defaults: AWX returns a fresh clone with id=12345.
         self.client.copy_workflow_template.return_value = (
-            True, {'id': 12345, 'name': 'cloned'}, None,
+            True,
+            {'id': 12345, 'name': 'cloned'},
+            None,
         )
         self.client.list_workflow_nodes.return_value = (True, [_node(1)], None)
         self.client.get_credential.return_value = (
-            True, {'credential_type': 42}, None,
+            True,
+            {'credential_type': 42},
+            None,
         )
         self.client.list_node_credentials.return_value = (True, [], None)
         self.client.associate_node_credential.return_value = (True, {}, None)
@@ -94,8 +103,11 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_clones_template_with_fabrik_prefixed_name(self):
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         self.client.copy_workflow_template.assert_called_once()
         source_id, name = self.client.copy_workflow_template.call_args.args
@@ -104,16 +116,22 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_credentials_attached_to_clone_nodes_only(self):
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         # list_workflow_nodes must be called with the CLONE id, not source.
         self.client.list_workflow_nodes.assert_called_once_with(12345)
 
     def test_clone_id_returned_in_launch_result(self):
         result = self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         self.assertTrue(result.success)
         self.assertEqual(result.clone_template_id, 12345)
@@ -122,8 +140,11 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_clone_kept_on_launch_success_for_reaper(self):
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         # The clone lives until JobMonitor's terminal-status hook deletes it.
         self.client.delete_workflow_template.assert_not_called()
@@ -132,8 +153,11 @@ class WorkflowCloneLaunchTestCase(TestCase):
         # Credentials are bound on nodes — passing them again at launch would
         # attach them to the workflow_job too (pointless noise).
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={'a': 1}, check_mode=True,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={'a': 1},
+            check_mode=True,
+            credentials=[99],
+            request_id=self.request_id,
         )
         kwargs = self.client.launch_workflow.call_args.kwargs
         self.assertEqual(kwargs['workflow_template_id'], 12345)
@@ -143,8 +167,11 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_no_credentials_still_clones_and_launches(self):
         result = self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[],
+            request_id=self.request_id,
         )
         self.assertTrue(result.success)
         self.client.copy_workflow_template.assert_called_once()
@@ -167,12 +194,13 @@ class WorkflowCloneLaunchTestCase(TestCase):
             (True, [_node(1), _node(2)], None),
         ]
 
-        with patch(
-            'awx.services.execution_engine.time.sleep'
-        ) as mock_sleep:
+        with patch('awx.services.execution_engine.time.sleep') as mock_sleep:
             self.engine._launch_workflow_via_clone(
-                self.template, extra_vars={}, check_mode=False,
-                credentials=[99], request_id=self.request_id,
+                self.template,
+                extra_vars={},
+                check_mode=False,
+                credentials=[99],
+                request_id=self.request_id,
             )
 
         # Polled three times, slept twice between attempts.
@@ -187,15 +215,18 @@ class WorkflowCloneLaunchTestCase(TestCase):
     def test_polling_returns_immediately_when_nodes_present(self):
         # First call already returns nodes — no polling needed.
         self.client.list_workflow_nodes.return_value = (
-            True, [_node(1), _node(2), _node(3)], None,
+            True,
+            [_node(1), _node(2), _node(3)],
+            None,
         )
 
-        with patch(
-            'awx.services.execution_engine.time.sleep'
-        ) as mock_sleep:
+        with patch('awx.services.execution_engine.time.sleep') as mock_sleep:
             self.engine._launch_workflow_via_clone(
-                self.template, extra_vars={}, check_mode=False,
-                credentials=[99], request_id=self.request_id,
+                self.template,
+                extra_vars={},
+                check_mode=False,
+                credentials=[99],
+                request_id=self.request_id,
             )
 
         self.assertEqual(self.client.list_workflow_nodes.call_count, 1)
@@ -207,12 +238,13 @@ class WorkflowCloneLaunchTestCase(TestCase):
         # an empty workflow than crash the request entirely.
         self.client.list_workflow_nodes.return_value = (True, [], None)
 
-        with patch(
-            'awx.services.execution_engine.time.sleep'
-        ) as mock_sleep:
+        with patch('awx.services.execution_engine.time.sleep') as mock_sleep:
             result = self.engine._launch_workflow_via_clone(
-                self.template, extra_vars={}, check_mode=False,
-                credentials=[99], request_id=self.request_id,
+                self.template,
+                extra_vars={},
+                check_mode=False,
+                credentials=[99],
+                request_id=self.request_id,
             )
 
         # Polled the configured max number of times.
@@ -224,7 +256,8 @@ class WorkflowCloneLaunchTestCase(TestCase):
         # implementation sleeps after each attempt for simplicity, so we
         # accept either count as long as it matches the loop body).
         self.assertEqual(
-            mock_sleep.call_count, self.engine.CLONE_NODE_POLL_ATTEMPTS,
+            mock_sleep.call_count,
+            self.engine.CLONE_NODE_POLL_ATTEMPTS,
         )
         # No bind happened — but launch still ran and returned success.
         self.client.associate_node_credential.assert_not_called()
@@ -235,14 +268,19 @@ class WorkflowCloneLaunchTestCase(TestCase):
         # If AWX returns an HTTP error during polling, give up immediately
         # and let the caller's try/finally reap the clone.
         self.client.list_workflow_nodes.return_value = (
-            False, [], 'HTTP 500 Server Error',
+            False,
+            [],
+            'HTTP 500 Server Error',
         )
 
         with patch('awx.services.execution_engine.time.sleep'):
             with self.assertRaises(Exception) as ctx:
                 self.engine._launch_workflow_via_clone(
-                    self.template, extra_vars={}, check_mode=False,
-                    credentials=[99], request_id=self.request_id,
+                    self.template,
+                    extra_vars={},
+                    check_mode=False,
+                    credentials=[99],
+                    request_id=self.request_id,
                 )
 
         self.assertIn('HTTP 500', str(ctx.exception))
@@ -253,18 +291,25 @@ class WorkflowCloneLaunchTestCase(TestCase):
     # ── Eligibility filtering ──────────────────────────────────────────────
 
     def test_associates_only_on_job_template_nodes(self):
-        self.client.list_workflow_nodes.return_value = (True, [
-            _node(1, 'job'),
-            _node(2, 'project_update'),    # skip
-            _node(3, 'inventory_update'),  # skip
-            _node(4, 'workflow_approval'), # skip
-            _node(5, 'workflow_job'),      # skip (nested wf)
-            _node(6, 'job'),
-        ], None)
+        self.client.list_workflow_nodes.return_value = (
+            True,
+            [
+                _node(1, 'job'),
+                _node(2, 'project_update'),  # skip
+                _node(3, 'inventory_update'),  # skip
+                _node(4, 'workflow_approval'),  # skip
+                _node(5, 'workflow_job'),  # skip (nested wf)
+                _node(6, 'job'),
+            ],
+            None,
+        )
 
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
 
         called_node_ids = sorted(
@@ -276,15 +321,22 @@ class WorkflowCloneLaunchTestCase(TestCase):
         # Approval nodes and unattached nodes have no unified_job_template FK;
         # they cannot accept credentials and must be skipped before the AWX
         # eligibility query, otherwise associate would 400.
-        self.client.list_workflow_nodes.return_value = (True, [
-            _node(1, fk=200),     # has FK → eligible
-            _node(2, fk=None),    # approval / unattached → skip
-            _node(3, fk=300),     # has FK → eligible
-        ], None)
+        self.client.list_workflow_nodes.return_value = (
+            True,
+            [
+                _node(1, fk=200),  # has FK → eligible
+                _node(2, fk=None),  # approval / unattached → skip
+                _node(3, fk=300),  # has FK → eligible
+            ],
+            None,
+        )
 
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
 
         bound_node_ids = sorted(
@@ -297,14 +349,21 @@ class WorkflowCloneLaunchTestCase(TestCase):
         # FK but hasn't expanded summary_fields yet. We must still treat the
         # node as job-eligible — assuming approval would mean no credentials
         # ever bind on warm clones, which is exactly the bug we're fixing.
-        self.client.list_workflow_nodes.return_value = (True, [
-            _node(1, include_summary=False),   # FK present, no summary
-            _node(2, include_summary=False),
-        ], None)
+        self.client.list_workflow_nodes.return_value = (
+            True,
+            [
+                _node(1, include_summary=False),  # FK present, no summary
+                _node(2, include_summary=False),
+            ],
+            None,
+        )
 
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
 
         bound_node_ids = sorted(
@@ -316,11 +375,16 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_skips_node_with_existing_same_type_credential(self):
         self.client.list_node_credentials.return_value = (
-            True, [{'id': 500, 'credential_type': 42}], None,
+            True,
+            [{'id': 500, 'credential_type': 42}],
+            None,
         )
         self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         self.client.associate_node_credential.assert_not_called()
 
@@ -330,8 +394,11 @@ class WorkflowCloneLaunchTestCase(TestCase):
         self.client.list_workflow_nodes.return_value = (False, [], 'HTTP 500')
         with self.assertRaises(Exception):
             self.engine._launch_workflow_via_clone(
-                self.template, extra_vars={}, check_mode=False,
-                credentials=[99], request_id=self.request_id,
+                self.template,
+                extra_vars={},
+                check_mode=False,
+                credentials=[99],
+                request_id=self.request_id,
             )
         self.client.delete_workflow_template.assert_called_once_with(12345)
         self.client.launch_workflow.assert_not_called()
@@ -340,27 +407,38 @@ class WorkflowCloneLaunchTestCase(TestCase):
         self.client.get_credential.return_value = (False, {}, 'HTTP 404')
         with self.assertRaises(Exception):
             self.engine._launch_workflow_via_clone(
-                self.template, extra_vars={}, check_mode=False,
-                credentials=[99], request_id=self.request_id,
+                self.template,
+                extra_vars={},
+                check_mode=False,
+                credentials=[99],
+                request_id=self.request_id,
             )
         self.client.delete_workflow_template.assert_called_once_with(12345)
 
     def test_clone_deleted_when_associate_fails(self):
         self.client.associate_node_credential.return_value = (
-            False, {}, 'HTTP 500',
+            False,
+            {},
+            'HTTP 500',
         )
         with self.assertRaises(Exception):
             self.engine._launch_workflow_via_clone(
-                self.template, extra_vars={}, check_mode=False,
-                credentials=[99], request_id=self.request_id,
+                self.template,
+                extra_vars={},
+                check_mode=False,
+                credentials=[99],
+                request_id=self.request_id,
             )
         self.client.delete_workflow_template.assert_called_once_with(12345)
 
     def test_clone_deleted_when_launch_workflow_fails(self):
         self.client.launch_workflow.return_value = (False, None, 'HTTP 400')
         result = self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         self.assertFalse(result.success)
         self.assertEqual(result.error, 'HTTP 400')
@@ -370,11 +448,16 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_copy_failure_returns_error_without_calling_anything_else(self):
         self.client.copy_workflow_template.return_value = (
-            False, {}, 'HTTP 403',
+            False,
+            {},
+            'HTTP 403',
         )
         result = self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         self.assertFalse(result.success)
         self.assertIn('Failed to clone workflow', result.error)
@@ -384,11 +467,16 @@ class WorkflowCloneLaunchTestCase(TestCase):
 
     def test_copy_returns_clone_without_id_is_handled(self):
         self.client.copy_workflow_template.return_value = (
-            True, {'name': 'no-id-here'}, None,
+            True,
+            {'name': 'no-id-here'},
+            None,
         )
         result = self.engine._launch_workflow_via_clone(
-            self.template, extra_vars={}, check_mode=False,
-            credentials=[99], request_id=self.request_id,
+            self.template,
+            extra_vars={},
+            check_mode=False,
+            credentials=[99],
+            request_id=self.request_id,
         )
         self.assertFalse(result.success)
         self.assertIn('id', result.error)
@@ -399,30 +487,41 @@ class LaunchAwxJobDispatchTestCase(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='dispatch', email='d@example.com', password='x',
+            username='dispatch',
+            email='d@example.com',
+            password='x',
         )
         self.category = TemplateCategory.objects.create(
-            name='Dispatch', created_by=self.user,
+            name='Dispatch',
+            created_by=self.user,
         )
         self.connection = AWXConnection.objects.create(
-            name='AWX2', url='https://awx2.example.com',
-            auth_type=AWXConnection.AUTH_TYPE_TOKEN, created_by=self.user,
+            name='AWX2',
+            url='https://awx2.example.com',
+            auth_type=AWXConnection.AUTH_TYPE_TOKEN,
+            created_by=self.user,
         )
         self.connection.set_token('t2')
         self.connection.save()
 
         self.workflow_template = AutomationTemplate.objects.create(
-            name='WF', awx_type=AutomationTemplate.AWX_TYPE_WORKFLOW,
-            awx_template_id=999, awx_template_name='WF',
-            awx_connection=self.connection, category=self.category,
+            name='WF',
+            awx_type=AutomationTemplate.AWX_TYPE_WORKFLOW,
+            awx_template_id=999,
+            awx_template_name='WF',
+            awx_connection=self.connection,
+            category=self.category,
             execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
             table_schemas=[{'sheet_name': 'Data', 'columns': []}],
             created_by=self.user,
         )
         self.job_template = AutomationTemplate.objects.create(
-            name='Job', awx_type=AutomationTemplate.AWX_TYPE_JOB,
-            awx_template_id=888, awx_template_name='Job',
-            awx_connection=self.connection, category=self.category,
+            name='Job',
+            awx_type=AutomationTemplate.AWX_TYPE_JOB,
+            awx_template_id=888,
+            awx_template_name='Job',
+            awx_connection=self.connection,
+            category=self.category,
             execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
             table_schemas=[{'sheet_name': 'Data', 'columns': []}],
             created_by=self.user,
@@ -432,12 +531,16 @@ class LaunchAwxJobDispatchTestCase(TestCase):
 
     def test_workflow_with_credentials_uses_clone_path(self):
         with patch.object(
-            self.engine, '_launch_workflow_via_clone',
+            self.engine,
+            '_launch_workflow_via_clone',
             return_value=LaunchResult(True, {'id': 2}, None, clone_template_id=42),
         ) as clone_path:
             result = self.engine._launch_awx_job(
-                self.workflow_template, extra_vars={'k': 'v'},
-                request_id=uuid.uuid4(), check_mode=False, credentials=[42],
+                self.workflow_template,
+                extra_vars={'k': 'v'},
+                request_id=uuid.uuid4(),
+                check_mode=False,
+                credentials=[42],
             )
         self.assertTrue(result.success)
         self.assertEqual(result.clone_template_id, 42)
@@ -448,23 +551,32 @@ class LaunchAwxJobDispatchTestCase(TestCase):
         # The clone path is uniform for workflows now — credentials don't
         # change which code branch runs.
         with patch.object(
-            self.engine, '_launch_workflow_via_clone',
+            self.engine,
+            '_launch_workflow_via_clone',
             return_value=LaunchResult(True, {'id': 3}, None, clone_template_id=43),
         ) as clone_path:
             result = self.engine._launch_awx_job(
-                self.workflow_template, extra_vars={},
-                request_id=uuid.uuid4(), check_mode=False, credentials=None,
+                self.workflow_template,
+                extra_vars={},
+                request_id=uuid.uuid4(),
+                check_mode=False,
+                credentials=None,
             )
         self.assertTrue(result.success)
         clone_path.assert_called_once()
 
     def test_job_template_does_not_clone(self):
         self.engine.awx_client.launch_job.return_value = (
-            True, {'id': 555}, None,
+            True,
+            {'id': 555},
+            None,
         )
         result = self.engine._launch_awx_job(
-            self.job_template, extra_vars={},
-            request_id=uuid.uuid4(), check_mode=False, credentials=[1],
+            self.job_template,
+            extra_vars={},
+            request_id=uuid.uuid4(),
+            check_mode=False,
+            credentials=[1],
         )
         self.assertTrue(result.success)
         self.assertIsNone(result.clone_template_id)
@@ -474,8 +586,11 @@ class LaunchAwxJobDispatchTestCase(TestCase):
         self.workflow_template.awx_type = 'something_else'
         self.workflow_template.save(update_fields=['awx_type'])
         result = self.engine._launch_awx_job(
-            self.workflow_template, extra_vars={},
-            request_id=uuid.uuid4(), check_mode=False, credentials=None,
+            self.workflow_template,
+            extra_vars={},
+            request_id=uuid.uuid4(),
+            check_mode=False,
+            credentials=None,
         )
         self.assertFalse(result.success)
         self.assertIn('Unknown template type', result.error)

@@ -122,7 +122,9 @@ class MIMService:
         """
         return neo4j_connection.execute_query(query, {'className': class_name})
 
-    def search_child_classes(self, parent_class: str, search_term: str, limit: int = 100) -> list[dict]:
+    def search_child_classes(
+        self, parent_class: str, search_term: str, limit: int = 100
+    ) -> list[dict]:
         """Search within direct children of ``parent_class``.
 
         Strategy mirrors :meth:`enhanced_search_classes`:
@@ -225,10 +227,10 @@ class MIMService:
             param = f'tok{index}'
             per_token.append(
                 f'(toLower(child.className) CONTAINS ${param} '
-                f'OR toLower(coalesce(child.label, \'\')) CONTAINS ${param} '
+                f"OR toLower(coalesce(child.label, '')) CONTAINS ${param} "
                 f'OR toLower(child.classPkg) CONTAINS ${param} '
-                f'OR toLower(coalesce(child.qualifiedName, \'\')) CONTAINS ${param} '
-                f'OR toLower(reduce(s = \'\', x IN coalesce(child.comment, []) | s + \' \' + x)) '
+                f"OR toLower(coalesce(child.qualifiedName, '')) CONTAINS ${param} "
+                f"OR toLower(reduce(s = '', x IN coalesce(child.comment, []) | s + ' ' + x)) "
                 f'CONTAINS ${param})'
             )
         where_clause = ' AND '.join(per_token)
@@ -291,10 +293,7 @@ class MIMService:
         ORDER BY c.className
         LIMIT $limit
         """
-        return neo4j_connection.execute_query(
-            query,
-            {'searchTerm': search_term, 'limit': limit}
-        )
+        return neo4j_connection.execute_query(query, {'searchTerm': search_term, 'limit': limit})
 
     def get_context_roots(self) -> list[dict]:
         """Return all classes that are context roots (top-level containment anchors)."""
@@ -321,8 +320,7 @@ class MIMService:
         return neo4j_connection.execute_query(query, {'className': class_name})
 
     def get_related_classes(self, class_name: str) -> list[dict]:
-        """Return all classes connected via CONTAINS or RN_MAPPING relationships.
-        """
+        """Return all classes connected via CONTAINS or RN_MAPPING relationships."""
         query = """
         MATCH (parent:Class {className: $className})
 
@@ -360,7 +358,9 @@ class MIMService:
     # Patterns for monitoring/stats class names — kept in sync with the
     # frontend `classFilters.ts` MONITORING_REGEX so server-side and
     # client-side hide-monitoring give the same result.
-    MONITORING_PATTERN = r'(?i)(stats|ag15min|ag1h|ag5min|fault|health|trend|threshold|event|record)'
+    MONITORING_PATTERN = (
+        r'(?i)(stats|ag15min|ag1h|ag5min|fault|health|trend|threshold|event|record)'
+    )
 
     def enhanced_search_classes(
         self,
@@ -668,7 +668,7 @@ class MIMService:
                 'packageFilter': package_filter,
                 'limit': limit,
                 'monitoringPattern': self.MONITORING_PATTERN,
-            }
+            },
         )
 
     def search_classes_by_property(
@@ -716,12 +716,15 @@ class MIMService:
         ORDER BY size(matchedProps) DESC, c.className
         LIMIT $limit
         """
-        return neo4j_connection.execute_query(query, {
-            'term': term,
-            'packageFilter': package_filter,
-            'limit': limit,
-            'monitoringPattern': self.MONITORING_PATTERN,
-        })
+        return neo4j_connection.execute_query(
+            query,
+            {
+                'term': term,
+                'packageFilter': package_filter,
+                'limit': limit,
+                'monitoringPattern': self.MONITORING_PATTERN,
+            },
+        )
 
     def get_package_list(self) -> list[dict]:
         """
@@ -805,8 +808,7 @@ class MIMService:
         """
 
         classes = neo4j_connection.execute_query(
-            class_query,
-            {'searchTerm': f"{search_term}~ OR {search_term}", 'limit': limit}
+            class_query, {'searchTerm': f'{search_term}~ OR {search_term}', 'limit': limit}
         )
 
         # Search properties using full-text index
@@ -824,8 +826,7 @@ class MIMService:
         """
 
         properties = neo4j_connection.execute_query(
-            property_query,
-            {'searchTerm': f"{search_term}~ OR {search_term}", 'limit': limit}
+            property_query, {'searchTerm': f'{search_term}~ OR {search_term}', 'limit': limit}
         )
 
         # Find relationship matches
@@ -834,7 +835,7 @@ class MIMService:
         return {
             'classes': classes or [],
             'properties': properties or [],
-            'relationships': relationships or []
+            'relationships': relationships or [],
         }
 
     def _manual_universal_search(self, search_term: str, limit: int) -> dict:
@@ -864,8 +865,7 @@ class MIMService:
         """
 
         classes = neo4j_connection.execute_query(
-            class_query,
-            {'searchTerm': search_term, 'limit': limit}
+            class_query, {'searchTerm': search_term, 'limit': limit}
         )
 
         # Search properties
@@ -888,8 +888,7 @@ class MIMService:
         """
 
         properties = neo4j_connection.execute_query(
-            property_query,
-            {'searchTerm': search_term, 'limit': limit}
+            property_query, {'searchTerm': search_term, 'limit': limit}
         )
 
         # Find relationships
@@ -898,7 +897,7 @@ class MIMService:
         return {
             'classes': classes or [],
             'properties': properties or [],
-            'relationships': relationships or []
+            'relationships': relationships or [],
         }
 
     def _search_relationships(self, search_term: str, limit: int) -> list[dict]:
@@ -918,10 +917,7 @@ class MIMService:
         LIMIT $limit
         """
 
-        return neo4j_connection.execute_query(
-            query,
-            {'searchTerm': search_term, 'limit': limit}
-        )
+        return neo4j_connection.execute_query(query, {'searchTerm': search_term, 'limit': limit})
 
     # ========================================================================
     # MODEL EXPLORER - CLASS TREE
@@ -975,10 +971,7 @@ class MIMService:
                [c IN children WHERE c.className IS NOT NULL] as children
         """
 
-        results = neo4j_connection.execute_query(
-            query,
-            {'rootClass': root_class}
-        )
+        results = neo4j_connection.execute_query(query, {'rootClass': root_class})
 
         if not results or len(results) == 0:
             return []
@@ -988,17 +981,21 @@ class MIMService:
         # Filter out null children
         children = [c for c in root.get('children', []) if c.get('className')]
 
-        return [{
-            'className': root['className'],
-            'label': root['label'],
-            'description': root['description'],
-            'classPkg': root['classPkg'],
-            'childCount': root['childCount'],
-            'children': children
-        }]
+        return [
+            {
+                'className': root['className'],
+                'label': root['label'],
+                'description': root['description'],
+                'classPkg': root['classPkg'],
+                'childCount': root['childCount'],
+                'children': children,
+            }
+        ]
 
     @MIMCache.cached('relationships', ttl=MIMCache.TTL_STATIC)
-    def get_all_relationships(self, class_name: str, children_limit: Optional[int] = None, children_offset: int = 0) -> dict:
+    def get_all_relationships(
+        self, class_name: str, children_limit: Optional[int] = None, children_offset: int = 0
+    ) -> dict:
         """
         Get comprehensive relationship information for a class
         CACHED: 24 hour TTL (relationships rarely change)
@@ -1094,12 +1091,7 @@ class MIMService:
         limit = children_limit if children_limit is not None else 1000
 
         result = neo4j_connection.execute_query(
-            query,
-            {
-                'className': class_name,
-                'skip': skip,
-                'limit': limit
-            }
+            query, {'className': class_name, 'skip': skip, 'limit': limit}
         )
 
         if not result or not result[0]:
@@ -1109,7 +1101,7 @@ class MIMService:
                 'properties': [],
                 'rnMappings': [],
                 'childrenTotal': 0,
-                'childrenHasMore': False
+                'childrenHasMore': False,
             }
 
         data = result[0]
@@ -1123,7 +1115,7 @@ class MIMService:
             'properties': data.get('properties', []),
             'rnMappings': data.get('rnMappings', []),
             'childrenTotal': total_children,
-            'childrenHasMore': has_more
+            'childrenHasMore': has_more,
         }
 
     # ========================================================================
@@ -1155,10 +1147,25 @@ class MIMService:
 
         # Stats/monitoring class patterns to exclude
         stats_patterns = [
-            'Stats', 'Ag15min', 'Ag1h', 'Ag1d', 'Ag1mo', 'Ag1qtr',
-            'Ag1w', 'Ag1year', 'Ag5min', 'AgHist', 'Hist15min',
-            'Hist1d', 'Hist1h', 'Counter', 'OverallHealth',
-            'Fault', 'Health', 'Db', 'DbgAc'
+            'Stats',
+            'Ag15min',
+            'Ag1h',
+            'Ag1d',
+            'Ag1mo',
+            'Ag1qtr',
+            'Ag1w',
+            'Ag1year',
+            'Ag5min',
+            'AgHist',
+            'Hist15min',
+            'Hist1d',
+            'Hist1h',
+            'Counter',
+            'OverallHealth',
+            'Fault',
+            'Health',
+            'Db',
+            'DbgAc',
         ]
 
         total_count = len(children)
@@ -1198,11 +1205,7 @@ class MIMService:
         # Return top 50 (increased from 25)
         common = filtered_sorted[:50]
 
-        return {
-            'common': common,
-            'statsCount': stats_count,
-            'totalCount': total_count
-        }
+        return {'common': common, 'statsCount': stats_count, 'totalCount': total_count}
 
     def _find_canonical_path(self, class_name: str) -> list[dict]:
         """
@@ -1265,9 +1268,7 @@ class MIMService:
         LIMIT 1
         """
 
-        parent_result = neo4j_connection.execute_query(
-            best_parent_query, {'className': class_name}
-        )
+        parent_result = neo4j_connection.execute_query(best_parent_query, {'className': class_name})
 
         # Maximum configurable depth for the preferred parent.
         # Classes like faultInst have 1000+ parents at all depth levels; without a cap
@@ -1300,10 +1301,7 @@ class MIMService:
                 rn_result = neo4j_connection.execute_query(
                     target_rn_query, {'className': class_name}
                 )
-                target_rn = (
-                    rn_result[0].get('rnFormat', '')
-                    if rn_result and rn_result[0] else ''
-                )
+                target_rn = rn_result[0].get('rnFormat', '') if rn_result and rn_result[0] else ''
                 return parent_path + [{'className': class_name, 'rnFormat': target_rn}]
 
         # Stage 3: Fallback — any shortest path regardless of configurability.
@@ -1376,7 +1374,7 @@ class MIMService:
             'pattern': pattern,
             'example': example,
             'rnFormat': rn_format,
-            'isContextRoot': is_context_root
+            'isContextRoot': is_context_root,
         }
 
     def get_class_ancestors(self, class_name: str) -> list[dict]:
@@ -1398,10 +1396,17 @@ class MIMService:
             RETURN count(DISTINCT child) as childCount
             """
             count_result = neo4j_connection.execute_query(count_query, {})
-            child_count = (count_result[0].get('childCount', 0)
-                           if count_result and count_result[0] else 0)
-            return [{'className': 'polUni', 'label': 'Policy Universe',
-                     'classPkg': 'top', 'childCount': child_count}]
+            child_count = (
+                count_result[0].get('childCount', 0) if count_result and count_result[0] else 0
+            )
+            return [
+                {
+                    'className': 'polUni',
+                    'label': 'Policy Universe',
+                    'classPkg': 'top',
+                    'childCount': child_count,
+                }
+            ]
 
         # Get canonical path nodes (className + rnFormat only, minimal query).
         path_nodes = self._find_canonical_path(class_name)
@@ -1422,13 +1427,11 @@ class MIMService:
                node.classPkg as classPkg,
                count(DISTINCT child) as childCount
         """
-        detail_result = neo4j_connection.execute_query(
-            detail_query, {'classNames': class_names}
-        )
+        detail_result = neo4j_connection.execute_query(detail_query, {'classNames': class_names})
 
         # Build a lookup dict and reassemble in path order.
         detail_map = {}
-        for row in (detail_result or []):
+        for row in detail_result or []:
             if row and row.get('className'):
                 detail_map[row['className']] = {
                     'className': row['className'],
@@ -1511,11 +1514,7 @@ class MIMService:
         result = neo4j_connection.execute_query(query, {'className': class_name})
 
         if not result:
-            return {
-                'required': [],
-                'configurable': [],
-                'readOnly': []
-            }
+            return {'required': [], 'configurable': [], 'readOnly': []}
 
         required = []
         configurable = []
@@ -1526,7 +1525,7 @@ class MIMService:
                 'name': prop.get('name'),
                 'type': prop.get('type'),
                 'description': prop.get('description'),
-                'values': prop.get('values', [])
+                'values': prop.get('values', []),
             }
 
             # Categorize
@@ -1537,11 +1536,7 @@ class MIMService:
             else:
                 read_only.append(prop_data)
 
-        return {
-            'required': required,
-            'configurable': configurable,
-            'readOnly': read_only
-        }
+        return {'required': required, 'configurable': configurable, 'readOnly': read_only}
 
     @MIMCache.cached('class_insights', ttl=MIMCache.TTL_STATIC)
     def get_class_insights(self, class_name: str) -> dict:
@@ -1584,7 +1579,7 @@ class MIMService:
             'isContextRoot': dn_pattern.get('isContextRoot', False),
             'preferredMethod': 'class' if dn_pattern.get('isContextRoot') else 'mo',
             'requiresParent': not dn_pattern.get('isContextRoot', False),
-            'dnPattern': dn_pattern.get('pattern')
+            'dnPattern': dn_pattern.get('pattern'),
         }
 
         # Add parent class hint if not context root
@@ -1597,7 +1592,7 @@ class MIMService:
             'dnPattern': dn_pattern,
             'smartChildren': smart_children,
             'optimization': optimization,
-            'properties': properties
+            'properties': properties,
         }
 
     def get_class_stats(self) -> dict:
@@ -1717,6 +1712,7 @@ class MIMService:
         """
         import json
         import logging
+
         logger = logging.getLogger(__name__)
 
         query = """
@@ -1734,7 +1730,7 @@ class MIMService:
                 parsed = json.loads(raw)
                 return parsed if isinstance(parsed, list) else []
             except (ValueError, TypeError) as exc:
-                logger.warning("class %s: failed to parse %s JSON: %s", class_name, label, exc)
+                logger.warning('class %s: failed to parse %s JSON: %s', class_name, label, exc)
                 return []
 
         row = results[0]
@@ -1754,6 +1750,7 @@ class MIMService:
         """
         import json
         import logging
+
         logger = logging.getLogger(__name__)
 
         query = """
@@ -1806,8 +1803,10 @@ class MIMService:
                     row['validators'] = parsed if isinstance(parsed, list) else []
                 except (ValueError, TypeError) as exc:
                     logger.warning(
-                        "class %s prop %s: failed to parse validators JSON: %s",
-                        class_name, row.get('name'), exc,
+                        'class %s prop %s: failed to parse validators JSON: %s',
+                        class_name,
+                        row.get('name'),
+                        exc,
                     )
                     row['validators'] = []
             else:

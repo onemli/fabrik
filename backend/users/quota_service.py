@@ -10,25 +10,29 @@ from django.utils import timezone
 
 
 # Global defaults — used when user has no group quota
-DEFAULT_QUOTAS = getattr(settings, 'DEFAULT_QUOTAS', {
-    'max_saved_queries': 0,
-    'max_scheduled_tasks': 0,
-    'max_apic_connections': 0,
-    'max_awx_requests_daily': 0,
-    'max_awx_concurrent': 5,
-    'max_query_results': 0,
-    'max_export_rows': 50000,
-    'query_execution_daily': 0,
-    'can_create_queries': True,
-    'can_execute_queries': True,
-    'can_create_scheduled': True,
-    'can_use_awx': True,
-    'can_use_time_machine': True,
-    'can_export_data': True,
-    'can_share_resources': True,
-    'can_use_ai_builder': True,
-    'ai_analysis_daily': 0,
-})
+DEFAULT_QUOTAS = getattr(
+    settings,
+    'DEFAULT_QUOTAS',
+    {
+        'max_saved_queries': 0,
+        'max_scheduled_tasks': 0,
+        'max_apic_connections': 0,
+        'max_awx_requests_daily': 0,
+        'max_awx_concurrent': 5,
+        'max_query_results': 0,
+        'max_export_rows': 50000,
+        'query_execution_daily': 0,
+        'can_create_queries': True,
+        'can_execute_queries': True,
+        'can_create_scheduled': True,
+        'can_use_awx': True,
+        'can_use_time_machine': True,
+        'can_export_data': True,
+        'can_share_resources': True,
+        'can_use_ai_builder': True,
+        'ai_analysis_daily': 0,
+    },
+)
 
 # Resource type → (quota field, model path for counting)
 RESOURCE_MAP = {
@@ -39,7 +43,6 @@ RESOURCE_MAP = {
 
 
 class QuotaService:
-
     @staticmethod
     def get_effective_quota(user) -> dict:
         """Resolve user's effective quota by merging all group quotas (most permissive wins).
@@ -56,9 +59,7 @@ class QuotaService:
 
         from .models import GroupQuota
 
-        group_quotas = GroupQuota.objects.filter(
-            group__in=user.groups.all()
-        )
+        group_quotas = GroupQuota.objects.filter(group__in=user.groups.all())
 
         if not group_quotas.exists():
             return dict(DEFAULT_QUOTAS)
@@ -68,14 +69,25 @@ class QuotaService:
         # For numeric: 0 = unlimited beats any number, otherwise take max.
         # For boolean: True beats False.
         numeric_fields = [
-            'max_saved_queries', 'max_scheduled_tasks', 'max_apic_connections',
-            'max_awx_requests_daily', 'max_awx_concurrent', 'max_query_results',
-            'max_export_rows', 'query_execution_daily', 'ai_analysis_daily',
+            'max_saved_queries',
+            'max_scheduled_tasks',
+            'max_apic_connections',
+            'max_awx_requests_daily',
+            'max_awx_concurrent',
+            'max_query_results',
+            'max_export_rows',
+            'query_execution_daily',
+            'ai_analysis_daily',
         ]
         boolean_fields = [
-            'can_create_queries', 'can_execute_queries', 'can_create_scheduled',
-            'can_use_awx', 'can_use_time_machine', 'can_export_data',
-            'can_share_resources', 'can_use_ai_builder',
+            'can_create_queries',
+            'can_execute_queries',
+            'can_create_scheduled',
+            'can_use_awx',
+            'can_use_time_machine',
+            'can_export_data',
+            'can_share_resources',
+            'can_use_ai_builder',
         ]
 
         # Start from the first group's values (not from global defaults)
@@ -141,7 +153,10 @@ class QuotaService:
 
         current_count = getattr(user, related_name).count()
         if current_count >= limit:
-            return False, f'You have reached your limit of {limit} {resource_type.replace("_", " ")}s.'
+            return (
+                False,
+                f'You have reached your limit of {limit} {resource_type.replace("_", " ")}s.',
+            )
 
         return True, ''
 
@@ -155,6 +170,7 @@ class QuotaService:
             if limit == 0:
                 return True, ''
             from queries.models import QueryExecutionLog
+
             today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
             count = QueryExecutionLog.objects.filter(
                 executed_by=user, executed_at__gte=today_start
@@ -164,6 +180,7 @@ class QuotaService:
             if limit == 0:
                 return True, ''
             from awx.models import AutomationExecution
+
             today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
             count = AutomationExecution.objects.filter(
                 request__created_by=user, created_at__gte=today_start
@@ -173,6 +190,7 @@ class QuotaService:
             if limit == 0:
                 return True, ''
             from audit.models import AuditLog
+
             today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
             count = AuditLog.objects.filter(
                 user=user, action='ai_query', timestamp__gte=today_start
@@ -186,7 +204,10 @@ class QuotaService:
                 'awx': 'automation requests',
                 'ai': 'AI requests',
             }.get(execution_type, f'{execution_type} executions')
-            return False, f'Daily limit reached: {count}/{limit} {remaining_label}. Resets at midnight UTC.'
+            return (
+                False,
+                f'Daily limit reached: {count}/{limit} {remaining_label}. Resets at midnight UTC.',
+            )
         return True, ''
 
     @staticmethod
@@ -218,6 +239,7 @@ class QuotaService:
         # AWX executions today
         try:
             from awx.models import AutomationExecution
+
             usage['awx_executions_today'] = AutomationExecution.objects.filter(
                 request__created_by=user, created_at__gte=today_start
             ).count()

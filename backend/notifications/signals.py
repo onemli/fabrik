@@ -31,15 +31,13 @@ def send_notification_to_websocket(sender, instance, created, **kwargs):
             {'type': 'notification_new', 'notification': serializer.data},
         )
     except Exception:
-        logger.warning("Failed to push notification to WebSocket for user %s", instance.user_id)
+        logger.warning('Failed to push notification to WebSocket for user %s', instance.user_id)
 
     try:
-        unread_count = Notification.objects.filter(
-            user=instance.user, is_read=False
-        ).count()
+        unread_count = Notification.objects.filter(user=instance.user, is_read=False).count()
         async_to_sync(channel_layer.group_send)(
             group,
             {'type': 'notification_count', 'count': unread_count},
         )
     except Exception:
-        logger.warning("Failed to push unread count to WebSocket for user %s", instance.user_id)
+        logger.warning('Failed to push unread count to WebSocket for user %s', instance.user_id)

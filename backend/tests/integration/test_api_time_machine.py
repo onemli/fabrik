@@ -2,6 +2,7 @@
 Integration tests for Time Machine API views
 Tests all endpoints: capture, list, snapshots, compare, heatmap, annotate, settings, cleanup
 """
+
 import json
 import hashlib
 import uuid
@@ -18,6 +19,7 @@ from tests.factories import (
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _snap(user, query, conn, result_data=None, **kwargs):
     """Create a raw snapshot bypassing duplicate-detection.
@@ -52,10 +54,10 @@ def _snap(user, query, conn, result_data=None, **kwargs):
 
 # ── Capture Snapshot ──────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestCaptureSnapshot:
-
     def test_capture_unauthenticated(self, api_client):
         response = api_client.post('/api/time-machine/capture/', {}, format='json')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -72,9 +74,7 @@ class TestCaptureSnapshot:
             'query_name': query.name,
             'class_name': 'fvTenant',
         }
-        response = authenticated_client.post(
-            '/api/time-machine/capture/', payload, format='json'
-        )
+        response = authenticated_client.post('/api/time-machine/capture/', payload, format='json')
         assert response.status_code == status.HTTP_200_OK
         assert response.data['success'] is True
         assert 'snapshot_id' in response.data
@@ -101,10 +101,10 @@ class TestCaptureSnapshot:
 
 # ── List Queries ──────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestListQueriesWithSnapshots:
-
     def test_unauthenticated(self, api_client):
         response = api_client.get('/api/time-machine/queries/')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -139,10 +139,10 @@ class TestListQueriesWithSnapshots:
 
 # ── Get Query Snapshots ───────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestGetQuerySnapshots:
-
     def test_unauthenticated(self, api_client):
         response = api_client.get('/api/time-machine/snapshots/?saved_query_id=1')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -161,6 +161,7 @@ class TestGetQuerySnapshots:
 
     def test_time_machine_not_enabled(self, authenticated_client, user):
         from tests.factories import SavedQueryFactory
+
         query = SavedQueryFactory(created_by=user, enable_time_machine=False)
         response = authenticated_client.get(
             f'/api/time-machine/snapshots/?saved_query_id={query.id}'
@@ -189,18 +190,26 @@ class TestGetQuerySnapshots:
             f'/api/time-machine/snapshots/?saved_query_id={query.id}'
         )
         snap = response.data['snapshots'][0]
-        for field in ('id', 'query_name', 'result_count', 'executed_at',
-                      'apic_connection_name', 'result_hash', 'has_changes',
-                      'execution_type', 'query_version'):
-            assert field in snap, f"Missing field: {field}"
+        for field in (
+            'id',
+            'query_name',
+            'result_count',
+            'executed_at',
+            'apic_connection_name',
+            'result_hash',
+            'has_changes',
+            'execution_type',
+            'query_version',
+        ):
+            assert field in snap, f'Missing field: {field}'
 
 
 # ── Snapshot Detail ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestGetSnapshotDetail:
-
     def test_unauthenticated(self, api_client):
         snap_id = str(uuid.uuid4())
         response = api_client.get(f'/api/time-machine/snapshots/{snap_id}/')
@@ -225,10 +234,10 @@ class TestGetSnapshotDetail:
 
 # ── Compare Snapshots ─────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestCompareSnapshots:
-
     def test_unauthenticated(self, api_client):
         response = api_client.post('/api/time-machine/compare/', {}, format='json')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -246,10 +255,14 @@ class TestCompareSnapshots:
         snap1 = _snap(user, query, conn, result_data=data, result_hash='hash_same')
         snap2 = _snap(user, query, conn, result_data=data, result_hash='hash_same')
 
-        response = authenticated_client.post('/api/time-machine/compare/', {
-            'snapshot_from_id': str(snap1.id),
-            'snapshot_to_id': str(snap2.id),
-        }, format='json')
+        response = authenticated_client.post(
+            '/api/time-machine/compare/',
+            {
+                'snapshot_from_id': str(snap1.id),
+                'snapshot_to_id': str(snap2.id),
+            },
+            format='json',
+        )
         assert response.status_code == status.HTTP_200_OK
         assert response.data['identical'] is True
         assert response.data['diff']['total_changes'] == 0
@@ -258,21 +271,37 @@ class TestCompareSnapshots:
         query = TimeMachineEnabledQueryFactory(created_by=user)
         conn = APICConnectionFactory(created_by=user)
         data1 = {'imdata': [{'fvTenant': {'attributes': {'dn': 'uni/tn-t1'}}}]}
-        data2 = {'imdata': [
-            {'fvTenant': {'attributes': {'dn': 'uni/tn-t1'}}},
-            {'fvTenant': {'attributes': {'dn': 'uni/tn-t2'}}},
-        ]}
+        data2 = {
+            'imdata': [
+                {'fvTenant': {'attributes': {'dn': 'uni/tn-t1'}}},
+                {'fvTenant': {'attributes': {'dn': 'uni/tn-t2'}}},
+            ]
+        }
         j1 = json.dumps(data1)
         j2 = json.dumps(data2)
-        snap1 = _snap(user, query, conn, result_data=data1,
-                      result_hash=hashlib.sha256(j1.encode()).hexdigest())
-        snap2 = _snap(user, query, conn, result_data=data2,
-                      result_hash=hashlib.sha256(j2.encode()).hexdigest())
+        snap1 = _snap(
+            user,
+            query,
+            conn,
+            result_data=data1,
+            result_hash=hashlib.sha256(j1.encode()).hexdigest(),
+        )
+        snap2 = _snap(
+            user,
+            query,
+            conn,
+            result_data=data2,
+            result_hash=hashlib.sha256(j2.encode()).hexdigest(),
+        )
 
-        response = authenticated_client.post('/api/time-machine/compare/', {
-            'snapshot_from_id': str(snap1.id),
-            'snapshot_to_id': str(snap2.id),
-        }, format='json')
+        response = authenticated_client.post(
+            '/api/time-machine/compare/',
+            {
+                'snapshot_from_id': str(snap1.id),
+                'snapshot_to_id': str(snap2.id),
+            },
+            format='json',
+        )
         assert response.status_code == status.HTTP_200_OK
         assert response.data['identical'] is False
         assert len(response.data['diff']['added']) == 1
@@ -280,10 +309,10 @@ class TestCompareSnapshots:
 
 # ── Heatmap ───────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestGetHeatmapData:
-
     def test_unauthenticated(self, api_client):
         response = api_client.get('/api/time-machine/heatmap/?saved_query_id=1')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -323,10 +352,10 @@ class TestGetHeatmapData:
 
 # ── Annotate Snapshot ─────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestAnnotateSnapshot:
-
     def test_unauthenticated(self, api_client):
         snap_id = str(uuid.uuid4())
         response = api_client.post(
@@ -338,7 +367,8 @@ class TestAnnotateSnapshot:
         snap_id = str(uuid.uuid4())
         response = authenticated_client.post(
             f'/api/time-machine/snapshots/{snap_id}/annotate/',
-            {'annotation': 'test'}, format='json'
+            {'annotation': 'test'},
+            format='json',
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -359,7 +389,7 @@ class TestAnnotateSnapshot:
         response = authenticated_client.post(
             f'/api/time-machine/snapshots/{snap.id}/annotate/',
             {'annotation': 'My note', 'label': 'Before deploy'},
-            format='json'
+            format='json',
         )
         assert response.status_code == status.HTTP_200_OK
         assert response.data['annotation'] == 'My note'
@@ -377,7 +407,7 @@ class TestAnnotateSnapshot:
         response = authenticated_client.post(
             f'/api/time-machine/snapshots/{snap.id}/annotate/',
             {'annotation': 'Updated note'},
-            format='json'
+            format='json',
         )
         assert response.status_code == status.HTTP_200_OK
         assert response.data['annotation'] == 'Updated note'
@@ -385,10 +415,10 @@ class TestAnnotateSnapshot:
 
 # ── Time Machine Settings ─────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestTimeMachineSettings:
-
     def test_unauthenticated_get(self, api_client):
         response = api_client.get('/api/time-machine/settings/')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -401,15 +431,19 @@ class TestTimeMachineSettings:
         assert 'auto_cleanup_enabled' in response.data
 
     def test_put_updates_settings(self, authenticated_client, user):
-        response = authenticated_client.put('/api/time-machine/settings/', {
-            'retention_policy': 'days',
-            'retention_days': 14,
-            'retention_count': 50,
-            'max_snapshot_size_mb': 5.0,
-            'warn_large_snapshots': False,
-            'auto_cleanup_enabled': False,
-            'store_duplicates': True,
-        }, format='json')
+        response = authenticated_client.put(
+            '/api/time-machine/settings/',
+            {
+                'retention_policy': 'days',
+                'retention_days': 14,
+                'retention_count': 50,
+                'max_snapshot_size_mb': 5.0,
+                'warn_large_snapshots': False,
+                'auto_cleanup_enabled': False,
+                'store_duplicates': True,
+            },
+            format='json',
+        )
         assert response.status_code == status.HTTP_200_OK
 
         get_response = authenticated_client.get('/api/time-machine/settings/')
@@ -420,18 +454,22 @@ class TestTimeMachineSettings:
         # Ensure settings exist first
         authenticated_client.get('/api/time-machine/settings/')
 
-        response = authenticated_client.put('/api/time-machine/settings/', {
-            'retention_days': 60,
-        }, format='json')
+        response = authenticated_client.put(
+            '/api/time-machine/settings/',
+            {
+                'retention_days': 60,
+            },
+            format='json',
+        )
         assert response.status_code == status.HTTP_200_OK
 
 
 # ── Cleanup Preview ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestCleanupPreview:
-
     def test_unauthenticated(self, api_client):
         response = api_client.post('/api/time-machine/cleanup/preview/', {}, format='json')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -447,10 +485,10 @@ class TestCleanupPreview:
 
 # ── Execute Cleanup ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 @pytest.mark.django_db
 class TestExecuteCleanup:
-
     def test_unauthenticated(self, api_client):
         response = api_client.post('/api/time-machine/cleanup/execute/', {}, format='json')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -460,9 +498,15 @@ class TestExecuteCleanup:
         conn = APICConnectionFactory(created_by=user)
 
         old_snap = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
             result_hash='old_h',
         )
         # Move executed_at to 200 days ago (auto_now_add bypass via update)
@@ -472,9 +516,7 @@ class TestExecuteCleanup:
 
         # Set retention to 30 days (delete anything older)
         TimeMachineSettings.objects.filter(user=user).delete()
-        TimeMachineSettings.objects.create(
-            user=user, retention_policy='days', retention_days=30
-        )
+        TimeMachineSettings.objects.create(user=user, retention_policy='days', retention_days=30)
 
         response = authenticated_client.post(
             '/api/time-machine/cleanup/execute/', {}, format='json'

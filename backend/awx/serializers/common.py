@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     """Basic user info"""
+
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email']
@@ -28,9 +29,6 @@ def _normalize_input_data(input_data: Any, table_schemas: list) -> dict:
     if isinstance(input_data, dict):
         return input_data
     if isinstance(input_data, list):
-        var_name = (
-            table_schemas[0].get('awx_variable_name')
-            if table_schemas else None
-        ) or 'data'
+        var_name = (table_schemas[0].get('awx_variable_name') if table_schemas else None) or 'data'
         return {var_name: input_data}
     return {}

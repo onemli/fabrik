@@ -11,7 +11,9 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from awx.models import (
-    AWXConnection, TemplateCategory, AutomationTemplate,
+    AWXConnection,
+    TemplateCategory,
+    AutomationTemplate,
     AutomationRequest,
 )
 
@@ -28,18 +30,18 @@ def auth_client(user):
 
 
 def make_user(username):
-    return User.objects.create_user(
-        username=username, email=f'{username}@t.com', password='pass'
-    )
+    return User.objects.create_user(username=username, email=f'{username}@t.com', password='pass')
 
 
 def make_connection(user):
     c = AWXConnection.objects.create(
-        name='AWX', url='https://awx.test',
+        name='AWX',
+        url='https://awx.test',
         auth_type=AWXConnection.AUTH_TYPE_TOKEN,
         created_by=user,
     )
-    c.set_token('token'); c.save()
+    c.set_token('token')
+    c.save()
     return c
 
 
@@ -49,26 +51,46 @@ def make_category(user):
 
 def make_template(user, conn, cat):
     return AutomationTemplate.objects.create(
-        name='Tmpl', awx_type='job_template', awx_template_id=1,
-        awx_template_name='JT', awx_connection=conn, category=cat,
+        name='Tmpl',
+        awx_type='job_template',
+        awx_template_id=1,
+        awx_template_name='JT',
+        awx_connection=conn,
+        category=cat,
         execution_mode='bulk',
-        table_schemas=[{
-            'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-            'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
-        }],
+        table_schemas=[
+            {
+                'name': 'Sheet1',
+                'awx_variable_name': 'sheet1',
+                'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
+            }
+        ],
         variable_mappings={'tenant_name': 'tenant'},
         created_by=user,
     )
 
 
 LIST_URL = '/api/awx/requests/'
-def detail_url(pk): return f'/api/awx/requests/{pk}/'
-def execute_url(pk): return f'/api/awx/requests/{pk}/execute/'
-def cancel_url(pk): return f'/api/awx/requests/{pk}/cancel/'
-def validate_url(pk): return f'/api/awx/requests/{pk}/validate-data/'
+
+
+def detail_url(pk):
+    return f'/api/awx/requests/{pk}/'
+
+
+def execute_url(pk):
+    return f'/api/awx/requests/{pk}/execute/'
+
+
+def cancel_url(pk):
+    return f'/api/awx/requests/{pk}/cancel/'
+
+
+def validate_url(pk):
+    return f'/api/awx/requests/{pk}/validate-data/'
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
+
 
 class RequestAuthTests(APITestCase):
     def test_list_requires_auth(self):
@@ -80,8 +102,8 @@ class RequestAuthTests(APITestCase):
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
-class RequestCRUDTests(APITestCase):
 
+class RequestCRUDTests(APITestCase):
     def setUp(self):
         self.user = make_user('owner')
         self.client = auth_client(self.user)
@@ -116,8 +138,10 @@ class RequestCRUDTests(APITestCase):
         make_category(make_user('other2'))
         # Create request owned by other user directly
         AutomationRequest.objects.create(
-            title='OtherReq', template=self.tmpl,
-            awx_connection=self.conn, requested_by=other,
+            title='OtherReq',
+            template=self.tmpl,
+            awx_connection=self.conn,
+            requested_by=other,
             input_data={'data': []},
         )
         resp = self.client.get(LIST_URL)
@@ -133,8 +157,10 @@ class RequestCRUDTests(APITestCase):
     def test_retrieve_other_user_request_returns_404(self):
         other = make_user('other3')
         req = AutomationRequest.objects.create(
-            title='Private', template=self.tmpl,
-            awx_connection=self.conn, requested_by=other,
+            title='Private',
+            template=self.tmpl,
+            awx_connection=self.conn,
+            requested_by=other,
             input_data={'data': []},
         )
         resp = self.client.get(detail_url(req.id))
@@ -144,7 +170,8 @@ class RequestCRUDTests(APITestCase):
         create = self.client.post(LIST_URL, self._valid_payload(), format='json')
         resp = self.client.patch(
             detail_url(create.data['id']),
-            {'title': 'Updated'}, format='json',
+            {'title': 'Updated'},
+            format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['title'], 'Updated')
@@ -157,8 +184,8 @@ class RequestCRUDTests(APITestCase):
 
 # ── Execute Action ────────────────────────────────────────────────────────────
 
-class RequestExecuteTests(APITestCase):
 
+class RequestExecuteTests(APITestCase):
     def setUp(self):
         self.user = make_user('exec_user')
         self.client = auth_client(self.user)
@@ -167,11 +194,16 @@ class RequestExecuteTests(APITestCase):
         self.tmpl = make_template(self.user, self.conn, self.cat)
 
     def _create_request(self):
-        resp = self.client.post(LIST_URL, {
-            'title': 'Exec', 'template': str(self.tmpl.id),
-            'awx_connection': str(self.conn.id),
-            'input_data': {'data': [{'tenant_name': 'TA'}]},
-        }, format='json')
+        resp = self.client.post(
+            LIST_URL,
+            {
+                'title': 'Exec',
+                'template': str(self.tmpl.id),
+                'awx_connection': str(self.conn.id),
+                'input_data': {'data': [{'tenant_name': 'TA'}]},
+            },
+            format='json',
+        )
         return resp.data['id']
 
     @patch('awx.views.request.execute_automation_request')
@@ -179,9 +211,7 @@ class RequestExecuteTests(APITestCase):
         mock_task.delay.return_value = MagicMock(id='celery-task-id')
         req_id = self._create_request()
         resp = self.client.post(execute_url(req_id))
-        self.assertIn(resp.status_code, [
-            status.HTTP_200_OK, status.HTTP_202_ACCEPTED
-        ])
+        self.assertIn(resp.status_code, [status.HTTP_200_OK, status.HTTP_202_ACCEPTED])
         mock_task.delay.assert_called_once()
 
     @patch('awx.views.request.execute_automation_request')
@@ -191,15 +221,16 @@ class RequestExecuteTests(APITestCase):
         # Manually set to running
         AutomationRequest.objects.filter(id=req_id).update(status='running')
         resp = self.client.post(execute_url(req_id))
-        self.assertIn(resp.status_code, [
-            status.HTTP_400_BAD_REQUEST, status.HTTP_409_CONFLICT
-        ])
+        self.assertIn(resp.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_409_CONFLICT])
 
     def test_execute_other_user_request_returns_404(self):
         other = make_user('other_exec')
         req = AutomationRequest.objects.create(
-            title='X', template=self.tmpl, awx_connection=self.conn,
-            requested_by=other, input_data={'data': []},
+            title='X',
+            template=self.tmpl,
+            awx_connection=self.conn,
+            requested_by=other,
+            input_data={'data': []},
         )
         resp = self.client.post(execute_url(req.id))
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
@@ -207,8 +238,8 @@ class RequestExecuteTests(APITestCase):
 
 # ── Cancel Action ─────────────────────────────────────────────────────────────
 
-class RequestCancelTests(APITestCase):
 
+class RequestCancelTests(APITestCase):
     def setUp(self):
         self.user = make_user('cancel_user')
         self.client = auth_client(self.user)
@@ -218,21 +249,25 @@ class RequestCancelTests(APITestCase):
 
     def test_cancel_pending_request(self):
         req = AutomationRequest.objects.create(
-            title='To Cancel', template=self.tmpl, awx_connection=self.conn,
-            requested_by=self.user, input_data={'data': []},
+            title='To Cancel',
+            template=self.tmpl,
+            awx_connection=self.conn,
+            requested_by=self.user,
+            input_data={'data': []},
             status='pending',
         )
         resp = self.client.post(cancel_url(req.id))
-        self.assertIn(resp.status_code, [
-            status.HTTP_200_OK, status.HTTP_204_NO_CONTENT
-        ])
+        self.assertIn(resp.status_code, [status.HTTP_200_OK, status.HTTP_204_NO_CONTENT])
         req.refresh_from_db()
         self.assertEqual(req.status, 'cancelled')
 
     def test_cancel_already_finished_returns_error(self):
         req = AutomationRequest.objects.create(
-            title='Done', template=self.tmpl, awx_connection=self.conn,
-            requested_by=self.user, input_data={'data': []},
+            title='Done',
+            template=self.tmpl,
+            awx_connection=self.conn,
+            requested_by=self.user,
+            input_data={'data': []},
             status='successful',
         )
         resp = self.client.post(cancel_url(req.id))

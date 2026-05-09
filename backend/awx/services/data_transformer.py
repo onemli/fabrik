@@ -34,9 +34,7 @@ class DataTransformer:
         pass
 
     def transform_input_to_ansible_vars(
-        self,
-        input_data: Dict[str, Any],
-        variable_mappings: Dict[str, str]
+        self, input_data: Dict[str, Any], variable_mappings: Dict[str, str]
     ) -> Dict[str, Any]:
         try:
             rows = input_data.get('data', [])
@@ -57,13 +55,11 @@ class DataTransformer:
             return {'data': transformed_rows}
 
         except Exception as e:
-            logger.exception(f"Error transforming input to ansible vars: {str(e)}")
-            raise ValidationError(f"Transformation failed: {str(e)}")
+            logger.exception(f'Error transforming input to ansible vars: {str(e)}')
+            raise ValidationError(f'Transformation failed: {str(e)}')
 
     def validate_against_schema(
-        self,
-        input_data: Dict[str, Any],
-        table_schemas: List[Dict[str, Any]]
+        self, input_data: Dict[str, Any], table_schemas: List[Dict[str, Any]]
     ) -> Tuple[bool, List[str]]:
         try:
             errors = []
@@ -94,14 +90,16 @@ class DataTransformer:
                     elif not input_data:
                         rows = []
                     else:
-                        errors.append("Input data must be a list or a dict with schema variable name")
+                        errors.append(
+                            'Input data must be a list or a dict with schema variable name'
+                        )
                         return False, errors
             elif isinstance(input_data, list):
                 rows = input_data
             elif not input_data:
                 rows = []
             else:
-                errors.append("Input data must be a list or a dict")
+                errors.append('Input data must be a list or a dict')
                 return False, errors
 
             # Check if there's at least one schema
@@ -121,10 +119,10 @@ class DataTransformer:
             max_rows = schema.get('max_rows', 10000)
 
             if len(rows) < min_rows:
-                errors.append(f"Minimum {min_rows} rows required, found {len(rows)}")
+                errors.append(f'Minimum {min_rows} rows required, found {len(rows)}')
 
             if len(rows) > max_rows:
-                errors.append(f"Maximum {max_rows} rows allowed, found {len(rows)}")
+                errors.append(f'Maximum {max_rows} rows allowed, found {len(rows)}')
 
             # Validate each row
             for row_idx, row in enumerate(rows, start=1):
@@ -133,20 +131,18 @@ class DataTransformer:
 
                 # Limit error count to prevent huge lists
                 if len(errors) > 50:
-                    errors.append("... and more errors (stopped at 50)")
+                    errors.append('... and more errors (stopped at 50)')
                     break
 
             is_valid = len(errors) == 0
             return is_valid, errors
 
         except Exception as e:
-            logger.exception(f"Error validating data: {str(e)}")
-            return False, [f"Validation error: {str(e)}"]
+            logger.exception(f'Error validating data: {str(e)}')
+            return False, [f'Validation error: {str(e)}']
 
     def apply_variable_mapping(
-        self,
-        row_data: Dict[str, Any],
-        column_mapping: Dict[str, str]
+        self, row_data: Dict[str, Any], column_mapping: Dict[str, str]
     ) -> Dict[str, Any]:
         # Dot-notation paths (e.g. "vlan.id") become nested dicts.
         try:
@@ -169,13 +165,11 @@ class DataTransformer:
             return result
 
         except Exception as e:
-            logger.exception(f"Error applying variable mapping: {str(e)}")
-            raise ValidationError(f"Mapping failed: {str(e)}")
+            logger.exception(f'Error applying variable mapping: {str(e)}')
+            raise ValidationError(f'Mapping failed: {str(e)}')
 
     def _transform_row(
-        self,
-        row: Dict[str, Any],
-        variable_mappings: Dict[str, str]
+        self, row: Dict[str, Any], variable_mappings: Dict[str, str]
     ) -> Dict[str, Any]:
         transformed = {}
 
@@ -197,12 +191,7 @@ class DataTransformer:
 
         return transformed
 
-    def _set_nested_value(
-        self,
-        target: Dict[str, Any],
-        path: str,
-        value: Any
-    ) -> None:
+    def _set_nested_value(self, target: Dict[str, Any], path: str, value: Any) -> None:
         parts = path.split('.')
         current = target
 
@@ -216,10 +205,7 @@ class DataTransformer:
         current[parts[-1]] = value
 
     def _validate_row(
-        self,
-        row: Dict[str, Any],
-        column_map: Dict[str, Dict],
-        row_idx: int
+        self, row: Dict[str, Any], column_map: Dict[str, Dict], row_idx: int
     ) -> List[str]:
         errors = []
 
@@ -247,23 +233,14 @@ class DataTransformer:
             # Type-specific validation
             field_type = column_def.get('type', self.TYPE_TEXT)
             validation_errors = self._validate_field_value(
-                value,
-                column_def,
-                field_type,
-                column_name,
-                row_idx
+                value, column_def, field_type, column_name, row_idx
             )
             errors.extend(validation_errors)
 
         return errors
 
     def _validate_field_value(
-        self,
-        value: Any,
-        column_def: Dict,
-        field_type: str,
-        column_name: str,
-        row_idx: int
+        self, value: Any, column_def: Dict, field_type: str, column_name: str, row_idx: int
     ) -> List[str]:
         errors = []
         display_name = column_def.get('display_name', column_name)
@@ -287,16 +264,12 @@ class DataTransformer:
                         )
 
                 except (ValueError, TypeError):
-                    errors.append(
-                        f"Row {row_idx}: '{display_name}' must be a number"
-                    )
+                    errors.append(f"Row {row_idx}: '{display_name}' must be a number")
 
             elif field_type == self.TYPE_BOOLEAN:
                 # Validate boolean
                 if not isinstance(value, bool) and value not in ['true', 'false', '1', '0', 1, 0]:
-                    errors.append(
-                        f"Row {row_idx}: '{display_name}' must be a boolean (true/false)"
-                    )
+                    errors.append(f"Row {row_idx}: '{display_name}' must be a boolean (true/false)")
 
             elif field_type in [self.TYPE_SELECT, self.TYPE_MULTISELECT]:
                 # Validate enum values
@@ -345,8 +318,11 @@ class DataTransformer:
                     pattern_id = column_def.get('regex_pattern_id')
                     if pattern_id:
                         from awx.models.validation import RegexPattern
+
                         try:
-                            validation_pattern = RegexPattern.objects.only('pattern').get(pk=pattern_id).pattern
+                            validation_pattern = (
+                                RegexPattern.objects.only('pattern').get(pk=pattern_id).pattern
+                            )
                         except RegexPattern.DoesNotExist:
                             validation_pattern = None
                     if not validation_pattern:
@@ -365,9 +341,7 @@ class DataTransformer:
                         )
 
         except Exception as e:
-            logger.exception(f"Error validating field {column_name}: {str(e)}")
-            errors.append(
-                f"Row {row_idx}: Error validating '{display_name}': {str(e)}"
-            )
+            logger.exception(f'Error validating field {column_name}: {str(e)}')
+            errors.append(f"Row {row_idx}: Error validating '{display_name}': {str(e)}")
 
         return errors

@@ -13,21 +13,29 @@ from .models import (
 class MIMRegistryConfigAdmin(admin.ModelAdmin):
     list_display = ('devnet_concurrency', 'devnet_request_delay_ms', 'updated_at')
     fieldsets = (
-        ('DevNet scraper', {
-            'fields': (
-                'devnet_concurrency',
-                'devnet_request_delay_ms',
-                'devnet_max_retries',
-            ),
-        }),
+        (
+            'DevNet scraper',
+            {
+                'fields': (
+                    'devnet_concurrency',
+                    'devnet_request_delay_ms',
+                    'devnet_max_retries',
+                ),
+            },
+        ),
     )
 
 
 @admin.register(MIMVersion)
 class MIMVersionAdmin(admin.ModelAdmin):
     list_display = (
-        'apic_version', 'is_active', 'class_count',
-        'property_count', 'rel_count', 'imported_at', 'imported_by',
+        'apic_version',
+        'is_active',
+        'class_count',
+        'property_count',
+        'rel_count',
+        'imported_at',
+        'imported_by',
     )
     list_filter = ('is_active',)
     search_fields = ('apic_version',)
@@ -45,24 +53,43 @@ class DevNetVersionAdmin(admin.ModelAdmin):
 @admin.register(MIMImportRun)
 class MIMImportRunAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'version_key', 'state', 'phase',
-        'completed_count', 'total_classes',
-        'fallback_count', 'not_found_count', 'failed_count',
-        'started_at', 'finished_at',
+        'id',
+        'version_key',
+        'state',
+        'phase',
+        'completed_count',
+        'total_classes',
+        'fallback_count',
+        'not_found_count',
+        'failed_count',
+        'started_at',
+        'finished_at',
     )
     list_filter = ('state', 'phase', 'version_key')
     search_fields = ('id', 'version_key')
     readonly_fields = (
-        'id', 'started_at', 'finished_at', 'core_ready_at',
-        'completed_count', 'fallback_count', 'not_found_count', 'failed_count',
+        'id',
+        'started_at',
+        'finished_at',
+        'core_ready_at',
+        'completed_count',
+        'fallback_count',
+        'not_found_count',
+        'failed_count',
     )
 
 
 @admin.register(MIMImportJob)
 class MIMImportJobAdmin(admin.ModelAdmin):
     list_display = (
-        'run', 'class_pkg', 'class_name', 'state',
-        'is_hot', 'source_version', 'retry_count', 'updated_at',
+        'run',
+        'class_pkg',
+        'class_name',
+        'state',
+        'is_hot',
+        'source_version',
+        'retry_count',
+        'updated_at',
     )
     list_filter = ('state', 'is_hot', 'source_version')
     search_fields = ('class_pkg', 'class_name', 'qualified_name')

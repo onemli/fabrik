@@ -43,7 +43,6 @@ CLASS_SEVERITY: Dict[str, str] = {
     'bgpInstPol': SEVERITY_CRITICAL,
     'ospfInstPol': SEVERITY_CRITICAL,
     'isisDomPol': SEVERITY_CRITICAL,
-
     # Tenant networking — the bread and butter of ACI
     'fvTenant': SEVERITY_HIGH,
     'fvCtx': SEVERITY_CRITICAL,
@@ -59,7 +58,6 @@ CLASS_SEVERITY: Dict[str, str] = {
     'fvRsPathAtt': SEVERITY_HIGH,
     'fvCEp': SEVERITY_LOW,
     'fvIp': SEVERITY_LOW,
-
     # Contracts and security policy
     'vzBrCP': SEVERITY_HIGH,
     'vzSubj': SEVERITY_HIGH,
@@ -67,7 +65,6 @@ CLASS_SEVERITY: Dict[str, str] = {
     'vzFilter': SEVERITY_HIGH,
     'vzEntry': SEVERITY_HIGH,
     'vzTaboo': SEVERITY_HIGH,
-
     # L3Out and external routing
     'l3extOut': SEVERITY_CRITICAL,
     'l3extLNodeP': SEVERITY_CRITICAL,
@@ -76,7 +73,6 @@ CLASS_SEVERITY: Dict[str, str] = {
     'l3extSubnet': SEVERITY_CRITICAL,
     'l3extInstP': SEVERITY_HIGH,
     'l3extRsPathL3OutAtt': SEVERITY_CRITICAL,
-
     # Access policies — physical connectivity
     'infraAccPortP': SEVERITY_MEDIUM,
     'infraHPortS': SEVERITY_MEDIUM,
@@ -85,18 +81,15 @@ CLASS_SEVERITY: Dict[str, str] = {
     'infraAccPortGrp': SEVERITY_MEDIUM,
     'infraAttEntityP': SEVERITY_MEDIUM,
     'infraRsDomP': SEVERITY_MEDIUM,
-
     # VMM and virtualization
     'vmmDomP': SEVERITY_MEDIUM,
     'vmmCtrlrP': SEVERITY_MEDIUM,
-
     # Monitoring and management — lower impact
     'monEPGPol': SEVERITY_LOW,
     'snmpPol': SEVERITY_LOW,
     'syslogGroup': SEVERITY_LOW,
     'maintMaintP': SEVERITY_LOW,
     'firmwareFwP': SEVERITY_LOW,
-
     # Health and fault objects are informational
     'healthInst': SEVERITY_INFO,
     'faultInst': SEVERITY_INFO,
@@ -112,7 +105,6 @@ ATTRIBUTE_SEVERITY: Dict[str, str] = {
     'fvSubnet.scope': SEVERITY_CRITICAL,
     'fvSubnet.preferred': SEVERITY_HIGH,
     'fvSubnet.virtual': SEVERITY_HIGH,
-
     # BD forwarding behavior
     'fvBD.unkMacUcastAct': SEVERITY_CRITICAL,
     'fvBD.unkMcastAct': SEVERITY_CRITICAL,
@@ -121,18 +113,15 @@ ATTRIBUTE_SEVERITY: Dict[str, str] = {
     'fvBD.limitIpLearnToSubnets': SEVERITY_HIGH,
     'fvBD.ipLearning': SEVERITY_CRITICAL,
     'fvBD.multiDstPktAct': SEVERITY_HIGH,
-
     # VRF enforcement — controls whether contracts are even applied
     'fvCtx.pcEnfPref': SEVERITY_CRITICAL,
     'fvCtx.pcEnfDir': SEVERITY_CRITICAL,
     'fvCtx.knwMcastAct': SEVERITY_HIGH,
     'fvCtx.bdEnforcedEnable': SEVERITY_HIGH,
-
     # EPG contract bindings change security posture
     'fvAEPg.prio': SEVERITY_MEDIUM,
     'fvAEPg.prefGrMemb': SEVERITY_HIGH,
     'fvAEPg.floodOnEncap': SEVERITY_HIGH,
-
     # Contract filter entries — the actual ACL rules
     'vzEntry.etherT': SEVERITY_HIGH,
     'vzEntry.prot': SEVERITY_HIGH,
@@ -142,19 +131,16 @@ ATTRIBUTE_SEVERITY: Dict[str, str] = {
     'vzEntry.sToPort': SEVERITY_HIGH,
     'vzEntry.stateful': SEVERITY_HIGH,
     'vzEntry.tcpRules': SEVERITY_HIGH,
-
     # L3Out route control — affects external reachability
     'l3extSubnet.scope': SEVERITY_CRITICAL,
     'l3extSubnet.ip': SEVERITY_CRITICAL,
     'l3extSubnet.aggregate': SEVERITY_HIGH,
-
     # Interface and path bindings — physical connectivity
     'fvRsPathAtt.tDn': SEVERITY_HIGH,
     'fvRsPathAtt.encap': SEVERITY_HIGH,
     'fvRsPathAtt.mode': SEVERITY_HIGH,
     'fvRsBd.tnFvBDName': SEVERITY_CRITICAL,
     'fvRsCtx.tnFvCtxName': SEVERITY_CRITICAL,
-
     # Cosmetic attributes that exist on many classes — always INFO
     'fvTenant.descr': SEVERITY_INFO,
     'fvBD.descr': SEVERITY_INFO,
@@ -167,15 +153,28 @@ ATTRIBUTE_SEVERITY: Dict[str, str] = {
 
 # Attributes that are cosmetic regardless of which class they're on.
 # Checked as a fallback when no class-specific override exists.
-GLOBAL_INFO_ATTRIBUTES = frozenset({
-    'descr', 'nameAlias', 'annotation', 'ownerKey', 'ownerTag',
-    'userdom', 'uid', 'extMngdBy',
-})
+GLOBAL_INFO_ATTRIBUTES = frozenset(
+    {
+        'descr',
+        'nameAlias',
+        'annotation',
+        'ownerKey',
+        'ownerTag',
+        'userdom',
+        'uid',
+        'extMngdBy',
+    }
+)
 
 # Attributes that always indicate a structural/operational change
-GLOBAL_MEDIUM_ATTRIBUTES = frozenset({
-    'name', 'dn', 'rn', 'status',
-})
+GLOBAL_MEDIUM_ATTRIBUTES = frozenset(
+    {
+        'name',
+        'dn',
+        'rn',
+        'status',
+    }
+)
 
 
 def get_attribute_severity(class_name: str, attr_name: str) -> str:
@@ -227,11 +226,13 @@ def score_attribute_changes(
     for change in attribute_changes:
         attr_name = change['key']
         severity = get_attribute_severity(class_name, attr_name)
-        enriched.append({
-            **change,
-            'severity': severity,
-            'weight': SEVERITY_WEIGHT[severity],
-        })
+        enriched.append(
+            {
+                **change,
+                'severity': severity,
+                'weight': SEVERITY_WEIGHT[severity],
+            }
+        )
     return enriched
 
 

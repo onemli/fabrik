@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+
 import logging
 import os
 from pathlib import Path
@@ -28,14 +29,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 _secret_key = os.getenv('DJANGO_SECRET_KEY', '')
 if not _secret_key:
     import sys
+
     if 'test' in sys.argv or os.getenv('CI'):
         _secret_key = 'django-insecure-test-only-key-do-not-use-in-production'
     elif os.getenv('DJANGO_DEVELOPMENT', 'false').lower() == 'true':
         _secret_key = 'django-insecure-dev-only-key-do-not-use-in-production'
     else:
         raise ValueError(
-            "DJANGO_SECRET_KEY environment variable is not set. "
-            "Generate one with: python -c \"from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())\""
+            'DJANGO_SECRET_KEY environment variable is not set. '
+            'Generate one with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"'
         )
 SECRET_KEY = _secret_key
 
@@ -43,7 +45,11 @@ SECRET_KEY = _secret_key
 DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
 
 _allowed_hosts = os.getenv('ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',') if h.strip()] if _allowed_hosts else ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = (
+    [h.strip() for h in _allowed_hosts.split(',') if h.strip()]
+    if _allowed_hosts
+    else ['localhost', '127.0.0.1']
+)
 # In DEBUG mode, allow all hosts for development convenience
 if DEBUG:
     ALLOWED_HOSTS = ['*']
@@ -53,17 +59,15 @@ if DEBUG:
 # (read-only views, seeded data, etc.) without forking the codebase.
 FABRIK_MODE = os.getenv('FABRIK_MODE', 'PROD').upper()
 if FABRIK_MODE not in ('PROD', 'DEMO'):
-    raise ImproperlyConfigured(
-        f"FABRIK_MODE must be 'PROD' or 'DEMO', got '{FABRIK_MODE}'"
-    )
+    raise ImproperlyConfigured(f"FABRIK_MODE must be 'PROD' or 'DEMO', got '{FABRIK_MODE}'")
 
 # Public registration: when False (default), the /api/users/register/ endpoint
 # returns 403 to anonymous callers. Admins create accounts via the user
 # management UI. Set true only for lab/demo deployments where self-signup
 # is intentional.
-FABRIK_ALLOW_PUBLIC_REGISTRATION = os.getenv(
-    'FABRIK_ALLOW_PUBLIC_REGISTRATION', 'false'
-).lower() == 'true'
+FABRIK_ALLOW_PUBLIC_REGISTRATION = (
+    os.getenv('FABRIK_ALLOW_PUBLIC_REGISTRATION', 'false').lower() == 'true'
+)
 
 # Neo4j Configuration
 NEO4J_URI = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
@@ -77,12 +81,17 @@ NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD', '')
 _encryption_key = os.getenv('ENCRYPTION_KEY', '')
 if not _encryption_key:
     import sys
-    if 'test' in sys.argv or os.getenv('CI') or os.getenv('DJANGO_DEVELOPMENT', 'false').lower() == 'true':
+
+    if (
+        'test' in sys.argv
+        or os.getenv('CI')
+        or os.getenv('DJANGO_DEVELOPMENT', 'false').lower() == 'true'
+    ):
         _encryption_key = 'rlC_Q73m6yg5bBFVz4GIfXjC61JmQ2QZT0okAzOdpJE='
     else:
         raise ValueError(
-            "ENCRYPTION_KEY environment variable is not set. "
-            "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            'ENCRYPTION_KEY environment variable is not set. '
+            'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         )
 ENCRYPTION_KEY = _encryption_key
 FERNET_KEY = ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY
@@ -97,13 +106,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.postgres',
-
     # Third-party apps
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
     'channels',
-
     # FABRIK apps
     'mim',
     'mim_registry',
@@ -370,7 +377,7 @@ SITE_URL = os.getenv('SITE_URL', 'http://localhost:3000')
 
 # Default quotas — fallback when user has no group quota assigned
 DEFAULT_QUOTAS = {
-    'max_saved_queries': 0,        # 0 = unlimited
+    'max_saved_queries': 0,  # 0 = unlimited
     'max_scheduled_tasks': 0,
     'max_apic_connections': 0,
     'max_awx_requests_daily': 0,
@@ -386,7 +393,7 @@ DEFAULT_QUOTAS = {
     'can_export_data': True,
     'can_share_resources': True,
     'can_use_ai_builder': True,
-    'ai_analysis_daily': 0,            # 0 = unlimited
+    'ai_analysis_daily': 0,  # 0 = unlimited
 }
 
 # Django Channels Configuration (WebSocket support)
@@ -394,7 +401,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.getenv('REDIS_HOST', 'redis'), int(os.getenv('REDIS_PORT', 6379)))],
+            'hosts': [(os.getenv('REDIS_HOST', 'redis'), int(os.getenv('REDIS_PORT', 6379)))],
         },
     },
 }
@@ -428,7 +435,7 @@ if LDAP_ENABLED:
         AUTH_LDAP_USER_SEARCH = LDAPSearch(
             os.getenv('LDAP_USER_DN', 'ou=users,dc=company,dc=com'),
             ldap.SCOPE_SUBTREE,
-            "(uid=%(user)s)"
+            '(uid=%(user)s)',
         )
 
         # User Attribute Mapping
@@ -449,7 +456,7 @@ if LDAP_ENABLED:
         AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
             os.getenv('LDAP_GROUP_DN', 'ou=groups,dc=company,dc=com'),
             ldap.SCOPE_SUBTREE,
-            "(objectClass=groupOfNames)"
+            '(objectClass=groupOfNames)',
         )
         AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
 
@@ -461,9 +468,9 @@ if LDAP_ENABLED:
 
         # Populate user profile on first login
         AUTH_LDAP_USER_FLAGS_BY_GROUP = {
-            "is_active": os.getenv('LDAP_ACTIVE_GROUP', 'cn=active,ou=groups,dc=company,dc=com'),
-            "is_staff": os.getenv('LDAP_STAFF_GROUP', 'cn=staff,ou=groups,dc=company,dc=com'),
-            "is_superuser": os.getenv('LDAP_ADMIN_GROUP', 'cn=admins,ou=groups,dc=company,dc=com'),
+            'is_active': os.getenv('LDAP_ACTIVE_GROUP', 'cn=active,ou=groups,dc=company,dc=com'),
+            'is_staff': os.getenv('LDAP_STAFF_GROUP', 'cn=staff,ou=groups,dc=company,dc=com'),
+            'is_superuser': os.getenv('LDAP_ADMIN_GROUP', 'cn=admins,ou=groups,dc=company,dc=com'),
         }
 
         # Local auth only in AUTHENTICATION_BACKENDS — LDAP login has its own
@@ -473,11 +480,13 @@ if LDAP_ENABLED:
             'django.contrib.auth.backends.ModelBackend',
         ]
 
-        logging.getLogger('django').info("LDAP authentication ENABLED")
+        logging.getLogger('django').info('LDAP authentication ENABLED')
 
     except ImportError:
-        logging.getLogger('django').warning("LDAP enabled but django-auth-ldap not installed. Install with: pip install django-auth-ldap python-ldap")
-        logging.getLogger('django').warning("Falling back to standard Django authentication")
+        logging.getLogger('django').warning(
+            'LDAP enabled but django-auth-ldap not installed. Install with: pip install django-auth-ldap python-ldap'
+        )
+        logging.getLogger('django').warning('Falling back to standard Django authentication')
         AUTHENTICATION_BACKENDS = [
             'django.contrib.auth.backends.ModelBackend',
         ]
@@ -486,7 +495,7 @@ else:
     AUTHENTICATION_BACKENDS = [
         'django.contrib.auth.backends.ModelBackend',
     ]
-    logging.getLogger('django').info("LDAP authentication DISABLED (using local Django auth)")
+    logging.getLogger('django').info('LDAP authentication DISABLED (using local Django auth)')
 
 # =============================================================================
 # Fabrik Platform Configuration

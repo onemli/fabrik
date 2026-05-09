@@ -21,7 +21,9 @@ router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'saved-queries', SavedQueryViewSet, basename='savedquery')
 router.register(r'execution-logs', QueryExecutionLogViewSet, basename='executionlog')
 router.register(r'scheduled-tasks', ScheduledTaskViewSet, basename='scheduledtask')
-router.register(r'scheduled-executions', ScheduledTaskExecutionViewSet, basename='scheduledexecution')
+router.register(
+    r'scheduled-executions', ScheduledTaskExecutionViewSet, basename='scheduledexecution'
+)
 router.register(r'task-settings', TaskManagementSettingsViewSet, basename='tasksettings')
 router.register(r'pipeline-executions', PipelineExecutionViewSet, basename='pipelineexecution')
 

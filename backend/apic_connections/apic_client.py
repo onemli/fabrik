@@ -17,7 +17,9 @@ from datetime import datetime, timedelta
 class APICClient:
     """Session-based HTTP client for the Cisco APIC REST API."""
 
-    def __init__(self, url: str, username: str, password: str, verify_ssl: bool = True, timeout: int = 30):
+    def __init__(
+        self, url: str, username: str, password: str, verify_ssl: bool = True, timeout: int = 30
+    ):
         self.url = url.rstrip('/')
         self.username = username
         self.password = password
@@ -34,22 +36,12 @@ class APICClient:
         requests.Session picks up automatically. We also record the expiry time
         so ensure_logged_in() can pro-actively refresh before it expires.
         """
-        login_url = f"{self.url}/api/aaaLogin.json"
-        payload = {
-            "aaaUser": {
-                "attributes": {
-                    "name": self.username,
-                    "pwd": self.password
-                }
-            }
-        }
+        login_url = f'{self.url}/api/aaaLogin.json'
+        payload = {'aaaUser': {'attributes': {'name': self.username, 'pwd': self.password}}}
 
         try:
             response = self.session.post(
-                login_url,
-                json=payload,
-                verify=self.verify_ssl,
-                timeout=self.timeout
+                login_url, json=payload, verify=self.verify_ssl, timeout=self.timeout
             )
 
             if response.status_code == 200:
@@ -60,17 +52,23 @@ class APICClient:
                 self.token_expiry = datetime.now() + timedelta(minutes=10)
                 return True, None
             else:
-                error_msg = response.json().get('imdata', [{}])[0].get('error', {}).get('attributes', {}).get('text', 'Login failed')
+                error_msg = (
+                    response.json()
+                    .get('imdata', [{}])[0]
+                    .get('error', {})
+                    .get('attributes', {})
+                    .get('text', 'Login failed')
+                )
                 return False, error_msg
 
         except requests.exceptions.SSLError:
-            return False, "SSL certificate verification failed. Try disabling SSL verification."
+            return False, 'SSL certificate verification failed. Try disabling SSL verification.'
         except requests.exceptions.ConnectionError:
-            return False, "Connection failed. Check APIC URL and network connectivity."
+            return False, 'Connection failed. Check APIC URL and network connectivity.'
         except requests.exceptions.Timeout:
-            return False, f"Request timed out after {self.timeout} seconds."
+            return False, f'Request timed out after {self.timeout} seconds.'
         except Exception as e:
-            return False, f"Unexpected error: {str(e)}"
+            return False, f'Unexpected error: {str(e)}'
 
     def is_token_valid(self) -> bool:
         """Check if current token is still valid"""
@@ -84,7 +82,9 @@ class APICClient:
             return True, None
         return self.login()
 
-    def execute_query(self, path: str, method: str = 'GET', data: Optional[Dict] = None) -> Tuple[bool, Any, Optional[str]]:
+    def execute_query(
+        self, path: str, method: str = 'GET', data: Optional[Dict] = None
+    ) -> Tuple[bool, Any, Optional[str]]:
         """
         Execute a query on APIC
         Args:
@@ -101,33 +101,42 @@ class APICClient:
         # Construct full URL
         if not path.startswith('/'):
             path = '/' + path
-        url = f"{self.url}{path}"
+        url = f'{self.url}{path}'
 
         try:
             if method == 'GET':
                 response = self.session.get(url, verify=self.verify_ssl, timeout=self.timeout)
             elif method == 'POST':
-                response = self.session.post(url, json=data, verify=self.verify_ssl, timeout=self.timeout)
+                response = self.session.post(
+                    url, json=data, verify=self.verify_ssl, timeout=self.timeout
+                )
             elif method == 'PUT':
-                response = self.session.put(url, json=data, verify=self.verify_ssl, timeout=self.timeout)
+                response = self.session.put(
+                    url, json=data, verify=self.verify_ssl, timeout=self.timeout
+                )
             elif method == 'DELETE':
                 response = self.session.delete(url, verify=self.verify_ssl, timeout=self.timeout)
             else:
-                return False, None, f"Unsupported HTTP method: {method}"
+                return False, None, f'Unsupported HTTP method: {method}'
 
             if response.status_code in [200, 201]:
                 return True, response.json(), None
             else:
                 error_data = response.json() if response.content else {}
-                error_msg = error_data.get('imdata', [{}])[0].get('error', {}).get('attributes', {}).get('text', 'Request failed')
-                return False, None, f"HTTP {response.status_code}: {error_msg}"
+                error_msg = (
+                    error_data.get('imdata', [{}])[0]
+                    .get('error', {})
+                    .get('attributes', {})
+                    .get('text', 'Request failed')
+                )
+                return False, None, f'HTTP {response.status_code}: {error_msg}'
 
         except requests.exceptions.Timeout:
-            return False, None, f"Request timed out after {self.timeout} seconds."
+            return False, None, f'Request timed out after {self.timeout} seconds.'
         except requests.exceptions.RequestException as e:
-            return False, None, f"Request error: {str(e)}"
+            return False, None, f'Request error: {str(e)}'
         except Exception as e:
-            return False, None, f"Unexpected error: {str(e)}"
+            return False, None, f'Unexpected error: {str(e)}'
 
     def test_connection(self) -> Tuple[bool, Optional[str]]:
         """

@@ -16,10 +16,20 @@ from .models import AuditLog, AuditLogSettings, LoginAttempt
 
 class AuditService:
     @staticmethod
-    def log(user: Optional[User], action: str, category: str, resource_type: str = '',
-            resource_id: str = '', resource_name: str = '', description: str = '',
-            metadata: Optional[dict] = None, content: str = '', success: bool = True,
-            error_message: str = '', request: Optional[HttpRequest] = None) -> Optional[AuditLog]:
+    def log(
+        user: Optional[User],
+        action: str,
+        category: str,
+        resource_type: str = '',
+        resource_id: str = '',
+        resource_name: str = '',
+        description: str = '',
+        metadata: Optional[dict] = None,
+        content: str = '',
+        success: bool = True,
+        error_message: str = '',
+        request: Optional[HttpRequest] = None,
+    ) -> Optional[AuditLog]:
         settings = AuditLogSettings.get_settings()
 
         category_enabled_map = {
@@ -109,9 +119,15 @@ class AuditService:
         return log_entry
 
     @staticmethod
-    def log_login_attempt(username: str, success: bool, ip_address: str, user_agent: str,
-                          failure_reason: str = '', user: Optional[User] = None,
-                          session_key: str = '') -> Optional[LoginAttempt]:
+    def log_login_attempt(
+        username: str,
+        success: bool,
+        ip_address: str,
+        user_agent: str,
+        failure_reason: str = '',
+        user: Optional[User] = None,
+        session_key: str = '',
+    ) -> Optional[LoginAttempt]:
         settings = AuditLogSettings.get_settings()
         if not settings.login_logout_enabled:
             return None

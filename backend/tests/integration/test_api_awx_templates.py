@@ -1,6 +1,7 @@
 """
 Integration tests for AWX Template API endpoints
 """
+
 import pytest
 from rest_framework import status
 from awx.models import TemplateCategory, AutomationTemplate, AWXConnection
@@ -18,7 +19,7 @@ class TestTemplateCategoryViewSet:
             name='Network',
             description='Network automation templates',
             color='#3b82f6',
-            created_by=authenticated_client.handler._force_user
+            created_by=authenticated_client.handler._force_user,
         )
 
         response = authenticated_client.get('/api/awx/categories/')
@@ -36,7 +37,7 @@ class TestTemplateCategoryViewSet:
             'name': 'Security',
             'description': 'Security automation',
             'color': '#ef4444',
-            'icon': 'shield'
+            'icon': 'shield',
         }
 
         response = authenticated_client.post('/api/awx/categories/', data, format='json')
@@ -47,17 +48,12 @@ class TestTemplateCategoryViewSet:
     def test_update_category(self, authenticated_client, user):
         """Test updating template category"""
         category = TemplateCategory.objects.create(
-            name='Old Name',
-            description='Old description',
-            color='#000000',
-            created_by=user
+            name='Old Name', description='Old description', color='#000000', created_by=user
         )
 
         data = {'name': 'New Name', 'description': 'New description', 'color': '#ffffff'}
         response = authenticated_client.patch(
-            f'/api/awx/categories/{category.id}/',
-            data,
-            format='json'
+            f'/api/awx/categories/{category.id}/', data, format='json'
         )
 
         # Allow both 200 OK and 404 (in case permissions prevent access)
@@ -70,10 +66,7 @@ class TestTemplateCategoryViewSet:
     def test_delete_category(self, authenticated_client, user):
         """Test deleting template category"""
         category = TemplateCategory.objects.create(
-            name='Test Category',
-            description='Test',
-            color='#000000',
-            created_by=user
+            name='Test Category', description='Test', color='#000000', created_by=user
         )
 
         response = authenticated_client.delete(f'/api/awx/categories/{category.id}/')
@@ -91,10 +84,7 @@ class TestAutomationTemplateViewSet:
         """Test listing automation templates"""
         # Create AWX connection first
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         # Create template
@@ -105,7 +95,7 @@ class TestAutomationTemplateViewSet:
             awx_type='job_template',
             awx_template_id=1,
             awx_template_name='AWX Template 1',
-            created_by=user
+            created_by=user,
         )
 
         response = authenticated_client.get('/api/awx/templates/')
@@ -120,10 +110,7 @@ class TestAutomationTemplateViewSet:
     def test_create_template(self, authenticated_client, user):
         """Test creating automation template"""
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         data = {
@@ -134,7 +121,7 @@ class TestAutomationTemplateViewSet:
             'awx_template_id': 100,
             'awx_template_name': 'AWX Job Template',
             'requires_approval': True,
-            'is_public': False
+            'is_public': False,
         }
 
         response = authenticated_client.post('/api/awx/templates/', data, format='json')
@@ -145,10 +132,7 @@ class TestAutomationTemplateViewSet:
     def test_retrieve_template(self, authenticated_client, user):
         """Test retrieving template details"""
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         template = AutomationTemplate.objects.create(
@@ -158,7 +142,7 @@ class TestAutomationTemplateViewSet:
             awx_type='job_template',
             awx_template_id=1,
             awx_template_name='AWX Template',
-            created_by=user
+            created_by=user,
         )
 
         response = authenticated_client.get(f'/api/awx/templates/{template.id}/')
@@ -169,10 +153,7 @@ class TestAutomationTemplateViewSet:
     def test_update_template(self, authenticated_client, user):
         """Test updating template"""
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         template = AutomationTemplate.objects.create(
@@ -182,14 +163,12 @@ class TestAutomationTemplateViewSet:
             awx_type='job_template',
             awx_template_id=1,
             awx_template_name='AWX Template',
-            created_by=user
+            created_by=user,
         )
 
         data = {'name': 'New Name', 'description': 'New description'}
         response = authenticated_client.patch(
-            f'/api/awx/templates/{template.id}/',
-            data,
-            format='json'
+            f'/api/awx/templates/{template.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -199,10 +178,7 @@ class TestAutomationTemplateViewSet:
     def test_delete_template(self, authenticated_client, user):
         """Test deleting template"""
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         template = AutomationTemplate.objects.create(
@@ -212,7 +188,7 @@ class TestAutomationTemplateViewSet:
             awx_type='job_template',
             awx_template_id=1,
             awx_template_name='AWX Template',
-            created_by=user
+            created_by=user,
         )
 
         response = authenticated_client.delete(f'/api/awx/templates/{template.id}/')
@@ -223,17 +199,11 @@ class TestAutomationTemplateViewSet:
     def test_filter_by_category(self, authenticated_client, user):
         """Test filtering templates by category"""
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         category = TemplateCategory.objects.create(
-            name='Network',
-            description='Network automation',
-            color='#3b82f6',
-            created_by=user
+            name='Network', description='Network automation', color='#3b82f6', created_by=user
         )
 
         AutomationTemplate.objects.create(
@@ -244,7 +214,7 @@ class TestAutomationTemplateViewSet:
             awx_template_id=1,
             awx_template_name='AWX Template',
             category=category,
-            created_by=user
+            created_by=user,
         )
 
         response = authenticated_client.get(f'/api/awx/templates/?category={category.id}')

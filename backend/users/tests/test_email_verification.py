@@ -27,11 +27,11 @@ class SendVerificationEmailTest(TestCase):
         self.client.force_authenticate(user=self.user)
 
     @override_settings(
-        EMAIL_ENABLED=True,
-        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
+        EMAIL_ENABLED=True, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
     )
     def test_send_verification_email(self):
         from django.core.cache import cache
+
         cache.delete('email_service_health')
 
         response = self.client.post('/api/auth/email/send-verification/')
@@ -71,7 +71,7 @@ class VerifyEmailTokenTest(TestCase):
     def test_verify_valid_token(self):
         token = default_token_generator.make_token(self.user)
         uid = urlsafe_base64_encode(force_bytes(self.user.pk))
-        combined = f"{uid}:{token}"
+        combined = f'{uid}:{token}'
 
         response = self.client.post(
             '/api/auth/email/verify/',
@@ -100,7 +100,7 @@ class VerifyEmailTokenTest(TestCase):
         token = default_token_generator.make_token(other)
         # Use self.user's uid but other's token
         uid = urlsafe_base64_encode(force_bytes(self.user.pk))
-        combined = f"{uid}:{token}"
+        combined = f'{uid}:{token}'
 
         response = self.client.post(
             '/api/auth/email/verify/',

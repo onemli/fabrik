@@ -29,7 +29,6 @@ from typing import Any, Dict, List
 
 
 class PostProcessorEngine:
-
     @staticmethod
     def execute(data: Any, processors: List[Dict[str, Any]]) -> Any:
         """Run the full processor chain on data.
@@ -79,7 +78,7 @@ class PostProcessorEngine:
         }
 
         if processor_type not in processors:
-            raise ValueError(f"Unknown processor type: {processor_type}")
+            raise ValueError(f'Unknown processor type: {processor_type}')
 
         return processors[processor_type](data, config)
 
@@ -103,7 +102,7 @@ class PostProcessorEngine:
         parser handles the patterns that come up constantly in APIC data.
         """
         if not isinstance(data, list):
-            raise ValueError("Filter Rows requires array input")
+            raise ValueError('Filter Rows requires array input')
 
         condition = (config.get('condition') or '').strip()
         if not condition:
@@ -115,8 +114,8 @@ class PostProcessorEngine:
         )
         if not m:
             raise ValueError(
-                f"Unsupported condition format: {condition!r}. "
-                "Expected: item.field op value  "
+                f'Unsupported condition format: {condition!r}. '
+                'Expected: item.field op value  '
                 "(e.g.  item.operSt !== 'established')"
             )
 
@@ -124,8 +123,9 @@ class PostProcessorEngine:
         raw = raw.strip()
 
         # Parse the value literal
-        if (raw.startswith("'") and raw.endswith("'")) or \
-                (raw.startswith('"') and raw.endswith('"')):
+        if (raw.startswith("'") and raw.endswith("'")) or (
+            raw.startswith('"') and raw.endswith('"')
+        ):
             value: Any = raw[1:-1]
         elif raw == 'true':
             value = True
@@ -168,10 +168,14 @@ class PostProcessorEngine:
             except (TypeError, ValueError):
                 return False
 
-            if op == '>': return a > b
-            if op == '<': return a < b
-            if op == '>=': return a >= b
-            if op == '<=': return a <= b
+            if op == '>':
+                return a > b
+            if op == '<':
+                return a < b
+            if op == '>=':
+                return a >= b
+            if op == '<=':
+                return a <= b
             return True
 
         return [item for item in data if passes(item)]
@@ -331,19 +335,23 @@ class PostProcessorEngine:
         before it (lexicographic ordering bites people constantly with APIC data).
         """
         if not isinstance(data, list):
-            raise ValueError("Array Sort requires array input")
+            raise ValueError('Array Sort requires array input')
 
         result = list(data)
         field = config.get('field')
 
         if config.get('numeric'):
             if field:
-                result.sort(key=lambda x: float(PostProcessorEngine._get_nested_value(x, field) or 0))
+                result.sort(
+                    key=lambda x: float(PostProcessorEngine._get_nested_value(x, field) or 0)
+                )
             else:
                 result.sort(key=lambda x: float(x) if isinstance(x, (int, float, str)) else 0)
         else:
             if field:
-                result.sort(key=lambda x: str(PostProcessorEngine._get_nested_value(x, field) or ''))
+                result.sort(
+                    key=lambda x: str(PostProcessorEngine._get_nested_value(x, field) or '')
+                )
             else:
                 result.sort(key=lambda x: str(x))
 
@@ -383,7 +391,7 @@ class PostProcessorEngine:
         rather than the whole item stringified.
         """
         if not isinstance(data, list):
-            raise ValueError("Pattern Filter requires array input")
+            raise ValueError('Pattern Filter requires array input')
 
         field = config.get('field')
         case_sensitive = config.get('caseSensitive', False)
@@ -426,11 +434,11 @@ class PostProcessorEngine:
             Useful when downstream processors expect nested input.
         """
         if not isinstance(data, list):
-            raise ValueError("Field Extract requires array input")
+            raise ValueError('Field Extract requires array input')
 
         fields = config.get('fields', [])
         if not fields:
-            raise ValueError("Field Extract requires at least one field")
+            raise ValueError('Field Extract requires at least one field')
 
         keep_structure = config.get('keepStructure', False)
 
@@ -503,7 +511,7 @@ class PostProcessorEngine:
 
             def flatten_dict(obj, prefix=''):
                 for key, value in obj.items():
-                    new_key = f"{prefix}{separator}{key}" if prefix else key
+                    new_key = f'{prefix}{separator}{key}' if prefix else key
                     if isinstance(value, dict):
                         flatten_dict(value, new_key)
                     else:
@@ -532,7 +540,7 @@ class PostProcessorEngine:
         breaking the whole pipeline for a misconfigured expression.
         """
         if not isinstance(data, list):
-            raise ValueError("Map Transform requires array input")
+            raise ValueError('Map Transform requires array input')
 
         expression = config.get('expression', 'item')
 
@@ -627,7 +635,7 @@ class PostProcessorEngine:
         rather than a scalar. Subsequent processors need to handle that shape.
         """
         if not isinstance(data, list):
-            raise ValueError("Aggregate requires array input")
+            raise ValueError('Aggregate requires array input')
 
         operation = config.get('operation', 'count')
 
@@ -637,7 +645,7 @@ class PostProcessorEngine:
         elif operation == 'sum':
             field = config.get('field')
             if not field:
-                raise ValueError("Sum requires a field")
+                raise ValueError('Sum requires a field')
             total = 0
             for item in data:
                 value = PostProcessorEngine._get_nested_value(item, field)
@@ -653,7 +661,7 @@ class PostProcessorEngine:
         elif operation == 'avg':
             field = config.get('field')
             if not field:
-                raise ValueError("Average requires a field")
+                raise ValueError('Average requires a field')
             total = 0
             count = 0
             for item in data:
@@ -672,7 +680,7 @@ class PostProcessorEngine:
         elif operation == 'min':
             field = config.get('field')
             if not field:
-                raise ValueError("Min requires a field")
+                raise ValueError('Min requires a field')
             values = []
             for item in data:
                 value = PostProcessorEngine._get_nested_value(item, field)
@@ -688,7 +696,7 @@ class PostProcessorEngine:
         elif operation == 'max':
             field = config.get('field')
             if not field:
-                raise ValueError("Max requires a field")
+                raise ValueError('Max requires a field')
             values = []
             for item in data:
                 value = PostProcessorEngine._get_nested_value(item, field)
@@ -704,7 +712,7 @@ class PostProcessorEngine:
         elif operation == 'group':
             group_by = config.get('groupBy')
             if not group_by:
-                raise ValueError("Group requires groupBy field")
+                raise ValueError('Group requires groupBy field')
 
             groups = {}
             for item in data:
@@ -716,7 +724,7 @@ class PostProcessorEngine:
             return groups
 
         else:
-            raise ValueError(f"Unknown aggregate operation: {operation}")
+            raise ValueError(f'Unknown aggregate operation: {operation}')
 
     # ========================================================================
     # Helpers

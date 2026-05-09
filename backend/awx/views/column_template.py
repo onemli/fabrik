@@ -42,6 +42,7 @@ class ColumnTemplateViewSet(viewsets.ModelViewSet):
     Visibility is union of: own, public, explicitly shared. Ordered by usage_count
     descending by default so the most-reused templates show up first in the picker.
     """
+
     permission_classes = [IsAuthenticated]
     serializer_class = ColumnTemplateSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]

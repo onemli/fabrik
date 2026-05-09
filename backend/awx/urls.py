@@ -14,11 +14,7 @@ from .views import (
     ValidationListViewSet,
     RegexPatternViewSet,
 )
-from .views.webhook_receiver import (
-    awx_webhook_receiver,
-    webhook_health_check,
-    test_webhook_event
-)
+from .views.webhook_receiver import awx_webhook_receiver, webhook_health_check, test_webhook_event
 
 router = DefaultRouter()
 router.register(r'connections', AWXConnectionViewSet, basename='awx-connection')
@@ -32,7 +28,6 @@ router.register(r'regex-patterns', RegexPatternViewSet, basename='regex-pattern'
 
 urlpatterns = [
     path('', include(router.urls)),
-
     # Webhook endpoints (event-driven architecture - Phase 1)
     path('webhooks/receiver/', awx_webhook_receiver, name='awx-webhook-receiver'),
     path('webhooks/health/', webhook_health_check, name='webhook-health'),

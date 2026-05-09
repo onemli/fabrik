@@ -44,7 +44,9 @@ class Command(BaseCommand):
         drop = options['drop_existing']
 
         self._ensure_index('classSearchIndex', self._create_index, self._drop_index, drop)
-        self._ensure_index('propertySearchIndex', self._create_property_index, self._drop_property_index, drop)
+        self._ensure_index(
+            'propertySearchIndex', self._create_property_index, self._drop_property_index, drop
+        )
 
         self._await_indexes()
 
@@ -66,7 +68,7 @@ class Command(BaseCommand):
     def _test_connection(self):
         """Quick RETURN 1 ping — fails fast before any index work."""
         try:
-            query = "RETURN 1 as test"
+            query = 'RETURN 1 as test'
             neo4j_connection.execute_query(query)
             self.stdout.write(self.style.SUCCESS('✓ Neo4j connection: OK'))
             return True
@@ -76,7 +78,7 @@ class Command(BaseCommand):
 
     def _index_exists(self, name):
         try:
-            indexes = neo4j_connection.execute_query("SHOW INDEXES")
+            indexes = neo4j_connection.execute_query('SHOW INDEXES')
             return any(idx.get('name') == name for idx in indexes)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Could not check indexes: {e}'))
@@ -84,14 +86,14 @@ class Command(BaseCommand):
 
     def _drop_index(self):
         try:
-            neo4j_connection.execute_query("DROP INDEX classSearchIndex IF EXISTS")
+            neo4j_connection.execute_query('DROP INDEX classSearchIndex IF EXISTS')
             self.stdout.write(self.style.SUCCESS('✓ classSearchIndex dropped'))
         except Exception as e:
             raise CommandError(f'Failed to drop index: {e}')
 
     def _drop_property_index(self):
         try:
-            neo4j_connection.execute_query("DROP INDEX propertySearchIndex IF EXISTS")
+            neo4j_connection.execute_query('DROP INDEX propertySearchIndex IF EXISTS')
             self.stdout.write(self.style.SUCCESS('✓ propertySearchIndex dropped'))
         except Exception as e:
             raise CommandError(f'Failed to drop index: {e}')
@@ -148,7 +150,7 @@ class Command(BaseCommand):
             for term, desc in [('operSt', 'Exact'), ('admin*', 'Prefix')]:
                 results = neo4j_connection.execute_query(
                     "CALL db.index.fulltext.queryNodes('propertySearchIndex', $t) "
-                    "YIELD node, score RETURN node.name as name, node.className as cls, score LIMIT 3",
+                    'YIELD node, score RETURN node.name as name, node.className as cls, score LIMIT 3',
                     {'t': term},
                 )
                 if results:
@@ -163,7 +165,7 @@ class Command(BaseCommand):
     def _await_indexes(self):
         try:
             self.stdout.write('\nWaiting for indexes to come online...')
-            neo4j_connection.execute_query("CALL db.awaitIndexes(300)")
+            neo4j_connection.execute_query('CALL db.awaitIndexes(300)')
             self.stdout.write(self.style.SUCCESS('✓ Indexes online'))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'  ! Await failed: {e}'))
@@ -186,13 +188,12 @@ class Command(BaseCommand):
                 RETURN node.className as className, score
                 LIMIT 3
                 """
-                results = neo4j_connection.execute_query(
-                    query,
-                    {'searchTerm': search_term}
-                )
+                results = neo4j_connection.execute_query(query, {'searchTerm': search_term})
 
                 if results:
-                    self.stdout.write(self.style.SUCCESS(f'  ✓ {description}: {len(results)} results'))
+                    self.stdout.write(
+                        self.style.SUCCESS(f'  ✓ {description}: {len(results)} results')
+                    )
                     for r in results[:2]:
                         self.stdout.write(f'    - {r["className"]} (score: {r["score"]:.2f})')
                 else:

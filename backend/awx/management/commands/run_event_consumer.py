@@ -44,7 +44,7 @@ class EventConsumer:
         # Prefetch count (process N messages at a time)
         self.prefetch_count = 10
 
-        logger.info(f"Event consumer initialized for queue: {queue_name}")
+        logger.info(f'Event consumer initialized for queue: {queue_name}')
 
     # Exchange → queue binding map
     # routing_key pattern → queue_name
@@ -73,30 +73,25 @@ class EventConsumer:
                 )
                 if exchange_name:
                     self.channel.exchange_declare(
-                        exchange=exchange_name,
-                        exchange_type='topic',
-                        durable=True
+                        exchange=exchange_name, exchange_type='topic', durable=True
                     )
-                self.channel.queue_declare(
-                    queue=self.queue_name,
-                    durable=True
-                )
+                self.channel.queue_declare(queue=self.queue_name, durable=True)
                 if exchange_name:
                     self.channel.queue_bind(
-                        queue=self.queue_name,
-                        exchange=exchange_name,
-                        routing_key=routing_key
+                        queue=self.queue_name, exchange=exchange_name, routing_key=routing_key
                     )
 
                 # Set QoS - process N messages at a time
                 self.channel.basic_qos(prefetch_count=self.prefetch_count)
 
-                logger.info(f"Connected to RabbitMQ for queue: {self.queue_name} (attempt {attempt + 1})")
+                logger.info(
+                    f'Connected to RabbitMQ for queue: {self.queue_name} (attempt {attempt + 1})'
+                )
                 return
 
             except (AMQPConnectionError, Exception) as e:
                 logger.warning(
-                    f"Failed to connect to RabbitMQ (attempt {attempt + 1}/{max_retries}): {str(e)}"
+                    f'Failed to connect to RabbitMQ (attempt {attempt + 1}/{max_retries}): {str(e)}'
                 )
 
                 # Explicitly close any partially-opened connection to prevent FD leaks
@@ -109,11 +104,11 @@ class EventConsumer:
                 self.channel = None
 
                 if attempt < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    logger.info(f'Retrying in {retry_delay} seconds...')
                     time.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
                 else:
-                    logger.error(f"Failed to connect after {max_retries} attempts")
+                    logger.error(f'Failed to connect after {max_retries} attempts')
                     raise
 
     def start_consuming(self):
@@ -126,20 +121,20 @@ class EventConsumer:
             self.channel.basic_consume(
                 queue=self.queue_name,
                 on_message_callback=self.on_message,
-                auto_ack=False  # Manual acknowledgment for reliability
+                auto_ack=False,  # Manual acknowledgment for reliability
             )
 
-            logger.info(f"Started consuming from queue: {self.queue_name}")
-            logger.info("Press Ctrl+C to stop...")
+            logger.info(f'Started consuming from queue: {self.queue_name}')
+            logger.info('Press Ctrl+C to stop...')
 
             # Start consuming (blocks until stopped)
             self.channel.start_consuming()
 
         except KeyboardInterrupt:
-            logger.info("Stopping consumer...")
+            logger.info('Stopping consumer...')
             self.stop()
         except Exception as e:
-            logger.exception(f"Error in consumer: {str(e)}")
+            logger.exception(f'Error in consumer: {str(e)}')
             self.reconnect()
 
     def on_message(self, channel, method, properties, body):
@@ -160,8 +155,8 @@ class EventConsumer:
             metadata = message.get('metadata', {})
 
             logger.info(
-                f"Processing event: routing_key={method.routing_key}, "
-                f"correlation_id={metadata.get('correlation_id')}"
+                f'Processing event: routing_key={method.routing_key}, '
+                f'correlation_id={metadata.get("correlation_id")}'
             )
 
             # Process event based on queue
@@ -172,27 +167,27 @@ class EventConsumer:
             elif self.queue_name == 'awx.job.output':
                 self.process_job_output_event(event_data, metadata)
             else:
-                logger.warning(f"Unknown queue: {self.queue_name}")
+                logger.warning(f'Unknown queue: {self.queue_name}')
 
             # Acknowledge message (success)
             channel.basic_ack(delivery_tag=method.delivery_tag)
 
-            logger.debug(f"Event processed successfully: {method.routing_key}")
+            logger.debug(f'Event processed successfully: {method.routing_key}')
 
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in message: {str(e)}")
+            logger.error(f'Invalid JSON in message: {str(e)}')
             # Reject and don't requeue (send to DLQ)
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
         except Exception as e:
-            logger.exception(f"Error processing message: {str(e)}")
+            logger.exception(f'Error processing message: {str(e)}')
 
             # Check retry count from message headers
             headers = properties.headers or {} if properties.headers else {}
             retry_count = headers.get('x-retry-count', 0)
 
             if retry_count >= 3:
-                logger.error(f"Message exceeded max retries ({retry_count}), sending to DLQ")
+                logger.error(f'Message exceeded max retries ({retry_count}), sending to DLQ')
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             else:
                 # Nack without requeue, then republish with incremented retry count
@@ -206,7 +201,7 @@ class EventConsumer:
                     properties=pika.BasicProperties(
                         headers=new_headers,
                         delivery_mode=2,
-                    )
+                    ),
                 )
 
     def process_job_status_event(self, event_data: Dict[str, Any], metadata: Dict[str, Any]):
@@ -222,7 +217,7 @@ class EventConsumer:
             execution_id = event_data.get('execution_id')
 
             if not awx_job_id:
-                logger.warning("Missing awx_job_id in event")
+                logger.warning('Missing awx_job_id in event')
                 return
 
             # Find execution by AWX job ID
@@ -232,10 +227,10 @@ class EventConsumer:
                 else:
                     execution = AutomationExecution.objects.get(awx_job_id=awx_job_id)
             except AutomationExecution.DoesNotExist:
-                logger.warning(f"Execution not found for AWX job {awx_job_id}")
+                logger.warning(f'Execution not found for AWX job {awx_job_id}')
                 return
             except AutomationExecution.MultipleObjectsReturned:
-                logger.warning(f"Multiple executions found for AWX job {awx_job_id}")
+                logger.warning(f'Multiple executions found for AWX job {awx_job_id}')
                 execution = AutomationExecution.objects.filter(awx_job_id=awx_job_id).first()
 
             # Map AWX status to Fabrik status
@@ -296,8 +291,7 @@ class EventConsumer:
                 serialized_data = convert_uuids(serialized_data)
 
                 ws_service.emit_execution_update(
-                    str(execution.automation_request_id),
-                    serialized_data
+                    str(execution.automation_request_id), serialized_data
                 )
 
                 ws_service.emit_execution_status(
@@ -305,19 +299,19 @@ class EventConsumer:
                     execution.status,
                     execution.awx_job_id,
                     execution.result_traceback,  # Use result_traceback instead of error_message
-                    execution.finished_at.isoformat() if execution.finished_at else None
+                    execution.finished_at.isoformat() if execution.finished_at else None,
                 )
 
             except Exception as ws_error:
-                logger.warning(f"WebSocket update failed: {str(ws_error)}")
+                logger.warning(f'WebSocket update failed: {str(ws_error)}')
 
             logger.info(
-                f"Job status updated: job_id={awx_job_id}, "
-                f"execution_id={execution.id}, status={fabrik_status}"
+                f'Job status updated: job_id={awx_job_id}, '
+                f'execution_id={execution.id}, status={fabrik_status}'
             )
 
         except Exception as e:
-            logger.exception(f"Error processing job status event: {str(e)}")
+            logger.exception(f'Error processing job status event: {str(e)}')
             raise
 
     def process_workflow_status_event(self, event_data: Dict[str, Any], metadata: Dict[str, Any]):
@@ -333,7 +327,7 @@ class EventConsumer:
             execution_id = event_data.get('execution_id')
 
             if not workflow_job_id:
-                logger.warning("Missing workflow_job_id in event")
+                logger.warning('Missing workflow_job_id in event')
                 return
 
             # Find execution
@@ -343,7 +337,7 @@ class EventConsumer:
                 else:
                     execution = AutomationExecution.objects.get(awx_job_id=workflow_job_id)
             except AutomationExecution.DoesNotExist:
-                logger.warning(f"Execution not found for workflow {workflow_job_id}")
+                logger.warning(f'Execution not found for workflow {workflow_job_id}')
                 return
 
             # Update status (same logic as job status)
@@ -402,20 +396,19 @@ class EventConsumer:
                 serialized_data = convert_uuids(serialized_data)
 
                 ws_service.emit_execution_update(
-                    str(execution.automation_request_id),
-                    serialized_data
+                    str(execution.automation_request_id), serialized_data
                 )
 
             except Exception as ws_error:
-                logger.warning(f"WebSocket update failed: {str(ws_error)}")
+                logger.warning(f'WebSocket update failed: {str(ws_error)}')
 
             logger.info(
-                f"Workflow status updated: workflow_id={workflow_job_id}, "
-                f"execution_id={execution.id}, status={fabrik_status}"
+                f'Workflow status updated: workflow_id={workflow_job_id}, '
+                f'execution_id={execution.id}, status={fabrik_status}'
             )
 
         except Exception as e:
-            logger.exception(f"Error processing workflow status event: {str(e)}")
+            logger.exception(f'Error processing workflow status event: {str(e)}')
             raise
 
     def process_job_output_event(self, event_data: Dict[str, Any], metadata: Dict[str, Any]):
@@ -433,14 +426,14 @@ class EventConsumer:
             counter = event_data.get('counter')
 
             if not all([awx_job_id, execution_id, counter is not None]):
-                logger.warning("Missing required fields in job output event")
+                logger.warning('Missing required fields in job output event')
                 return
 
             # Find execution
             try:
                 execution = AutomationExecution.objects.get(id=execution_id)
             except AutomationExecution.DoesNotExist:
-                logger.warning(f"Execution not found: {execution_id}")
+                logger.warning(f'Execution not found: {execution_id}')
                 return
 
             # Parse timestamp
@@ -470,7 +463,7 @@ class EventConsumer:
                         'host_name': event_data.get('host_name', ''),
                     },
                     'awx_created': awx_created,
-                }
+                },
             )
 
             # Broadcast via WebSocket
@@ -498,21 +491,17 @@ class EventConsumer:
                     'awx_job_id': awx_job_id,
                 }
 
-                ws_service.emit_execution_output(
-                    str(execution.id),
-                    output_data
-                )
+                ws_service.emit_execution_output(str(execution.id), output_data)
             except Exception as ws_error:
-                logger.warning(f"WebSocket update failed: {str(ws_error)}")
+                logger.warning(f'WebSocket update failed: {str(ws_error)}')
 
-            action = "Created" if created else "Updated"
+            action = 'Created' if created else 'Updated'
             logger.debug(
-                f"{action} output chunk {counter} for job {awx_job_id} "
-                f"(execution {execution_id})"
+                f'{action} output chunk {counter} for job {awx_job_id} (execution {execution_id})'
             )
 
         except Exception as e:
-            logger.exception(f"Error processing job output event: {str(e)}")
+            logger.exception(f'Error processing job output event: {str(e)}')
             raise
 
     def reconnect(self):
@@ -531,7 +520,7 @@ class EventConsumer:
             self.channel = None
 
             try:
-                logger.info(f"Attempting to reconnect in {retry_delay} seconds...")
+                logger.info(f'Attempting to reconnect in {retry_delay} seconds...')
                 time.sleep(retry_delay)
 
                 self.connect()
@@ -539,7 +528,7 @@ class EventConsumer:
                 break
 
             except Exception as e:
-                logger.error(f"Reconnection failed: {str(e)}")
+                logger.error(f'Reconnection failed: {str(e)}')
                 retry_delay = min(retry_delay * 2, 60)  # Exponential backoff (max 60s)
 
     def stop(self):
@@ -554,10 +543,10 @@ class EventConsumer:
             if self.connection and not self.connection.is_closed:
                 self.connection.close()
 
-            logger.info("Consumer stopped")
+            logger.info('Consumer stopped')
 
         except Exception as e:
-            logger.exception(f"Error stopping consumer: {str(e)}")
+            logger.exception(f'Error stopping consumer: {str(e)}')
 
 
 class Command(BaseCommand):
@@ -567,12 +556,10 @@ class Command(BaseCommand):
         parser.add_argument(
             '--queue',
             type=str,
-            help='Queue name to consume from (awx.job.status, awx.workflow.status, awx.job.output)'
+            help='Queue name to consume from (awx.job.status, awx.workflow.status, awx.job.output)',
         )
         parser.add_argument(
-            '--all',
-            action='store_true',
-            help='Run all consumers in separate threads'
+            '--all', action='store_true', help='Run all consumers in separate threads'
         )
 
     def handle(self, *args, **options):
@@ -586,21 +573,17 @@ class Command(BaseCommand):
         elif queue_name:
             self.run_single_consumer(queue_name)
         else:
-            self.stdout.write(self.style.ERROR(
-                'Please specify --queue <name> or --all'
-            ))
+            self.stdout.write(self.style.ERROR('Please specify --queue <name> or --all'))
             sys.exit(1)
 
     def run_single_consumer(self, queue_name: str):
         """Run single consumer"""
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Starting event consumer for queue: {queue_name}'
-        ))
+        self.stdout.write(self.style.SUCCESS(f'Starting event consumer for queue: {queue_name}'))
 
         consumer = EventConsumer(queue_name)
 
-        # Handle Ctrl+C 
+        # Handle Ctrl+C
         def signal_handler(sig, frame):
             self.stdout.write(self.style.WARNING('\nStopping consumer...'))
             consumer.stop()
@@ -614,9 +597,7 @@ class Command(BaseCommand):
     def run_all_consumers(self):
         """Run all consumers in separate threads"""
 
-        self.stdout.write(self.style.SUCCESS(
-            'Starting all event consumers in threads...'
-        ))
+        self.stdout.write(self.style.SUCCESS('Starting all event consumers in threads...'))
 
         queues = [
             'awx.job.status',
@@ -634,18 +615,14 @@ class Command(BaseCommand):
 
             # Start in thread
             thread = threading.Thread(
-                target=consumer.start_consuming,
-                name=f"consumer-{queue_name}",
-                daemon=False
+                target=consumer.start_consuming, name=f'consumer-{queue_name}', daemon=False
             )
             threads.append(thread)
             thread.start()
 
-            self.stdout.write(self.style.SUCCESS(
-                f'✓ Consumer started for queue: {queue_name}'
-            ))
+            self.stdout.write(self.style.SUCCESS(f'✓ Consumer started for queue: {queue_name}'))
 
-        # Handle Ctrl+C 
+        # Handle Ctrl+C
         def signal_handler(sig, frame):
             self.stdout.write(self.style.WARNING('\nStopping all consumers...'))
             for consumer in consumers:

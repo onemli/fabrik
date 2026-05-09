@@ -1,6 +1,7 @@
 """
 Integration tests for AWX Connection API endpoints
 """
+
 import pytest
 from rest_framework import status
 from awx.models import AWXConnection
@@ -18,7 +19,7 @@ def awx_connection_data():
         'token': 'test-token-123',
         'verify_ssl': True,
         'timeout': 30,
-        'is_public': False
+        'is_public': False,
     }
 
 
@@ -31,10 +32,7 @@ class TestAWXConnectionViewSet:
         """Test listing AWX connections"""
         # Create connection
         AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         response = authenticated_client.get('/api/awx/connections/')
@@ -50,7 +48,7 @@ class TestAWXConnectionViewSet:
             url='https://awx.example.com',
             auth_type='token',
             created_by=user,
-            is_public=False
+            is_public=False,
         )
 
         response = authenticated_client.get('/api/awx/connections/')
@@ -67,7 +65,7 @@ class TestAWXConnectionViewSet:
             url='https://public-awx.example.com',
             auth_type='token',
             created_by=other_user,
-            is_public=True
+            is_public=True,
         )
 
         response = authenticated_client.get('/api/awx/connections/')
@@ -79,9 +77,7 @@ class TestAWXConnectionViewSet:
     def test_create_awx_connection(self, authenticated_client, awx_connection_data):
         """Test creating AWX connection"""
         response = authenticated_client.post(
-            '/api/awx/connections/',
-            awx_connection_data,
-            format='json'
+            '/api/awx/connections/', awx_connection_data, format='json'
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -93,10 +89,7 @@ class TestAWXConnectionViewSet:
     def test_retrieve_awx_connection(self, authenticated_client, user):
         """Test retrieving AWX connection details"""
         connection = AWXConnection.objects.create(
-            name='Test AWX',
-            url='https://awx.example.com',
-            auth_type='token',
-            created_by=user
+            name='Test AWX', url='https://awx.example.com', auth_type='token', created_by=user
         )
 
         response = authenticated_client.get(f'/api/awx/connections/{connection.id}/')
@@ -108,22 +101,17 @@ class TestAWXConnectionViewSet:
     def test_update_awx_connection(self, authenticated_client, user):
         """Test updating AWX connection"""
         connection = AWXConnection.objects.create(
-            name='Old Name',
-            url='https://old.example.com',
-            auth_type='token',
-            created_by=user
+            name='Old Name', url='https://old.example.com', auth_type='token', created_by=user
         )
 
         data = {
             'name': 'New Name',
             'url': 'https://new.example.com',
             'auth_type': 'token',
-            'token': 'updated-token-123'
+            'token': 'updated-token-123',
         }
         response = authenticated_client.patch(
-            f'/api/awx/connections/{connection.id}/',
-            data,
-            format='json'
+            f'/api/awx/connections/{connection.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -138,7 +126,7 @@ class TestAWXConnectionViewSet:
             url='https://awx.example.com',
             auth_type='basic',
             username='testuser',
-            created_by=user
+            created_by=user,
         )
 
         response = authenticated_client.delete(f'/api/awx/connections/{connection.id}/')
@@ -154,7 +142,7 @@ class TestAWXConnectionViewSet:
             url='https://other.example.com',
             auth_type='token',
             created_by=other_user,
-            is_public=False
+            is_public=False,
         )
 
         response = authenticated_client.delete(f'/api/awx/connections/{connection.id}/')
@@ -168,13 +156,13 @@ class TestAWXConnectionViewSet:
             name='Production AWX',
             url='https://prod.example.com',
             auth_type='token',
-            created_by=user
+            created_by=user,
         )
         AWXConnection.objects.create(
             name='Development AWX',
             url='https://dev.example.com',
             auth_type='token',
-            created_by=user
+            created_by=user,
         )
 
         response = authenticated_client.get('/api/awx/connections/?search=production')

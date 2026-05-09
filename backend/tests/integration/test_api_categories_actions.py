@@ -1,6 +1,7 @@
 """
 Integration tests for Category ViewSet actions
 """
+
 import pytest
 from rest_framework import status
 from queries.models import Category
@@ -18,7 +19,7 @@ class TestCategoryActions:
             'name': 'Network Management',
             'description': 'Network related queries',
             'icon': 'network',
-            'color': '#4CAF50'
+            'color': '#4CAF50',
         }
 
         response = authenticated_client.post('/api/queries/categories/', data, format='json')
@@ -31,15 +32,10 @@ class TestCategoryActions:
         """Test updating a category"""
         category = CategoryFactory(name='Old Name')
 
-        data = {
-            'name': 'Updated Name',
-            'description': 'Updated description'
-        }
+        data = {'name': 'Updated Name', 'description': 'Updated description'}
 
         response = authenticated_client.patch(
-            f'/api/queries/categories/{category.id}/',
-            data,
-            format='json'
+            f'/api/queries/categories/{category.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK

@@ -8,10 +8,10 @@ from rest_framework.routers import DefaultRouter
 from .views import AuditLogViewSet, AuditLogSettingsViewSet, LoginAttemptViewSet
 
 router = DefaultRouter()
-router.register(r"logs", AuditLogViewSet, basename="audit-log")
-router.register(r"settings", AuditLogSettingsViewSet, basename="audit-settings")
-router.register(r"login-attempts", LoginAttemptViewSet, basename="login-attempt")
+router.register(r'logs', AuditLogViewSet, basename='audit-log')
+router.register(r'settings', AuditLogSettingsViewSet, basename='audit-settings')
+router.register(r'login-attempts', LoginAttemptViewSet, basename='login-attempt')
 
 urlpatterns = [
-    path("", include(router.urls)),
+    path('', include(router.urls)),
 ]

@@ -20,58 +20,47 @@ class AIQueryBuilderSettings(models.Model):
 
     # Feature toggle
     enabled = models.BooleanField(
-        default=False,
-        help_text='Enable AI Query Builder feature globally'
+        default=False, help_text='Enable AI Query Builder feature globally'
     )
 
     # Ollama configuration
     ollama_url = models.CharField(
-        max_length=255,
-        default='http://localhost:11434',
-        help_text='Ollama API URL'
+        max_length=255, default='http://localhost:11434', help_text='Ollama API URL'
     )
 
     # Model selection
     intent_model = models.CharField(
         max_length=100,
         default='qwen2.5-coder:7b',
-        help_text='Model for intent extraction (fast, lightweight)'
+        help_text='Model for intent extraction (fast, lightweight)',
     )
 
     query_builder_model = models.CharField(
         max_length=100,
         default='phi3:medium',
-        help_text='Model for query generation (accurate, powerful)'
+        help_text='Model for query generation (accurate, powerful)',
     )
 
     # Neo4j configuration
     neo4j_url = models.CharField(
         max_length=255,
         default='bolt://localhost:7687',
-        help_text='Neo4j database URL for schema validation'
+        help_text='Neo4j database URL for schema validation',
     )
 
-    neo4j_user = models.CharField(
-        max_length=100,
-        default='neo4j',
-        help_text='Neo4j username'
-    )
+    neo4j_user = models.CharField(max_length=100, default='neo4j', help_text='Neo4j username')
 
     neo4j_password = models.CharField(
-        max_length=255,
-        default='password',
-        help_text='Neo4j password (encrypted in production)'
+        max_length=255, default='password', help_text='Neo4j password (encrypted in production)'
     )
 
     # Logging & Debugging
     log_all_queries = models.BooleanField(
-        default=True,
-        help_text='Log all AI query generation attempts for debugging'
+        default=True, help_text='Log all AI query generation attempts for debugging'
     )
 
     save_failed_attempts = models.BooleanField(
-        default=True,
-        help_text='Save failed generation attempts for model improvement'
+        default=True, help_text='Save failed generation attempts for model improvement'
     )
 
     # Metadata
@@ -82,7 +71,7 @@ class AIQueryBuilderSettings(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        help_text='Last user who updated settings'
+        help_text='Last user who updated settings',
     )
 
     class Meta:
@@ -90,8 +79,8 @@ class AIQueryBuilderSettings(models.Model):
         verbose_name_plural = 'AI Query Builder Settings'
 
     def __str__(self):
-        status = "Enabled" if self.enabled else "Disabled"
-        return f"AI Query Builder Settings ({status})"
+        status = 'Enabled' if self.enabled else 'Disabled'
+        return f'AI Query Builder Settings ({status})'
 
     def save(self, *args, **kwargs):
         """Ensure only one instance exists (singleton)"""
@@ -140,33 +129,22 @@ class UserAIProvider(models.Model):
     ]
 
     # Each user can have one provider config
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        related_name='ai_provider'
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='ai_provider')
 
     # Provider selection
     provider = models.CharField(
-        max_length=20,
-        choices=PROVIDER_CHOICES,
-        default='ollama',
-        help_text='AI provider to use'
+        max_length=20, choices=PROVIDER_CHOICES, default='ollama', help_text='AI provider to use'
     )
 
     # API credentials (encrypted)
-    api_key = models.BinaryField(
-        null=True,
-        blank=True,
-        help_text='Encrypted API key'
-    )
+    api_key = models.BinaryField(null=True, blank=True, help_text='Encrypted API key')
 
     # Provider-specific settings
     api_base_url = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        help_text='Custom API base URL (for Azure, Ollama, etc.)'
+        help_text='Custom API base URL (for Azure, Ollama, etc.)',
     )
 
     # Model selection
@@ -174,15 +152,12 @@ class UserAIProvider(models.Model):
         max_length=100,
         blank=True,
         null=True,
-        help_text='Model to use (e.g., gpt-4o, claude-3-5-sonnet, llama-3.1-70b-versatile)'
+        help_text='Model to use (e.g., gpt-4o, claude-3-5-sonnet, llama-3.1-70b-versatile)',
     )
 
     # Azure-specific
     azure_deployment_name = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text='Azure OpenAI deployment name'
+        max_length=100, blank=True, null=True, help_text='Azure OpenAI deployment name'
     )
 
     azure_api_version = models.CharField(
@@ -190,25 +165,20 @@ class UserAIProvider(models.Model):
         blank=True,
         null=True,
         default='2024-02-15-preview',
-        help_text='Azure OpenAI API version'
+        help_text='Azure OpenAI API version',
     )
 
     # Status
     is_active = models.BooleanField(
-        default=True,
-        help_text='Is this provider configuration active?'
+        default=True, help_text='Is this provider configuration active?'
     )
 
     last_used_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text='Last time this provider was used'
+        null=True, blank=True, help_text='Last time this provider was used'
     )
 
     last_error = models.TextField(
-        blank=True,
-        null=True,
-        help_text='Last error message (for debugging)'
+        blank=True, null=True, help_text='Last error message (for debugging)'
     )
 
     # Metadata
@@ -220,7 +190,7 @@ class UserAIProvider(models.Model):
         verbose_name_plural = 'User AI Providers'
 
     def __str__(self):
-        return f"{self.user.username} - {self.get_provider_display()}"
+        return f'{self.user.username} - {self.get_provider_display()}'
 
     def set_api_key(self, raw_key: str):
         """Encrypt and store API key"""

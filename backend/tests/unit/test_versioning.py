@@ -2,6 +2,7 @@
 Unit tests for Query Versioning utilities
 Tests hash generation, change detection, and version incrementing
 """
+
 import pytest
 from queries.services.versioning import (
     normalize_flow_data,
@@ -18,9 +19,9 @@ from queries.services.versioning import (
 # normalize_flow_data
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestNormalizeFlowData:
-
     def test_empty_flow_data(self):
         result = normalize_flow_data({})
         assert result == {}
@@ -31,18 +32,20 @@ class TestNormalizeFlowData:
 
     def test_normalizes_class_node(self):
         flow_data = {
-            'nodes': [{
-                'id': 'n1',
-                'type': 'classNode',
-                'position': {'x': 100, 'y': 200},  # should be stripped
-                'data': {
-                    'className': 'fvTenant',
-                    'scope': 'self',
-                    'queryTarget': 'self',
-                    'label': 'Tenant',  # irrelevant
+            'nodes': [
+                {
+                    'id': 'n1',
+                    'type': 'classNode',
+                    'position': {'x': 100, 'y': 200},  # should be stripped
+                    'data': {
+                        'className': 'fvTenant',
+                        'scope': 'self',
+                        'queryTarget': 'self',
+                        'label': 'Tenant',  # irrelevant
+                    },
                 }
-            }],
-            'edges': []
+            ],
+            'edges': [],
         }
         result = normalize_flow_data(flow_data)
         node = result['nodes'][0]
@@ -55,13 +58,15 @@ class TestNormalizeFlowData:
     def test_normalizes_edges_to_source_target_only(self):
         flow_data = {
             'nodes': [],
-            'edges': [{
-                'id': 'e1',
-                'source': 'n1',
-                'target': 'n2',
-                'label': 'contains',  # should be stripped
-                'animated': True,
-            }]
+            'edges': [
+                {
+                    'id': 'e1',
+                    'source': 'n1',
+                    'target': 'n2',
+                    'label': 'contains',  # should be stripped
+                    'animated': True,
+                }
+            ],
         }
         result = normalize_flow_data(flow_data)
         edge = result['edges'][0]
@@ -69,12 +74,14 @@ class TestNormalizeFlowData:
 
     def test_filter_node_keeps_filters(self):
         flow_data = {
-            'nodes': [{
-                'id': 'f1',
-                'type': 'filterNode',
-                'data': {'filters': [{'field': 'name', 'op': 'eq', 'value': 'prod'}]}
-            }],
-            'edges': []
+            'nodes': [
+                {
+                    'id': 'f1',
+                    'type': 'filterNode',
+                    'data': {'filters': [{'field': 'name', 'op': 'eq', 'value': 'prod'}]},
+                }
+            ],
+            'edges': [],
         }
         result = normalize_flow_data(flow_data)
         node = result['nodes'][0]
@@ -82,12 +89,14 @@ class TestNormalizeFlowData:
 
     def test_output_node_has_no_semantic_data(self):
         flow_data = {
-            'nodes': [{
-                'id': 'out1',
-                'type': 'outputNode',
-                'data': {'label': 'Output', 'columns': ['name', 'dn']}
-            }],
-            'edges': []
+            'nodes': [
+                {
+                    'id': 'out1',
+                    'type': 'outputNode',
+                    'data': {'label': 'Output', 'columns': ['name', 'dn']},
+                }
+            ],
+            'edges': [],
         }
         result = normalize_flow_data(flow_data)
         node = result['nodes'][0]
@@ -100,9 +109,9 @@ class TestNormalizeFlowData:
 # generate_query_version_hash
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestGenerateQueryVersionHash:
-
     def test_returns_8_char_hex(self):
         flow_data = {'nodes': [], 'edges': []}
         result = generate_query_version_hash(flow_data)
@@ -114,26 +123,46 @@ class TestGenerateQueryVersionHash:
     def test_deterministic_same_input(self):
         flow_data = {
             'nodes': [{'id': '1', 'type': 'classNode', 'data': {'className': 'fvTenant'}}],
-            'edges': []
+            'edges': [],
         }
         h1 = generate_query_version_hash(flow_data)
         h2 = generate_query_version_hash(flow_data)
         assert h1 == h2
 
     def test_different_class_different_hash(self):
-        fd1 = {'nodes': [{'id': '1', 'type': 'classNode', 'data': {'className': 'fvTenant'}}], 'edges': []}
-        fd2 = {'nodes': [{'id': '1', 'type': 'classNode', 'data': {'className': 'fvBD'}}], 'edges': []}
+        fd1 = {
+            'nodes': [{'id': '1', 'type': 'classNode', 'data': {'className': 'fvTenant'}}],
+            'edges': [],
+        }
+        fd2 = {
+            'nodes': [{'id': '1', 'type': 'classNode', 'data': {'className': 'fvBD'}}],
+            'edges': [],
+        }
         assert generate_query_version_hash(fd1) != generate_query_version_hash(fd2)
 
     def test_position_change_does_not_change_hash(self):
         """Changing position should not affect hash (semantic equality)"""
         fd1 = {
-            'nodes': [{'id': '1', 'type': 'classNode', 'position': {'x': 0, 'y': 0}, 'data': {'className': 'fvTenant'}}],
-            'edges': []
+            'nodes': [
+                {
+                    'id': '1',
+                    'type': 'classNode',
+                    'position': {'x': 0, 'y': 0},
+                    'data': {'className': 'fvTenant'},
+                }
+            ],
+            'edges': [],
         }
         fd2 = {
-            'nodes': [{'id': '1', 'type': 'classNode', 'position': {'x': 999, 'y': 999}, 'data': {'className': 'fvTenant'}}],
-            'edges': []
+            'nodes': [
+                {
+                    'id': '1',
+                    'type': 'classNode',
+                    'position': {'x': 999, 'y': 999},
+                    'data': {'className': 'fvTenant'},
+                }
+            ],
+            'edges': [],
         }
         # Hashes should be equal since position is stripped
         assert generate_query_version_hash(fd1) == generate_query_version_hash(fd2)
@@ -147,9 +176,9 @@ class TestGenerateQueryVersionHash:
 # categorize_nodes
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestCategorizeNodes:
-
     def test_empty_nodes(self):
         result = categorize_nodes({'nodes': [], 'edges': []})
         assert result['structural_nodes'] == []
@@ -162,7 +191,7 @@ class TestCategorizeNodes:
                 {'id': '1', 'type': 'classNode', 'data': {}},
                 {'id': '2', 'type': 'classNode', 'data': {}},
             ],
-            'edges': []
+            'edges': [],
         }
         result = categorize_nodes(flow_data)
         assert len(result['structural_nodes']) == 2
@@ -173,7 +202,7 @@ class TestCategorizeNodes:
             'nodes': [
                 {'id': '1', 'type': 'filterNode', 'data': {}},
             ],
-            'edges': []
+            'edges': [],
         }
         result = categorize_nodes(flow_data)
         assert len(result['filter_nodes']) == 1
@@ -184,7 +213,7 @@ class TestCategorizeNodes:
             'nodes': [
                 {'id': '1', 'type': 'postProcessorNode', 'data': {}},
             ],
-            'edges': []
+            'edges': [],
         }
         result = categorize_nodes(flow_data)
         assert len(result['processor_nodes']) == 1
@@ -197,7 +226,7 @@ class TestCategorizeNodes:
                 {'id': '3', 'type': 'postProcessorNode', 'data': {}},
                 {'id': '4', 'type': 'outputNode', 'data': {}},
             ],
-            'edges': []
+            'edges': [],
         }
         result = categorize_nodes(flow_data)
         assert len(result['structural_nodes']) == 1
@@ -209,28 +238,24 @@ class TestCategorizeNodes:
 # detect_version_change_type
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestDetectVersionChangeType:
-
     def _class_node(self, node_id, class_name='fvTenant'):
         return {
             'id': node_id,
             'type': 'classNode',
-            'data': {'className': class_name, 'scope': 'self', 'queryTarget': 'self'}
+            'data': {'className': class_name, 'scope': 'self', 'queryTarget': 'self'},
         }
 
     def _filter_node(self, node_id, filters=None):
-        return {
-            'id': node_id,
-            'type': 'filterNode',
-            'data': {'filters': filters or []}
-        }
+        return {'id': node_id, 'type': 'filterNode', 'data': {'filters': filters or []}}
 
     def _processor_node(self, node_id, processors=None):
         return {
             'id': node_id,
             'type': 'postProcessorNode',
-            'data': {'processors': processors or []}
+            'data': {'processors': processors or []},
         }
 
     def test_no_old_flow_data_returns_none(self):
@@ -245,42 +270,30 @@ class TestDetectVersionChangeType:
 
     def test_adding_class_node_is_major(self):
         old_flow = {'nodes': [self._class_node('1')], 'edges': []}
-        new_flow = {
-            'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')],
-            'edges': []
-        }
+        new_flow = {'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')], 'edges': []}
         change_type, changes = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'major'
         assert any('Added' in c for c in changes)
 
     def test_removing_class_node_is_major(self):
-        old_flow = {
-            'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')],
-            'edges': []
-        }
+        old_flow = {'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')], 'edges': []}
         new_flow = {'nodes': [self._class_node('1')], 'edges': []}
         change_type, changes = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'major'
         assert any('Removed' in c for c in changes)
 
     def test_adding_edge_is_major(self):
-        old_flow = {
-            'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')],
-            'edges': []
-        }
+        old_flow = {'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')], 'edges': []}
         new_flow = {
             'nodes': [self._class_node('1'), self._class_node('2', 'fvBD')],
-            'edges': [{'source': '1', 'target': '2'}]
+            'edges': [{'source': '1', 'target': '2'}],
         }
         change_type, changes = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'major'
 
     def test_adding_filter_node_is_minor(self):
         old_flow = {'nodes': [self._class_node('1')], 'edges': []}
-        new_flow = {
-            'nodes': [self._class_node('1'), self._filter_node('f1')],
-            'edges': []
-        }
+        new_flow = {'nodes': [self._class_node('1'), self._filter_node('f1')], 'edges': []}
         change_type, changes = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'minor'
 
@@ -288,42 +301,38 @@ class TestDetectVersionChangeType:
         old_flow = {
             'nodes': [
                 self._class_node('1'),
-                self._filter_node('f1', [{'field': 'name', 'op': 'eq', 'value': 'prod'}])
+                self._filter_node('f1', [{'field': 'name', 'op': 'eq', 'value': 'prod'}]),
             ],
-            'edges': []
+            'edges': [],
         }
         new_flow = {
             'nodes': [
                 self._class_node('1'),
-                self._filter_node('f1', [{'field': 'name', 'op': 'eq', 'value': 'staging'}])
+                self._filter_node('f1', [{'field': 'name', 'op': 'eq', 'value': 'staging'}]),
             ],
-            'edges': []
+            'edges': [],
         }
         change_type, changes = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'minor'
 
     def test_adding_processor_node_is_minor(self):
         old_flow = {'nodes': [self._class_node('1')], 'edges': []}
-        new_flow = {
-            'nodes': [self._class_node('1'), self._processor_node('p1')],
-            'edges': []
-        }
+        new_flow = {'nodes': [self._class_node('1'), self._processor_node('p1')], 'edges': []}
         change_type, changes = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'minor'
 
     def test_major_overrides_minor(self):
         """When both structural and filter changes exist, major wins"""
-        old_flow = {
-            'nodes': [self._class_node('1'), self._filter_node('f1', [])],
-            'edges': []
-        }
+        old_flow = {'nodes': [self._class_node('1'), self._filter_node('f1', [])], 'edges': []}
         new_flow = {
             'nodes': [
                 self._class_node('1'),
                 self._class_node('2', 'fvBD'),  # major change
-                self._filter_node('f1', [{'field': 'name', 'op': 'eq', 'value': 'x'}])  # minor change
+                self._filter_node(
+                    'f1', [{'field': 'name', 'op': 'eq', 'value': 'x'}]
+                ),  # minor change
             ],
-            'edges': []
+            'edges': [],
         }
         change_type, _ = detect_version_change_type(old_flow, new_flow)
         assert change_type == 'major'
@@ -333,9 +342,9 @@ class TestDetectVersionChangeType:
 # increment_version
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestIncrementVersion:
-
     def test_major_change_bumps_major_resets_minor(self):
         new_major, new_minor = increment_version(1, 3, 'major')
         assert new_major == 2
@@ -356,14 +365,12 @@ class TestIncrementVersion:
 # create_version_history_entry
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestCreateVersionHistoryEntry:
-
     def test_creates_entry_with_required_fields(self):
         entry = create_version_history_entry(
-            version='v2.1',
-            version_hash='abc12345',
-            changes=['Added tenant node']
+            version='v2.1', version_hash='abc12345', changes=['Added tenant node']
         )
         assert entry['version'] == 'v2.1'
         assert entry['hash'] == 'abc12345'
@@ -376,16 +383,14 @@ class TestCreateVersionHistoryEntry:
             version_hash='deadbeef',
             changes=['Initial'],
             user_id=42,
-            username='alice'
+            username='alice',
         )
         assert entry['created_by_id'] == 42
         assert entry['created_by_username'] == 'alice'
 
     def test_user_info_defaults_to_none(self):
         entry = create_version_history_entry(
-            version='v1.0',
-            version_hash='deadbeef',
-            changes=['Initial']
+            version='v1.0', version_hash='deadbeef', changes=['Initial']
         )
         assert entry['created_by_id'] is None
         assert entry['created_by_username'] is None
@@ -395,9 +400,9 @@ class TestCreateVersionHistoryEntry:
 # format_version
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestFormatVersion:
-
     def test_formats_v1_0(self):
         assert format_version(1, 0) == 'v1.0'
 

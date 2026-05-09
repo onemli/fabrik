@@ -3,6 +3,7 @@ Integration Tests for Query Export/Import API
 
 Tests the complete export/import workflow with security checks
 """
+
 import pytest
 import json
 from django.urls import reverse
@@ -21,11 +22,7 @@ class TestQueryExportAPI:
         query = SavedQueryFactory(created_by=user)
 
         url = reverse('savedquery-export')
-        response = authenticated_client.post(
-            url,
-            {'query_ids': [query.id]},
-            format='json'
-        )
+        response = authenticated_client.post(url, {'query_ids': [query.id]}, format='json')
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -55,9 +52,7 @@ class TestQueryExportAPI:
 
         url = reverse('savedquery-export')
         response = authenticated_client.post(
-            url,
-            {'query_ids': [q.id for q in queries]},
-            format='json'
+            url, {'query_ids': [q.id for q in queries]}, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -72,11 +67,7 @@ class TestQueryExportAPI:
         query = SavedQueryFactory(created_by=user, category=category)
 
         url = reverse('savedquery-export')
-        response = authenticated_client.post(
-            url,
-            {'query_ids': [query.id]},
-            format='json'
-        )
+        response = authenticated_client.post(url, {'query_ids': [query.id]}, format='json')
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -89,11 +80,7 @@ class TestQueryExportAPI:
         query = TimeMachineEnabledQueryFactory(created_by=user)
 
         url = reverse('savedquery-export')
-        response = authenticated_client.post(
-            url,
-            {'query_ids': [query.id]},
-            format='json'
-        )
+        response = authenticated_client.post(url, {'query_ids': [query.id]}, format='json')
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -106,11 +93,7 @@ class TestQueryExportAPI:
         query = SavedQueryFactory(created_by=user, execution_count=10)
 
         url = reverse('savedquery-export')
-        response = authenticated_client.post(
-            url,
-            {'query_ids': [query.id]},
-            format='json'
-        )
+        response = authenticated_client.post(url, {'query_ids': [query.id]}, format='json')
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -140,9 +123,7 @@ class TestQueryExportAPI:
 
         url = reverse('savedquery-export')
         response = authenticated_client.post(
-            url,
-            {'query_ids': [own_query.id, private_query.id, public_query.id]},
-            format='json'
+            url, {'query_ids': [own_query.id, private_query.id, public_query.id]}, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -163,11 +144,7 @@ class TestQueryExportAPI:
         private_query = SavedQueryFactory(created_by=other_user, is_public=False)
 
         url = reverse('savedquery-export')
-        response = authenticated_client.post(
-            url,
-            {'query_ids': [private_query.id]},
-            format='json'
-        )
+        response = authenticated_client.post(url, {'query_ids': [private_query.id]}, format='json')
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -177,7 +154,7 @@ class TestQueryExportAPI:
         response = authenticated_client.post(
             url,
             {'query_ids': [99999, 99998]},  # Non-existent IDs
-            format='json'
+            format='json',
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -188,7 +165,7 @@ class TestQueryExportAPI:
         response = authenticated_client.post(
             url,
             {'query_ids': list(range(1, 102))},  # 101 IDs (over limit)
-            format='json'
+            format='json',
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -198,11 +175,7 @@ class TestQueryExportAPI:
         query = SavedQueryFactory(created_by=user)
 
         url = reverse('savedquery-export')
-        response = authenticated_client.post(
-            url,
-            {'query_ids': [query.id]},
-            format='json'
-        )
+        response = authenticated_client.post(url, {'query_ids': [query.id]}, format='json')
 
         assert response.status_code == status.HTTP_200_OK
         assert 'Content-Disposition' in response
@@ -223,19 +196,16 @@ class TestQueryImportAPI:
                 {
                     'name': 'Imported Query',
                     'description': 'Test import',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -261,20 +231,17 @@ class TestQueryImportAPI:
                 {
                     'name': f'Imported Query {i}',
                     'description': 'Test',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
                 for i in range(5)
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -297,19 +264,16 @@ class TestQueryImportAPI:
                 {
                     'name': 'Query with Category',
                     'description': 'Test',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': 'New Category',
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         # Ensure category doesn't exist
@@ -336,19 +300,16 @@ class TestQueryImportAPI:
                 {
                     'name': 'Time Machine Query',
                     'description': 'Test',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': True,  # CRITICAL: Time Machine enabled
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -368,25 +329,16 @@ class TestQueryImportAPI:
                 {
                     'name': 'Template Query',
                     'description': 'Test template',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': True,
-                    'variables': [
-                        {
-                            'id': 'var1',
-                            'label': 'Tenant Name',
-                            'type': 'string'
-                        }
-                    ],
+                    'variables': [{'id': 'var1', 'label': 'Tenant Name', 'type': 'string'}],
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -417,9 +369,9 @@ class TestQueryImportAPI:
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -438,19 +390,16 @@ class TestQueryImportAPI:
                 {
                     'name': 'Dangerous Query',
                     'description': 'Test',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json?<script>alert("xss")</script>',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -468,19 +417,16 @@ class TestQueryImportAPI:
                 {
                     'name': '<script>alert("xss")</script>',
                     'description': 'Test',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -494,7 +440,7 @@ class TestQueryImportAPI:
         """Test that import validates version"""
         import_data = {
             'version': '99.0',  # Unsupported version
-            'queries': []
+            'queries': [],
         }
 
         url = reverse('savedquery-import-queries')
@@ -510,20 +456,17 @@ class TestQueryImportAPI:
                 {
                     'name': f'Query {i}',
                     'description': 'Test',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 }
                 for i in range(101)  # 101 queries (over limit)
-            ]
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -539,34 +482,28 @@ class TestQueryImportAPI:
                 {
                     'name': 'Duplicate Name',
                     'description': 'Test 1',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
+                    'is_public': False,
                 },
                 {
                     'name': 'Duplicate Name',  # Same name!
                     'description': 'Test 2',
-                    'flow_data': {
-                        'nodes': [{'id': '1', 'type': 'class', 'data': {}}],
-                        'edges': []
-                    },
+                    'flow_data': {'nodes': [{'id': '1', 'type': 'class', 'data': {}}], 'edges': []},
                     'generated_query': '/api/class/fvTenant.json',
                     'enable_time_machine': False,
                     'is_template': False,
                     'variables': None,
                     'category_name': None,
                     'tags': '',
-                    'is_public': False
-                }
-            ]
+                    'is_public': False,
+                },
+            ],
         }
 
         url = reverse('savedquery-import-queries')
@@ -585,18 +522,13 @@ class TestExportImportWorkflow:
         # Create original query
         category = Category.objects.create(name='Test Category')
         original_query = SavedQueryFactory(
-            created_by=user,
-            category=category,
-            enable_time_machine=True,
-            tags='test,export'
+            created_by=user, category=category, enable_time_machine=True, tags='test,export'
         )
 
         # Export
         export_url = reverse('savedquery-export')
         export_response = authenticated_client.post(
-            export_url,
-            {'query_ids': [original_query.id]},
-            format='json'
+            export_url, {'query_ids': [original_query.id]}, format='json'
         )
 
         assert export_response.status_code == status.HTTP_200_OK
@@ -613,16 +545,14 @@ class TestExportImportWorkflow:
         assert import_result['success_count'] == 1
 
         # Find imported query (will have different name or ID)
-        imported_queries = SavedQuery.objects.filter(
-            name=original_query.name
-        ).exclude(id=original_query.id)
+        imported_queries = SavedQuery.objects.filter(name=original_query.name).exclude(
+            id=original_query.id
+        )
 
         # If no query with same name, check the created_queries
         if not imported_queries.exists():
             # Query name should match
-            imported_queries = SavedQuery.objects.filter(
-                name=original_query.name
-            )
+            imported_queries = SavedQuery.objects.filter(name=original_query.name)
 
         assert imported_queries.count() >= 1
 
@@ -640,9 +570,7 @@ class TestExportImportWorkflow:
         # Export
         export_url = reverse('savedquery-export')
         export_response = authenticated_client.post(
-            export_url,
-            {'query_ids': [query.id]},
-            format='json'
+            export_url, {'query_ids': [query.id]}, format='json'
         )
 
         export_data = json.loads(export_response.content)

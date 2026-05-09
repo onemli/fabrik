@@ -2,6 +2,7 @@
 Unit tests for APIC Client
 Tests authentication, query execution, and error handling
 """
+
 import pytest
 import responses
 from datetime import datetime, timedelta
@@ -19,7 +20,7 @@ class TestAPICClientInit:
             username='admin',
             password='password123',
             verify_ssl=True,
-            timeout=30
+            timeout=30,
         )
 
         assert client.url == 'https://sandboxapicdc.cisco.com'
@@ -33,9 +34,7 @@ class TestAPICClientInit:
     def test_url_trailing_slash_removed(self):
         """Test that trailing slash is removed from URL"""
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com/',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com/', username='admin', password='password123'
         )
 
         assert client.url == 'https://sandboxapicdc.cisco.com'
@@ -53,23 +52,23 @@ class TestAPICClientLogin:
             responses.POST,
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={
-                'imdata': [{
-                    'aaaLogin': {
-                        'attributes': {
-                            'token': 'test-token-123',
-                            'siteFingerprint': 'test-fingerprint'
+                'imdata': [
+                    {
+                        'aaaLogin': {
+                            'attributes': {
+                                'token': 'test-token-123',
+                                'siteFingerprint': 'test-fingerprint',
+                            }
                         }
                     }
-                }]
+                ]
             },
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-123'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-123'},
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         success, error = client.login()
@@ -87,22 +86,15 @@ class TestAPICClientLogin:
             responses.POST,
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={
-                'imdata': [{
-                    'error': {
-                        'attributes': {
-                            'code': '401',
-                            'text': 'Authentication failed'
-                        }
-                    }
-                }]
+                'imdata': [
+                    {'error': {'attributes': {'code': '401', 'text': 'Authentication failed'}}}
+                ]
             },
-            status=401
+            status=401,
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='wrongpassword'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='wrongpassword'
         )
 
         success, error = client.login()
@@ -117,19 +109,17 @@ class TestAPICClientLogin:
         responses.add(
             responses.POST,
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
-            body=ConnectionError('Connection refused')
+            body=ConnectionError('Connection refused'),
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         success, error = client.login()
 
         assert success is False
-        assert ('Connection failed' in error or 'Connection refused' in error)
+        assert 'Connection failed' in error or 'Connection refused' in error
 
     @responses.activate
     def test_login_timeout(self):
@@ -137,14 +127,14 @@ class TestAPICClientLogin:
         responses.add(
             responses.POST,
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
-            body=Exception('Timeout')
+            body=Exception('Timeout'),
         )
 
         client = APICClient(
             url='https://sandboxapicdc.cisco.com',
             username='admin',
             password='password123',
-            timeout=1
+            timeout=1,
         )
 
         success, error = client.login()
@@ -160,9 +150,7 @@ class TestAPICClientTokenValidation:
     def test_token_not_valid_when_none(self):
         """Test token validation when token is None"""
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         assert client.is_token_valid() is False
@@ -170,9 +158,7 @@ class TestAPICClientTokenValidation:
     def test_token_valid_when_not_expired(self):
         """Test token validation when token is valid"""
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         client.token = 'test-token'
@@ -183,9 +169,7 @@ class TestAPICClientTokenValidation:
     def test_token_not_valid_when_expired(self):
         """Test token validation when token is expired"""
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         client.token = 'test-token'
@@ -207,7 +191,7 @@ class TestAPICClientQueryExecution:
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-123'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-123'},
         )
 
         # Mock query response
@@ -218,16 +202,14 @@ class TestAPICClientQueryExecution:
                 'totalCount': '2',
                 'imdata': [
                     {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
-                    {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}}
-                ]
+                    {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
+                ],
             },
-            status=200
+            status=200,
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         success, data, error = client.execute_query('/api/class/fvTenant.json')
@@ -247,7 +229,7 @@ class TestAPICClientQueryExecution:
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-123'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-123'},
         )
 
         # Mock query response
@@ -258,15 +240,13 @@ class TestAPICClientQueryExecution:
                 'totalCount': '1',
                 'imdata': [
                     {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-                ]
+                ],
             },
-            status=200
+            status=200,
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         success, data, error = client.execute_query(
@@ -286,7 +266,7 @@ class TestAPICClientQueryExecution:
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-123'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-123'},
         )
 
         # Mock 404 response
@@ -294,22 +274,13 @@ class TestAPICClientQueryExecution:
             responses.GET,
             'https://sandboxapicdc.cisco.com/api/class/invalidClass.json',
             json={
-                'imdata': [{
-                    'error': {
-                        'attributes': {
-                            'code': '400',
-                            'text': 'Invalid class name'
-                        }
-                    }
-                }]
+                'imdata': [{'error': {'attributes': {'code': '400', 'text': 'Invalid class name'}}}]
             },
-            status=400
+            status=400,
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         success, data, error = client.execute_query('/api/class/invalidClass.json')
@@ -327,7 +298,7 @@ class TestAPICClientQueryExecution:
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token-1'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-1'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-1'},
         )
 
         # Second login (re-auth)
@@ -336,7 +307,7 @@ class TestAPICClientQueryExecution:
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token-2'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-2'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-2'},
         )
 
         # Query response
@@ -344,13 +315,11 @@ class TestAPICClientQueryExecution:
             responses.GET,
             'https://sandboxapicdc.cisco.com/api/class/fvTenant.json',
             json={'totalCount': '0', 'imdata': []},
-            status=200
+            status=200,
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         # First login
@@ -379,13 +348,11 @@ class TestAPICClientTestConnection:
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token-123'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token-123'},
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='password123'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='password123'
         )
 
         success, error = client.test_connection()
@@ -400,22 +367,15 @@ class TestAPICClientTestConnection:
             responses.POST,
             'https://sandboxapicdc.cisco.com/api/aaaLogin.json',
             json={
-                'imdata': [{
-                    'error': {
-                        'attributes': {
-                            'code': '401',
-                            'text': 'Authentication failed'
-                        }
-                    }
-                }]
+                'imdata': [
+                    {'error': {'attributes': {'code': '401', 'text': 'Authentication failed'}}}
+                ]
             },
-            status=401
+            status=401,
         )
 
         client = APICClient(
-            url='https://sandboxapicdc.cisco.com',
-            username='admin',
-            password='wrongpassword'
+            url='https://sandboxapicdc.cisco.com', username='admin', password='wrongpassword'
         )
 
         success, error = client.test_connection()
@@ -429,19 +389,12 @@ class TestAPICClientSSL:
     """Test SSL verification settings"""
 
     def test_ssl_verification_enabled_by_default(self):
-        client = APICClient(
-            url='https://apic.example.com',
-            username='admin',
-            password='pass'
-        )
+        client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         assert client.verify_ssl is True
 
     def test_ssl_verification_disabled(self):
         client = APICClient(
-            url='https://apic.example.com',
-            username='admin',
-            password='pass',
-            verify_ssl=False
+            url='https://apic.example.com', username='admin', password='pass', verify_ssl=False
         )
         assert client.verify_ssl is False
 
@@ -450,13 +403,9 @@ class TestAPICClientSSL:
         responses.add(
             responses.POST,
             'https://apic.example.com/api/aaaLogin.json',
-            body=__import__('requests').exceptions.SSLError('certificate verify failed')
+            body=__import__('requests').exceptions.SSLError('certificate verify failed'),
         )
-        client = APICClient(
-            url='https://apic.example.com',
-            username='admin',
-            password='pass'
-        )
+        client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, error = client.login()
         assert success is False
         assert 'SSL' in error
@@ -474,19 +423,19 @@ class TestAPICClientQueryMethods:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'tok'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=tok'}
+            headers={'Set-Cookie': 'APIC-cookie=tok'},
         )
         responses.add(
             responses.POST,
             'https://apic.example.com/api/mo/uni/tn-test.json',
             json={'totalCount': '0', 'imdata': []},
-            status=200
+            status=200,
         )
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, data, error = client.execute_query(
             '/api/mo/uni/tn-test.json',
             method='POST',
-            data={'fvTenant': {'attributes': {'name': 'test'}}}
+            data={'fvTenant': {'attributes': {'name': 'test'}}},
         )
         assert success is True
 
@@ -497,7 +446,7 @@ class TestAPICClientQueryMethods:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'tok'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=tok'}
+            headers={'Set-Cookie': 'APIC-cookie=tok'},
         )
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, data, error = client.execute_query('/api/test', method='PATCH')
@@ -511,14 +460,16 @@ class TestAPICClientQueryMethods:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'tok'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=tok'}
+            headers={'Set-Cookie': 'APIC-cookie=tok'},
         )
         responses.add(
             responses.GET,
             'https://apic.example.com/api/class/fvTenant.json',
-            body=__import__('requests').exceptions.Timeout('timeout')
+            body=__import__('requests').exceptions.Timeout('timeout'),
         )
-        client = APICClient(url='https://apic.example.com', username='admin', password='pass', timeout=5)
+        client = APICClient(
+            url='https://apic.example.com', username='admin', password='pass', timeout=5
+        )
         success, data, error = client.execute_query('/api/class/fvTenant.json')
         assert success is False
         assert 'timed out' in error
@@ -530,12 +481,12 @@ class TestAPICClientQueryMethods:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'tok'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=tok'}
+            headers={'Set-Cookie': 'APIC-cookie=tok'},
         )
         responses.add(
             responses.GET,
             'https://apic.example.com/api/class/fvTenant.json',
-            body=__import__('requests').exceptions.ConnectionError('refused')
+            body=__import__('requests').exceptions.ConnectionError('refused'),
         )
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, data, error = client.execute_query('/api/class/fvTenant.json')
@@ -550,13 +501,13 @@ class TestAPICClientQueryMethods:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'tok'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=tok'}
+            headers={'Set-Cookie': 'APIC-cookie=tok'},
         )
         responses.add(
             responses.GET,
             'https://apic.example.com/api/class/fvTenant.json',
             json={'totalCount': '0', 'imdata': []},
-            status=200
+            status=200,
         )
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, data, error = client.execute_query('api/class/fvTenant.json')
@@ -569,13 +520,13 @@ class TestAPICClientQueryMethods:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'tok'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=tok'}
+            headers={'Set-Cookie': 'APIC-cookie=tok'},
         )
         responses.add(
             responses.GET,
             'https://apic.example.com/api/class/fvTenant.json',
             json={'totalCount': '0', 'imdata': []},
-            status=200
+            status=200,
         )
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, data, error = client.execute_query('/api/class/fvTenant.json')
@@ -603,7 +554,7 @@ class TestAPICClientEnsureAuthenticated:
             'https://apic.example.com/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'new-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=new-token'}
+            headers={'Set-Cookie': 'APIC-cookie=new-token'},
         )
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         client.token = 'expired-token'
@@ -627,5 +578,7 @@ class TestAPICClientSession:
         assert client.timeout == 30
 
     def test_custom_timeout(self):
-        client = APICClient(url='https://apic.example.com', username='admin', password='pass', timeout=60)
+        client = APICClient(
+            url='https://apic.example.com', username='admin', password='pass', timeout=60
+        )
         assert client.timeout == 60

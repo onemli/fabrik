@@ -14,24 +14,19 @@ class TemplateCategory(models.Model):
     Allows organizing 90+ templates efficiently
     System categories cannot be deleted or renamed
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
     color = models.CharField(
-        max_length=7,
-        default='#6366f1',
-        help_text="Hex color code for UI (e.g., #6366f1)"
+        max_length=7, default='#6366f1', help_text='Hex color code for UI (e.g., #6366f1)'
     )
     icon = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text="Icon name (e.g., 'network', 'server')"
+        max_length=50, blank=True, null=True, help_text="Icon name (e.g., 'network', 'server')"
     )
-    display_order = models.IntegerField(default=0, help_text="Sort order in UI")
+    display_order = models.IntegerField(default=0, help_text='Sort order in UI')
     is_system = models.BooleanField(
-        default=False,
-        help_text="System categories cannot be deleted or renamed"
+        default=False, help_text='System categories cannot be deleted or renamed'
     )
 
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -59,6 +54,7 @@ class AutomationTemplate(models.Model):
 
     Execution is always bulk: all rows go in one JSON structure → one AWX job.
     """
+
     AWX_TYPE_JOB = 'job_template'
     AWX_TYPE_WORKFLOW = 'workflow_template'
 
@@ -73,22 +69,13 @@ class AutomationTemplate(models.Model):
 
     # AWX Integration (CORE)
     awx_connection = models.ForeignKey(
-        'AWXConnection',
-        on_delete=models.PROTECT,
-        help_text="AWX connection to use"
+        'AWXConnection', on_delete=models.PROTECT, help_text='AWX connection to use'
     )
     awx_type = models.CharField(
-        max_length=20,
-        choices=AWX_TYPE_CHOICES,
-        help_text="Job Template or Workflow Template"
+        max_length=20, choices=AWX_TYPE_CHOICES, help_text='Job Template or Workflow Template'
     )
-    awx_template_id = models.IntegerField(
-        help_text="AWX Job Template ID or Workflow Template ID"
-    )
-    awx_template_name = models.CharField(
-        max_length=200,
-        help_text="Cached name from AWX"
-    )
+    awx_template_id = models.IntegerField(help_text='AWX Job Template ID or Workflow Template ID')
+    awx_template_name = models.CharField(max_length=200, help_text='Cached name from AWX')
 
     # Workflow Details (only if awx_type == workflow_template)
     workflow_job_nodes = models.JSONField(
@@ -111,7 +98,7 @@ class AutomationTemplate(models.Model):
                 "identifier": "node-2"
             }
         ]
-        """
+        """,
     )
 
     # Table Schemas (supports multi-table for workflows)
@@ -153,7 +140,7 @@ class AutomationTemplate(models.Model):
                 "columns": [...]
             }
         ]
-        """
+        """,
     )
 
     # Variable Mappings (maps table columns to AWX variables)
@@ -167,7 +154,7 @@ class AutomationTemplate(models.Model):
             "tenant_name": "tenant",
             "vrf_name": "vrf"
         }
-        """
+        """,
     )
 
     # Categorization & Tags
@@ -176,32 +163,27 @@ class AutomationTemplate(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='templates'
+        related_name='templates',
     )
     tags = models.JSONField(
-        default=list,
-        help_text="List of tags for filtering (e.g., ['l3out', 'bgp', 'bfd'])"
+        default=list, help_text="List of tags for filtering (e.g., ['l3out', 'bgp', 'bfd'])"
     )
 
     # Validation Control
     requires_validation = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text="Requires column validation before execution"
+        default=False, db_index=True, help_text='Requires column validation before execution'
     )
     allow_validation_bypass = models.BooleanField(
         default=False,
-        help_text="Allow users with 'awx.bypass_validation' permission to skip validation"
+        help_text="Allow users with 'awx.bypass_validation' permission to skip validation",
     )
 
     # Check Mode (Dry-Run) Control
     enable_check_mode = models.BooleanField(
-        default=False,
-        help_text="Enable Ansible check mode (dry-run) by default for this template"
+        default=False, help_text='Enable Ansible check mode (dry-run) by default for this template'
     )
     allow_check_mode_override = models.BooleanField(
-        default=True,
-        help_text="Allow users to override check mode setting when creating requests"
+        default=True, help_text='Allow users to override check mode setting when creating requests'
     )
 
     # Usage Statistics
@@ -221,24 +203,26 @@ class AutomationTemplate(models.Model):
         max_length=20,
         choices=EXECUTION_MODE_CHOICES,
         default=EXECUTION_MODE_BULK,
-        help_text="All rows are sent as structured JSON in a single AWX job."
+        help_text='All rows are sent as structured JSON in a single AWX job.',
     )
 
     # Ownership & Sharing
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='automation_templates_created'
+        User, on_delete=models.CASCADE, related_name='automation_templates_created'
     )
     is_public = models.BooleanField(default=False)
 
     # Approval workflow — when enabled, requests go to awaiting_approval before execution
     requires_approval = models.BooleanField(default=False)
     approver_users = models.ManyToManyField(
-        User, blank=True, related_name='approvable_templates',
+        User,
+        blank=True,
+        related_name='approvable_templates',
     )
     approver_groups = models.ManyToManyField(
-        'auth.Group', blank=True, related_name='approvable_templates',
+        'auth.Group',
+        blank=True,
+        related_name='approvable_templates',
     )
     auto_approve_for_owner = models.BooleanField(
         default=False,
@@ -247,8 +231,11 @@ class AutomationTemplate(models.Model):
 
     # Rollback — link to a compensating template that undoes this one
     rollback_template = models.ForeignKey(
-        'self', null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='rollback_for',
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='rollback_for',
     )
 
     # Timestamps
@@ -272,7 +259,7 @@ class AutomationTemplate(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.get_awx_type_display()})"
+        return f'{self.name} ({self.get_awx_type_display()})'
 
     def validate_input_data(
         self,
@@ -319,30 +306,47 @@ class AutomationTemplate(models.Model):
 
         # Handle dict format (normalized single-schema or multi-schema workflow templates)
         if isinstance(input_data, dict):
-            logger.info(f'[Validation] Multi-schema validation for {len(self.table_schemas)} schemas')
+            logger.info(
+                f'[Validation] Multi-schema validation for {len(self.table_schemas)} schemas'
+            )
 
             # Validate each schema
             for schema_idx, schema in enumerate(self.table_schemas):
                 var_name = schema.get('awx_variable_name')
                 if not var_name or var_name not in input_data:
-                    logger.warning(f'[Validation] Schema {schema_idx} variable "{var_name}" not found in input data')
+                    logger.warning(
+                        f'[Validation] Schema {schema_idx} variable "{var_name}" not found in input data'
+                    )
                     continue
 
                 rows = input_data[var_name]
                 if not isinstance(rows, list):
-                    errors.append({
-                        "schema_index": schema_idx,
-                        "message": f"Data for '{var_name}' must be a list of objects"
-                    })
+                    errors.append(
+                        {
+                            'schema_index': schema_idx,
+                            'message': f"Data for '{var_name}' must be a list of objects",
+                        }
+                    )
                     continue
 
                 columns = schema.get('columns', [])
-                logger.info(f'[Validation] Schema "{var_name}": {len(rows)} rows, {len(columns)} columns')
+                logger.info(
+                    f'[Validation] Schema "{var_name}": {len(rows)} rows, {len(columns)} columns'
+                )
 
                 # Validate each row in this schema
                 for row_idx, row in enumerate(rows):
                     for column in columns:
-                        self._validate_column(column, row, row_idx, schema_idx, errors, connection_id, logger, regex_patterns_by_id)
+                        self._validate_column(
+                            column,
+                            row,
+                            row_idx,
+                            schema_idx,
+                            errors,
+                            connection_id,
+                            logger,
+                            regex_patterns_by_id,
+                        )
 
             return len(errors) == 0, errors
 
@@ -361,27 +365,33 @@ class AutomationTemplate(models.Model):
             # Validate each row
             for row_idx, row in enumerate(input_data):
                 if not isinstance(row, dict):
-                    errors.append({
-                        "row": row_idx,
-                        "column": "",
-                        "schema_index": 0,
-                        "message": "Input data must be a list of objects"
-                    })
+                    errors.append(
+                        {
+                            'row': row_idx,
+                            'column': '',
+                            'schema_index': 0,
+                            'message': 'Input data must be a list of objects',
+                        }
+                    )
                     continue
 
                 for column in columns:
-                    self._validate_column(column, row, row_idx, 0, errors, connection_id, logger, regex_patterns_by_id)
+                    self._validate_column(
+                        column, row, row_idx, 0, errors, connection_id, logger, regex_patterns_by_id
+                    )
 
             return len(errors) == 0, errors
 
         else:
             logger.warning(f'[Validation] Invalid input data type: {type(input_data)}')
-            errors.append({
-                "row": 0,
-                "column": "",
-                "schema_index": 0,
-                "message": "Input data must be a list of objects or a dict of schema data"
-            })
+            errors.append(
+                {
+                    'row': 0,
+                    'column': '',
+                    'schema_index': 0,
+                    'message': 'Input data must be a list of objects or a dict of schema data',
+                }
+            )
             return False, errors
 
     def _load_referenced_regex_patterns(self) -> dict:
@@ -391,7 +401,7 @@ class AutomationTemplate(models.Model):
         Returns {pattern_id: pattern_string}. Called once per validation run.
         """
         ids = set()
-        for schema in (self.table_schemas or []):
+        for schema in self.table_schemas or []:
             for column in schema.get('columns', []):
                 pid = column.get('regex_pattern_id')
                 if pid:
@@ -399,6 +409,7 @@ class AutomationTemplate(models.Model):
         if not ids:
             return {}
         from awx.models.validation import RegexPattern
+
         return {
             str(pk): pattern
             for pk, pattern in RegexPattern.objects.filter(pk__in=ids).values_list('id', 'pattern')
@@ -426,16 +437,20 @@ class AutomationTemplate(models.Model):
             # required column is an error regardless of validation_mode, and
             # downstream checks (regex, static_list, query_list) all short-circuit
             # on empty values so they'd never catch a missing required field.
-            is_empty = cell_value is None or (isinstance(cell_value, str) and cell_value.strip() == '')
+            is_empty = cell_value is None or (
+                isinstance(cell_value, str) and cell_value.strip() == ''
+            )
             if column.get('required') and is_empty:
                 display_name = column.get('display_name', column_name)
-                errors.append({
-                    'row': row_idx,
-                    'column': column_name,
-                    'value': cell_value,
-                    'schema_index': schema_idx,
-                    'message': f"'{display_name}' is required",
-                })
+                errors.append(
+                    {
+                        'row': row_idx,
+                        'column': column_name,
+                        'value': cell_value,
+                        'schema_index': schema_idx,
+                        'message': f"'{display_name}' is required",
+                    }
+                )
                 return
 
             # Enforce enum_values for select columns before any validation_mode
@@ -446,18 +461,22 @@ class AutomationTemplate(models.Model):
                 str_value = str(cell_value)
                 if str_value not in [str(v) for v in enum_values]:
                     display_name = column.get('display_name', column_name)
-                    errors.append({
-                        'row': row_idx,
-                        'column': column_name,
-                        'value': cell_value,
-                        'schema_index': schema_idx,
-                        'message': f"'{display_name}' must be one of: {', '.join(str(v) for v in enum_values)}",
-                        'allowed_values': enum_values,
-                    })
+                    errors.append(
+                        {
+                            'row': row_idx,
+                            'column': column_name,
+                            'value': cell_value,
+                            'schema_index': schema_idx,
+                            'message': f"'{display_name}' must be one of: {', '.join(str(v) for v in enum_values)}",
+                            'allowed_values': enum_values,
+                        }
+                    )
                     return  # enum check is definitive for select columns
 
             # Get validation config
-            validation_mode = column.get('validation_mode', 'regex')  # Default to regex for backward compatibility
+            validation_mode = column.get(
+                'validation_mode', 'regex'
+            )  # Default to regex for backward compatibility
 
             # Skip if no validation mode or mode is 'none'
             if not validation_mode or validation_mode == 'none':
@@ -478,13 +497,15 @@ class AutomationTemplate(models.Model):
                 if validation_pattern and cell_value:
                     try:
                         if not re.match(validation_pattern, str(cell_value)):
-                            errors.append({
-                                'row': row_idx,
-                                'column': column_name,
-                                'value': cell_value,
-                                'schema_index': schema_idx,
-                                'message': f'Does not match pattern: {validation_pattern}'
-                            })
+                            errors.append(
+                                {
+                                    'row': row_idx,
+                                    'column': column_name,
+                                    'value': cell_value,
+                                    'schema_index': schema_idx,
+                                    'message': f'Does not match pattern: {validation_pattern}',
+                                }
+                            )
                     except re.error as e:
                         logger.error(f'Invalid regex pattern "{validation_pattern}": {e}')
 
@@ -492,7 +513,9 @@ class AutomationTemplate(models.Model):
             elif validation_mode == 'static_list':
                 validation_list = column.get('validation_list', [])
                 case_sensitive = column.get('validation_case_sensitive', False)
-                validation_invert = column.get('validation_invert', False)  # NEW: Invert logic (conflict check)
+                validation_invert = column.get(
+                    'validation_invert', False
+                )  # NEW: Invert logic (conflict check)
 
                 if validation_list and cell_value:
                     is_in_list = self._is_in_list(cell_value, validation_list, case_sensitive)
@@ -507,39 +530,55 @@ class AutomationTemplate(models.Model):
                         if validation_invert:
                             # Conflict detected
                             default_msg = 'Value already exists (conflict detected)'
-                            errors.append({
-                                'row': row_idx,
-                                'column': column_name,
-                                'value': cell_value,
-                                'schema_index': schema_idx,
-                                'message': custom_msg if custom_msg else default_msg,
-                                'allowed_values': validation_list[:10]
-                            })
+                            errors.append(
+                                {
+                                    'row': row_idx,
+                                    'column': column_name,
+                                    'value': cell_value,
+                                    'schema_index': schema_idx,
+                                    'message': custom_msg if custom_msg else default_msg,
+                                    'allowed_values': validation_list[:10],
+                                }
+                            )
                         else:
                             # Not in allowed list
                             default_msg = 'Value not in allowed list'
-                            errors.append({
-                                'row': row_idx,
-                                'column': column_name,
-                                'value': cell_value,
-                                'schema_index': schema_idx,
-                                'message': custom_msg if custom_msg else default_msg,
-                                'allowed_values': validation_list[:10]
-                            })
+                            errors.append(
+                                {
+                                    'row': row_idx,
+                                    'column': column_name,
+                                    'value': cell_value,
+                                    'schema_index': schema_idx,
+                                    'message': custom_msg if custom_msg else default_msg,
+                                    'allowed_values': validation_list[:10],
+                                }
+                            )
 
             # Query-based list validation
             elif validation_mode == 'query_list':
                 validation_query_id = column.get('validation_query')
                 case_sensitive = column.get('validation_case_sensitive', False)
-                validation_invert = column.get('validation_invert', False)  # NEW: Invert logic (conflict check)
+                validation_invert = column.get(
+                    'validation_invert', False
+                )  # NEW: Invert logic (conflict check)
 
                 if validation_query_id and cell_value:
-                    allowed_values, query_error = self._get_query_validation_list(validation_query_id, connection_id)
+                    allowed_values, query_error = self._get_query_validation_list(
+                        validation_query_id, connection_id
+                    )
 
-                    logger.info(f'[Validation] Column: {column_name}, Row: {row_idx}, Value: {cell_value}')
-                    logger.info(f'[Validation] Query ID: {validation_query_id}, Allowed values count: {len(allowed_values) if allowed_values else 0}')
-                    logger.info(f'[Validation] First 10 allowed values: {allowed_values[:10] if allowed_values else []}')
-                    logger.info(f'[Validation] Case sensitive: {case_sensitive}, Invert: {validation_invert}')
+                    logger.info(
+                        f'[Validation] Column: {column_name}, Row: {row_idx}, Value: {cell_value}'
+                    )
+                    logger.info(
+                        f'[Validation] Query ID: {validation_query_id}, Allowed values count: {len(allowed_values) if allowed_values else 0}'
+                    )
+                    logger.info(
+                        f'[Validation] First 10 allowed values: {allowed_values[:10] if allowed_values else []}'
+                    )
+                    logger.info(
+                        f'[Validation] Case sensitive: {case_sensitive}, Invert: {validation_invert}'
+                    )
 
                     # Use custom error message if provided
                     custom_msg = column.get('validation_error_message')
@@ -547,13 +586,15 @@ class AutomationTemplate(models.Model):
                     if query_error:
                         logger.error(f'[Validation] Query error: {query_error}')
                         default_msg = f'Query validation error: {query_error}'
-                        errors.append({
-                            'row': row_idx,
-                            'column': column_name,
-                            'value': cell_value,
-                            'schema_index': schema_idx,
-                            'message': custom_msg if custom_msg else default_msg
-                        })
+                        errors.append(
+                            {
+                                'row': row_idx,
+                                'column': column_name,
+                                'value': cell_value,
+                                'schema_index': schema_idx,
+                                'message': custom_msg if custom_msg else default_msg,
+                            }
+                        )
                     elif allowed_values:
                         is_in_list = self._is_in_list(cell_value, allowed_values, case_sensitive)
 
@@ -563,33 +604,43 @@ class AutomationTemplate(models.Model):
                         if should_fail:
                             if validation_invert:
                                 # Conflict detected
-                                logger.warning(f'[Validation] CONFLICT: Value "{cell_value}" already exists in list')
+                                logger.warning(
+                                    f'[Validation] CONFLICT: Value "{cell_value}" already exists in list'
+                                )
                                 default_msg = 'Value already exists (conflict detected)'
-                                errors.append({
-                                    'row': row_idx,
-                                    'column': column_name,
-                                    'value': cell_value,
-                                    'schema_index': schema_idx,
-                                    'message': custom_msg if custom_msg else default_msg,
-                                    'allowed_values': allowed_values[:10]
-                                })
+                                errors.append(
+                                    {
+                                        'row': row_idx,
+                                        'column': column_name,
+                                        'value': cell_value,
+                                        'schema_index': schema_idx,
+                                        'message': custom_msg if custom_msg else default_msg,
+                                        'allowed_values': allowed_values[:10],
+                                    }
+                                )
                             else:
                                 # Not in allowed list
-                                logger.warning(f'[Validation] Value "{cell_value}" not in allowed list')
+                                logger.warning(
+                                    f'[Validation] Value "{cell_value}" not in allowed list'
+                                )
                                 default_msg = 'Value not in query output list'
-                                errors.append({
-                                    'row': row_idx,
-                                    'column': column_name,
-                                    'value': cell_value,
-                                    'schema_index': schema_idx,
-                                    'message': custom_msg if custom_msg else default_msg,
-                                    'allowed_values': allowed_values[:10]
-                                })
+                                errors.append(
+                                    {
+                                        'row': row_idx,
+                                        'column': column_name,
+                                        'value': cell_value,
+                                        'schema_index': schema_idx,
+                                        'message': custom_msg if custom_msg else default_msg,
+                                        'allowed_values': allowed_values[:10],
+                                    }
+                                )
                         else:
                             logger.info(f'[Validation] Value "{cell_value}" is valid')
 
         except Exception as e:
-            logger.error(f'[Validation] Error validating column {column.get("name")}: {e}', exc_info=True)
+            logger.error(
+                f'[Validation] Error validating column {column.get("name")}: {e}', exc_info=True
+            )
 
     def _is_in_list(self, value, allowed_list: list, case_sensitive: bool) -> bool:
         """Check if value is in allowed list"""
@@ -672,23 +723,34 @@ class AutomationTemplate(models.Model):
             if isinstance(results[0], dict):
                 first_key = list(results[0].keys())[0]
                 values = [str(row[first_key]) for row in results if first_key in row]
-                logger.info(f'[Validation] Extracted values from dict key "{first_key}": {len(values)} values')
+                logger.info(
+                    f'[Validation] Extracted values from dict key "{first_key}": {len(values)} values'
+                )
             elif isinstance(results[0], (str, int, float)):
                 # Already simple list
                 values = [str(v) for v in results]
                 logger.info(f'[Validation] Using simple list: {len(values)} values')
             else:
                 # Unknown format
-                logger.error(f'Validation query {query_id} returned unsupported format: {type(results[0])}')
-                return [], 'Query returned unsupported format. Expected simple list or single-column dict.'
+                logger.error(
+                    f'Validation query {query_id} returned unsupported format: {type(results[0])}'
+                )
+                return (
+                    [],
+                    'Query returned unsupported format. Expected simple list or single-column dict.',
+                )
 
             # Cache for 5 minutes - graceful degradation if Redis unavailable
             try:
                 cache.set(cache_key, (values, None), 300)
             except Exception as cache_err:
-                logger.warning(f'[Validation] Cache write failed, continuing without cache: {cache_err}')
+                logger.warning(
+                    f'[Validation] Cache write failed, continuing without cache: {cache_err}'
+                )
 
-            logger.info(f'[Validation] Final allowed values list ({len(values)} items): {values[:10]}...')
+            logger.info(
+                f'[Validation] Final allowed values list ({len(values)} items): {values[:10]}...'
+            )
 
             return values, None
 

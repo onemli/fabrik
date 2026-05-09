@@ -56,6 +56,7 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
     Status filtering is handled via query param rather than separate endpoints
     because the frontend needs mixed-status views for the tracking dashboard.
     """
+
     permission_classes = [FabrikModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
@@ -66,8 +67,7 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         """Filter requests based on ownership"""
         user = self.request.user
         queryset = AutomationRequest.objects.select_related(
-            'template', 'awx_connection', 'target_apic',
-            'requested_by'
+            'template', 'awx_connection', 'target_apic', 'requested_by'
         )
 
         # Filter by status
@@ -80,6 +80,7 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         if view_type == 'all':
             if not user.is_staff:
                 from rest_framework.exceptions import PermissionDenied
+
                 raise PermissionDenied('Staff access required to view all requests.')
             # Admin view: all requests — no filter
         elif view_type == 'my_requests':
@@ -118,10 +119,12 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: BaseSerializer) -> None:
         # Quota enforcement
         from users.quota_service import QuotaService
+
         user = self.request.user
         allowed, reason = QuotaService.check_feature(user, 'can_use_awx')
         if not allowed:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied(reason)
 
         instance = serializer.save(requested_by=self.request.user)
@@ -186,7 +189,7 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
                 'old_status': old_status,
                 'new_status': updated_instance.status,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance: AutomationRequest) -> None:
@@ -201,7 +204,7 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
             metadata={
                 'status': instance.status,
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -217,68 +220,93 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         """
         logger.info(f'[Execute] Request received for automation request: {pk}')
         automation_request = self.get_object()
-        logger.info(f'[Execute] Automation request loaded: {automation_request.title}, status: {automation_request.status}')
+        logger.info(
+            f'[Execute] Automation request loaded: {automation_request.title}, status: {automation_request.status}'
+        )
 
         # Check ownership or admin permission
         if automation_request.requested_by != request.user and not request.user.is_staff:
-            return Response({
-                'error': 'Only request owner or admin can execute'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'error': 'Only request owner or admin can execute'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         # Validate request status — allow both pending and approved
         if automation_request.status not in (
             AutomationRequest.STATUS_PENDING,
             AutomationRequest.STATUS_APPROVED,
         ):
-            return Response({
-                'error': f'Request must be pending or approved to execute. Current: {automation_request.status}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': f'Request must be pending or approved to execute. Current: {automation_request.status}'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Quota enforcement — daily AWX execution limit
         from users.quota_service import QuotaService
+
         allowed, reason = QuotaService.check_daily_execution(request.user, 'awx')
         if not allowed:
             return Response({'detail': reason}, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
         # Rate limiting — per-user concurrency cap
         max_per_user = getattr(django_settings, 'AWX_MAX_CONCURRENT_PER_USER', 5)
-        active_user = AutomationRequest.objects.filter(
-            requested_by=request.user,
-            status__in=['running', 'pending'],
-        ).exclude(id=automation_request.id).count()
+        active_user = (
+            AutomationRequest.objects.filter(
+                requested_by=request.user,
+                status__in=['running', 'pending'],
+            )
+            .exclude(id=automation_request.id)
+            .count()
+        )
         if active_user >= max_per_user:
-            return Response({
-                'error': f'Concurrent execution limit reached ({active_user}/{max_per_user}). Wait for running jobs to finish.'
-            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return Response(
+                {
+                    'error': f'Concurrent execution limit reached ({active_user}/{max_per_user}). Wait for running jobs to finish.'
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
         # Global concurrency cap
         max_global = getattr(django_settings, 'AWX_MAX_CONCURRENT_GLOBAL', 20)
-        active_global = AutomationRequest.objects.filter(
-            status__in=['running', 'pending'],
-        ).exclude(id=automation_request.id).count()
+        active_global = (
+            AutomationRequest.objects.filter(
+                status__in=['running', 'pending'],
+            )
+            .exclude(id=automation_request.id)
+            .count()
+        )
         if active_global >= max_global:
-            return Response({
-                'error': f'Platform is at capacity ({active_global}/{max_global} active). Try again shortly.'
-            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return Response(
+                {
+                    'error': f'Platform is at capacity ({active_global}/{max_global} active). Try again shortly.'
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
         # Check if template exists
         if not automation_request.template:
-            return Response({
-                'error': 'Template not found for this request'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Template not found for this request'}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Check if AWX connection exists
         if not automation_request.awx_connection:
-            return Response({
-                'error': 'AWX connection not found for this request'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'AWX connection not found for this request'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             # Trigger async execution
             logger.info(f'[Execute] Triggering Celery task for request: {automation_request.id}')
 
             # Support deferred execution — Celery's eta parameter handles the delay
-            if automation_request.scheduled_for and automation_request.scheduled_for > timezone.now():
+            if (
+                automation_request.scheduled_for
+                and automation_request.scheduled_for > timezone.now()
+            ):
                 task = execute_automation_request.apply_async(
                     args=[str(automation_request.id)],
                     eta=automation_request.scheduled_for,
@@ -302,24 +330,30 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
                     'template': automation_request.template.name,
                     'execution_mode': automation_request.template.execution_mode,
                 },
-                request=self.request
+                request=self.request,
             )
 
             logger.info(f'[Execute] Returning 202 response with task_id: {task.id}')
 
-            return Response({
-                'message': 'Execution started',
-                'task_id': task.id,
-                'request_id': str(automation_request.id),
-                'execution_mode': automation_request.template.execution_mode
-            }, status=status.HTTP_202_ACCEPTED)
+            return Response(
+                {
+                    'message': 'Execution started',
+                    'task_id': task.id,
+                    'request_id': str(automation_request.id),
+                    'execution_mode': automation_request.template.execution_mode,
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         except Exception as e:
-            logger.error(f'[Execute] EXCEPTION during execution trigger: {type(e).__name__}: {str(e)}')
+            logger.error(
+                f'[Execute] EXCEPTION during execution trigger: {type(e).__name__}: {str(e)}'
+            )
             logger.exception('[Execute] Full traceback:')
-            return Response({
-                'error': 'Failed to trigger execution'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': 'Failed to trigger execution'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['post'])
     def retry(self, request: Request, pk: Any = None) -> Response:
@@ -334,9 +368,9 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
 
         # Check ownership or admin permission
         if automation_request.requested_by != request.user and not request.user.is_staff:
-            return Response({
-                'error': 'Only request owner or admin can retry'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'error': 'Only request owner or admin can retry'}, status=status.HTTP_403_FORBIDDEN
+            )
 
         # Get execution_id from body or find last failed execution
         execution_id = request.data.get('execution_id')
@@ -345,30 +379,38 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
             # Retry specific execution
             try:
                 execution = AutomationExecution.objects.get(
-                    id=execution_id,
-                    automation_request=automation_request
+                    id=execution_id, automation_request=automation_request
                 )
             except AutomationExecution.DoesNotExist:
-                return Response({
-                    'error': f'Execution {execution_id} not found for this request'
-                }, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {'error': f'Execution {execution_id} not found for this request'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
         else:
             # Find most recent failed execution
-            execution = AutomationExecution.objects.filter(
-                automation_request=automation_request,
-                status__in=['failed', 'error', 'canceled']
-            ).order_by('-created_at').first()
+            execution = (
+                AutomationExecution.objects.filter(
+                    automation_request=automation_request,
+                    status__in=['failed', 'error', 'canceled'],
+                )
+                .order_by('-created_at')
+                .first()
+            )
 
             if not execution:
-                return Response({
-                    'error': 'No failed executions found for this request'
-                }, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {'error': 'No failed executions found for this request'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
         # Validate execution can be retried
         if execution.status not in ['failed', 'error', 'canceled']:
-            return Response({
-                'error': f'Only failed/error/canceled executions can be retried. Current status: {execution.status}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': f'Only failed/error/canceled executions can be retried. Current status: {execution.status}'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             # Trigger async retry
@@ -381,7 +423,7 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
                 category='awx_automation',
                 resource_type='AutomationExecution',
                 resource_id=execution.id,
-                description=f"Retry triggered for execution {execution.id}",
+                description=f'Retry triggered for execution {execution.id}',
                 metadata={
                     'task_id': task.id,
                     'original_execution_id': str(execution.id),
@@ -390,21 +432,24 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
                     'row_number': execution.row_number,
                     'batch_number': execution.batch_number,
                 },
-                request=self.request
+                request=self.request,
             )
 
-            return Response({
-                'message': 'Retry started',
-                'task_id': task.id,
-                'original_execution_id': str(execution.id),
-                'execution_mode': execution.execution_mode
-            }, status=status.HTTP_202_ACCEPTED)
+            return Response(
+                {
+                    'message': 'Retry started',
+                    'task_id': task.id,
+                    'original_execution_id': str(execution.id),
+                    'execution_mode': execution.execution_mode,
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         except Exception:
-            logger.exception("Failed to trigger retry")
-            return Response({
-                'error': 'Failed to trigger retry'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('Failed to trigger retry')
+            return Response(
+                {'error': 'Failed to trigger retry'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'])
     def approve(self, request: Request, pk: Any = None) -> Response:
@@ -415,14 +460,18 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         automation_request = self.get_object()
 
         if automation_request.status != AutomationRequest.STATUS_AWAITING_APPROVAL:
-            return Response({
-                'error': f'Request must be awaiting approval. Current: {automation_request.status}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': f'Request must be awaiting approval. Current: {automation_request.status}'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not self._is_approver(request.user, automation_request):
-            return Response({
-                'error': 'You are not authorized to approve this request'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'error': 'You are not authorized to approve this request'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         automation_request.status = AutomationRequest.STATUS_APPROVED
         automation_request.approved_by = request.user
@@ -466,14 +515,18 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         automation_request = self.get_object()
 
         if automation_request.status != AutomationRequest.STATUS_AWAITING_APPROVAL:
-            return Response({
-                'error': f'Request must be awaiting approval. Current: {automation_request.status}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'error': f'Request must be awaiting approval. Current: {automation_request.status}'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not self._is_approver(request.user, automation_request):
-            return Response({
-                'error': 'You are not authorized to reject this request'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'error': 'You are not authorized to reject this request'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         reason = request.data.get('reason', '')
 
@@ -481,9 +534,9 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         automation_request.approved_by = request.user
         automation_request.approved_at = timezone.now()
         automation_request.rejection_reason = reason
-        automation_request.save(update_fields=[
-            'status', 'approved_by', 'approved_at', 'rejection_reason'
-        ])
+        automation_request.save(
+            update_fields=['status', 'approved_by', 'approved_at', 'rejection_reason']
+        )
 
         AuditService.log(
             user=request.user,
@@ -523,19 +576,21 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
         automation_request = self.get_object()
 
         if automation_request.status != AutomationRequest.STATUS_SUCCESSFUL:
-            return Response({
-                'error': 'Only successful requests can be rolled back'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Only successful requests can be rolled back'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         rollback_tmpl = automation_request.template.rollback_template
         if not rollback_tmpl:
-            return Response({
-                'error': 'No rollback template configured for this template'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'No rollback template configured for this template'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         rollback_request = AutomationRequest.objects.create(
-            title=f"[Rollback] {automation_request.title}",
-            description=f"Rollback of request {automation_request.id}",
+            title=f'[Rollback] {automation_request.title}',
+            description=f'Rollback of request {automation_request.id}',
             template=rollback_tmpl,
             awx_connection=automation_request.awx_connection,
             target_apic=automation_request.target_apic,
@@ -620,5 +675,6 @@ class AutomationRequestViewSet(viewsets.ModelViewSet):
 
         logger.info(
             '[Approval] Notified %d approvers for request %s',
-            len(notified_ids), automation_request.id
+            len(notified_ids),
+            automation_request.id,
         )

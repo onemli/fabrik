@@ -2,6 +2,7 @@
 Integration tests for Scheduled Tasks API
 Tests task CRUD operations and status management
 """
+
 import pytest
 from rest_framework import status
 from queries.models import ScheduledTask
@@ -9,7 +10,7 @@ from tests.factories import (
     SavedQueryFactory,
     TimeMachineEnabledQueryFactory,
     ScheduledTaskFactory,
-    APICConnectionFactory
+    APICConnectionFactory,
 )
 
 
@@ -32,14 +33,10 @@ class TestScheduledTasksAPI:
             'time_of_day': '09:00',
             'timezone': 'UTC',
             'priority': 'medium',
-            'status': 'active'
+            'status': 'active',
         }
 
-        response = authenticated_client.post(
-            '/api/queries/scheduled-tasks/',
-            data,
-            format='json'
-        )
+        response = authenticated_client.post('/api/queries/scheduled-tasks/', data, format='json')
 
         if response.status_code == status.HTTP_201_CREATED:
             assert response.data['name'] == 'Daily Tenant Check'
@@ -57,14 +54,10 @@ class TestScheduledTasksAPI:
             'saved_query': query.id,
             'apic_connection_ids': [connection.id],
             'frequency': 'hourly',
-            'minute_of_hour': 0
+            'minute_of_hour': 0,
         }
 
-        response = authenticated_client.post(
-            '/api/queries/scheduled-tasks/',
-            data,
-            format='json'
-        )
+        response = authenticated_client.post('/api/queries/scheduled-tasks/', data, format='json')
 
         if response.status_code == status.HTTP_201_CREATED:
             # Verify task is linked to Time Machine enabled query
@@ -75,14 +68,10 @@ class TestScheduledTasksAPI:
         """Test pausing a scheduled task"""
         query = SavedQueryFactory(created_by=user)
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            status=ScheduledTask.STATUS_ACTIVE
+            created_by=user, saved_query=query, status=ScheduledTask.STATUS_ACTIVE
         )
 
-        response = authenticated_client.post(
-            f'/api/queries/scheduled-tasks/{task.id}/pause/'
-        )
+        response = authenticated_client.post(f'/api/queries/scheduled-tasks/{task.id}/pause/')
 
         if response.status_code == status.HTTP_200_OK:
             task.refresh_from_db()
@@ -92,14 +81,10 @@ class TestScheduledTasksAPI:
         """Test resuming a paused task"""
         query = SavedQueryFactory(created_by=user)
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            status=ScheduledTask.STATUS_PAUSED
+            created_by=user, saved_query=query, status=ScheduledTask.STATUS_PAUSED
         )
 
-        response = authenticated_client.post(
-            f'/api/queries/scheduled-tasks/{task.id}/resume/'
-        )
+        response = authenticated_client.post(f'/api/queries/scheduled-tasks/{task.id}/resume/')
 
         if response.status_code == status.HTTP_200_OK:
             task.refresh_from_db()
@@ -109,16 +94,16 @@ class TestScheduledTasksAPI:
         """Test cloning a scheduled task"""
         query = SavedQueryFactory(created_by=user)
         original_task = ScheduledTaskFactory(
-            name='Original Task',
-            created_by=user,
-            saved_query=query
+            name='Original Task', created_by=user, saved_query=query
         )
 
         response = authenticated_client.post(
             f'/api/queries/scheduled-tasks/{original_task.id}/clone/'
         )
 
-        assert response.status_code == status.HTTP_201_CREATED, f"Expected 201, got {response.status_code}: {response.data}"
+        assert response.status_code == status.HTTP_201_CREATED, (
+            f'Expected 201, got {response.status_code}: {response.data}'
+        )
         cloned_task = ScheduledTask.objects.get(id=response.data['id'])
         assert '(Copy)' in cloned_task.name or 'Copy of' in cloned_task.name
         assert cloned_task.id != original_task.id
@@ -140,9 +125,7 @@ class TestScheduledTasksAPI:
         query = SavedQueryFactory(created_by=user)
         task = ScheduledTaskFactory(created_by=user, saved_query=query)
 
-        response = authenticated_client.delete(
-            f'/api/queries/scheduled-tasks/{task.id}/'
-        )
+        response = authenticated_client.delete(f'/api/queries/scheduled-tasks/{task.id}/')
 
         if response.status_code == status.HTTP_204_NO_CONTENT:
             assert not ScheduledTask.objects.filter(id=task.id).exists()

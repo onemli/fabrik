@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 class TimeMachineService:
-
     def _extract_imdata(self, result_data: Any) -> list:
         # APIC normally returns {"imdata": [...], "totalCount": "N"}.
         # But post-processors can strip the wrapper and return a plain list.
@@ -49,8 +48,7 @@ class TimeMachineService:
         # Any entry with severity "error" or "warning" means the result is unreliable.
         if isinstance(messages, list):
             return any(
-                isinstance(m, dict) and m.get('severity') in ('error', 'warning')
-                for m in messages
+                isinstance(m, dict) and m.get('severity') in ('error', 'warning') for m in messages
             )
         return True
 
@@ -77,8 +75,7 @@ class TimeMachineService:
                     continue
                 for class_name, attrs in item.items():
                     dn = (
-                        attrs.get('attributes', {}).get('dn', '')
-                        if isinstance(attrs, dict) else ''
+                        attrs.get('attributes', {}).get('dn', '') if isinstance(attrs, dict) else ''
                     )
                     if dn:
                         target[dn] = {'class_name': class_name, 'attrs': attrs}
@@ -100,7 +97,7 @@ class TimeMachineService:
 
         # Objects present in both — check if any attributes actually changed
         modified = []
-        for dn in (dns_from & dns_to):
+        for dn in dns_from & dns_to:
             f = objects_from[dn]
             t = objects_to[dn]
             from_obj = {f['class_name']: f['attrs']}
@@ -109,16 +106,16 @@ class TimeMachineService:
                 from_attrs = (
                     f['attrs'].get('attributes', {}) if isinstance(f['attrs'], dict) else {}
                 )
-                to_attrs = (
-                    t['attrs'].get('attributes', {}) if isinstance(t['attrs'], dict) else {}
+                to_attrs = t['attrs'].get('attributes', {}) if isinstance(t['attrs'], dict) else {}
+                modified.append(
+                    {
+                        'dn': dn,
+                        'before': from_obj,
+                        'after': to_obj,
+                        # Drill down to show exactly which attributes changed
+                        'attribute_changes': self._attribute_diff(from_attrs, to_attrs),
+                    }
                 )
-                modified.append({
-                    'dn': dn,
-                    'before': from_obj,
-                    'after': to_obj,
-                    # Drill down to show exactly which attributes changed
-                    'attribute_changes': self._attribute_diff(from_attrs, to_attrs),
-                })
 
         return added, modified, deleted
 
@@ -144,6 +141,7 @@ class TimeMachineService:
         """
         try:
             from django.contrib.auth.models import User
+
             user = User.objects.get(id=user_id)
             settings = TimeMachineSettings.get_for_user(user)
 
@@ -154,7 +152,7 @@ class TimeMachineService:
 
             # Reject APIC error responses — saving them would create false drift alarms.
             if self._is_apic_error_response(result_data):
-                logger.warning("Rejecting snapshot: APIC returned an error response")
+                logger.warning('Rejecting snapshot: APIC returned an error response')
                 return {
                     'success': False,
                     'error': 'apic_error_response',
@@ -166,8 +164,8 @@ class TimeMachineService:
             if settings.max_snapshot_size_mb > 0 and result_size_mb > settings.max_snapshot_size_mb:
                 if settings.warn_large_snapshots:
                     logger.warning(
-                        f"Snapshot size ({result_size_mb:.2f} MB) exceeds limit "
-                        f"({settings.max_snapshot_size_mb} MB)"
+                        f'Snapshot size ({result_size_mb:.2f} MB) exceeds limit '
+                        f'({settings.max_snapshot_size_mb} MB)'
                     )
                 return {
                     'success': False,
@@ -182,13 +180,16 @@ class TimeMachineService:
             # the last snapshot. This is the common case for stable networks — no need
             # to fill the DB with identical rows.
             if not settings.store_duplicates and saved_query_id:
-                previous = QueryExecutionSnapshot.objects.filter(
-                    saved_query_id=saved_query_id,
-                    apic_connection_id=apic_connection_id
-                ).order_by('-executed_at').first()
+                previous = (
+                    QueryExecutionSnapshot.objects.filter(
+                        saved_query_id=saved_query_id, apic_connection_id=apic_connection_id
+                    )
+                    .order_by('-executed_at')
+                    .first()
+                )
 
                 if previous and previous.result_hash == result_hash:
-                    logger.info(f"Skipping duplicate snapshot for query {saved_query_id}")
+                    logger.info(f'Skipping duplicate snapshot for query {saved_query_id}')
                     return {
                         'success': True,
                         'skipped': True,
@@ -201,12 +202,15 @@ class TimeMachineService:
             # without having to join or re-compare on read.
             has_changes = False
             if saved_query_id:
-                previous = QueryExecutionSnapshot.objects.filter(
-                    saved_query_id=saved_query_id,
-                    apic_connection_id=apic_connection_id
-                ).order_by('-executed_at').first()
+                previous = (
+                    QueryExecutionSnapshot.objects.filter(
+                        saved_query_id=saved_query_id, apic_connection_id=apic_connection_id
+                    )
+                    .order_by('-executed_at')
+                    .first()
+                )
                 if previous is not None:
-                    has_changes = (previous.result_hash != result_hash)
+                    has_changes = previous.result_hash != result_hash
 
             result_count = len(self._extract_imdata(result_data))
 
@@ -225,9 +229,9 @@ class TimeMachineService:
                     major_version = saved_query.major_version
                     minor_version = saved_query.minor_version
                 elif class_name:
-                    query_name = f"{class_name} Query"
+                    query_name = f'{class_name} Query'
                 else:
-                    query_name = "Unsaved Query"
+                    query_name = 'Unsaved Query'
             elif saved_query_id:
                 # Name was provided by caller, but we still need the version info
                 saved_query = SavedQuery.objects.get(id=saved_query_id)
@@ -262,8 +266,8 @@ class TimeMachineService:
             # under heavy fabric load (thousands of snapshots), cleanup is an O(table) scan that
             # would lock inserts for seconds and stall APIC workers.
             logger.info(
-                f"Time Machine snapshot captured: {snapshot.id} "
-                f"({result_count} objects, {result_size_mb:.2f} MB)"
+                f'Time Machine snapshot captured: {snapshot.id} '
+                f'({result_count} objects, {result_size_mb:.2f} MB)'
             )
 
             return {
@@ -276,7 +280,7 @@ class TimeMachineService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to capture Time Machine snapshot: {e}")
+            logger.error(f'Failed to capture Time Machine snapshot: {e}')
             return {
                 'success': False,
                 'error': str(e),
@@ -293,27 +297,26 @@ class TimeMachineService:
 
         # One aggregation query instead of N+1 per query — counts and latest timestamp
         # come back together so we don't hit the DB again in the loop below.
-        saved_queries = QueryExecutionSnapshot.objects.filter(
-            saved_query__isnull=False,
-            saved_query__created_by_id=user_id
-        ).select_related('saved_query').values('saved_query_id').annotate(
-            snapshot_count=Count('id'),
-            latest_execution=Max('executed_at')
-        ).order_by('-latest_execution')
+        saved_queries = (
+            QueryExecutionSnapshot.objects.filter(
+                saved_query__isnull=False, saved_query__created_by_id=user_id
+            )
+            .select_related('saved_query')
+            .values('saved_query_id')
+            .annotate(snapshot_count=Count('id'), latest_execution=Max('executed_at'))
+            .order_by('-latest_execution')
+        )
 
         # Batch-fetch all referenced SavedQuery objects in one query to avoid N+1
         query_ids = [item['saved_query_id'] for item in saved_queries]
-        queries_by_id = {
-            q.id: q
-            for q in SavedQuery.objects.filter(id__in=query_ids)
-        }
+        queries_by_id = {q.id: q for q in SavedQuery.objects.filter(id__in=query_ids)}
 
         results = []
 
         for item in saved_queries:
             query = queries_by_id.get(item['saved_query_id'])
             if query is None:
-                logger.warning(f"Skipping snapshots for deleted query ID: {item['saved_query_id']}")
+                logger.warning(f'Skipping snapshots for deleted query ID: {item["saved_query_id"]}')
                 continue
 
             # Respect the per-query opt-in flag — if Time Machine was later
@@ -322,15 +325,17 @@ class TimeMachineService:
             if not query.enable_time_machine:
                 continue
 
-            results.append({
-                'type': 'saved',
-                'id': query.id,
-                'name': query.name,
-                'snapshot_count': item['snapshot_count'],
-                'latest_execution': item['latest_execution'].isoformat(),
-                'version': f"v{query.major_version}.{query.minor_version}",
-                'enable_time_machine': query.enable_time_machine,
-            })
+            results.append(
+                {
+                    'type': 'saved',
+                    'id': query.id,
+                    'name': query.name,
+                    'snapshot_count': item['snapshot_count'],
+                    'latest_execution': item['latest_execution'].isoformat(),
+                    'version': f'v{query.major_version}.{query.minor_version}',
+                    'enable_time_machine': query.enable_time_machine,
+                }
+            )
 
         return results
 
@@ -360,12 +365,14 @@ class TimeMachineService:
                 tz_info = dt.timezone.utc
             target = dt.date.fromisoformat(date)
             day_start = dt.datetime(target.year, target.month, target.day, 0, 0, 0, tzinfo=tz_info)
-            day_end = dt.datetime(target.year, target.month, target.day, 23, 59, 59, 999999, tzinfo=tz_info)
+            day_end = dt.datetime(
+                target.year, target.month, target.day, 23, 59, 59, 999999, tzinfo=tz_info
+            )
             qs = qs.filter(executed_at__gte=day_start, executed_at__lte=day_end)
 
         qs = qs.order_by('-executed_at')
         total_count = qs.count()
-        page_snapshots = qs[offset:offset + limit]
+        page_snapshots = qs[offset : offset + limit]
 
         return {
             'total_count': total_count,
@@ -382,7 +389,7 @@ class TimeMachineService:
                     'execution_time_ms': snap.execution_time_ms,
                     'result_hash': snap.result_hash,
                     'is_duplicate': snap.is_duplicate,
-                    'query_version': f"v{snap.major_version}.{snap.minor_version}",
+                    'query_version': f'v{snap.major_version}.{snap.minor_version}',
                     'query_version_hash': snap.query_version_hash,
                     'execution_type': snap.execution_type,
                     'has_changes': snap.has_changes,
@@ -414,7 +421,7 @@ class TimeMachineService:
                 'apic_connection_name': snapshot.apic_connection_name,
                 'execution_time_ms': snapshot.execution_time_ms,
                 'result_hash': snapshot.result_hash,
-                'query_version': f"v{snapshot.major_version}.{snapshot.minor_version}",
+                'query_version': f'v{snapshot.major_version}.{snapshot.minor_version}',
                 'query_version_hash': snapshot.query_version_hash,
                 'execution_type': snapshot.execution_type,
                 'saved_query_id': snapshot.saved_query_id,
@@ -481,10 +488,12 @@ class TimeMachineService:
             }
 
         except QueryExecutionSnapshot.DoesNotExist as e:
-            logger.error(f"Snapshot not found: {e}")
+            logger.error(f'Snapshot not found: {e}')
             return {'error': 'Snapshot not found'}
 
-    def get_heatmap_data(self, saved_query_id: int, year: int, timezone: str = 'UTC') -> Dict[str, Dict]:
+    def get_heatmap_data(
+        self, saved_query_id: int, year: int, timezone: str = 'UTC'
+    ) -> Dict[str, Dict]:
         """Return per-day snapshot counts for the calendar heatmap component.
 
         We return every day of the year (all 365/366) with count=0 as the default
@@ -509,8 +518,7 @@ class TimeMachineService:
         # TruncDate with tzinfo converts UTC executed_at to the target timezone before
         # extracting the date, so cells align with the user's local calendar.
         rows = (
-            QueryExecutionSnapshot.objects
-            .filter(
+            QueryExecutionSnapshot.objects.filter(
                 saved_query_id=saved_query_id,
                 executed_at__date__gte=start,
                 executed_at__date__lte=end,
@@ -672,30 +680,32 @@ class TimeMachineService:
             if isinstance(matched_attrs, str):
                 matched_attrs = json.loads(matched_attrs)
             if matched_attrs is None:
-                timeline_points.append({
-                    'snapshot_id': snap_id,
-                    'executed_at': executed_at.isoformat(),
-                    'present': False,
-                    'attributes': {},
-                })
+                timeline_points.append(
+                    {
+                        'snapshot_id': snap_id,
+                        'executed_at': executed_at.isoformat(),
+                        'present': False,
+                        'attributes': {},
+                    }
+                )
                 continue
 
             all_attribute_keys.update(matched_attrs.keys())
-            timeline_points.append({
-                'snapshot_id': snap_id,
-                'executed_at': executed_at.isoformat(),
-                'present': True,
-                'attributes': matched_attrs,
-            })
+            timeline_points.append(
+                {
+                    'snapshot_id': snap_id,
+                    'executed_at': executed_at.isoformat(),
+                    'present': True,
+                    'attributes': matched_attrs,
+                }
+            )
 
         # Reverse so oldest is first — more natural for a left-to-right timeline
         timeline_points.reverse()
 
         # Build the attribute evolution summary: for each attribute, find which
         # snapshots it changed in, and what the distinct values were.
-        attribute_evolution = self._build_attribute_evolution(
-            all_attribute_keys, timeline_points
-        )
+        attribute_evolution = self._build_attribute_evolution(all_attribute_keys, timeline_points)
 
         return {
             'dn': dn,
@@ -726,27 +736,31 @@ class TimeMachineService:
 
             for point in present_points:
                 val = point['attributes'].get(attr)
-                values_over_time.append({
-                    'executed_at': point['executed_at'],
-                    'snapshot_id': point['snapshot_id'],
-                    'value': val,
-                    'changed': prev_val is not None and val != prev_val,
-                })
+                values_over_time.append(
+                    {
+                        'executed_at': point['executed_at'],
+                        'snapshot_id': point['snapshot_id'],
+                        'value': val,
+                        'changed': prev_val is not None and val != prev_val,
+                    }
+                )
                 if prev_val is not None and val != prev_val:
                     change_count += 1
                 prev_val = val
 
-            distinct_values = list({
-                str(v['value']) for v in values_over_time if v['value'] is not None
-            })
+            distinct_values = list(
+                {str(v['value']) for v in values_over_time if v['value'] is not None}
+            )
 
-            evolution.append({
-                'attribute': attr,
-                'change_count': change_count,
-                'is_stable': change_count == 0,
-                'distinct_values': distinct_values,
-                'values': values_over_time,
-            })
+            evolution.append(
+                {
+                    'attribute': attr,
+                    'change_count': change_count,
+                    'is_stable': change_count == 0,
+                    'distinct_values': distinct_values,
+                    'values': values_over_time,
+                }
+            )
 
         # Sort by change frequency — volatile attributes first, stable ones last
         evolution.sort(key=lambda e: -e['change_count'])

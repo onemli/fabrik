@@ -1,6 +1,7 @@
 """
 Integration tests for APIC Connection ViewSet
 """
+
 import pytest
 from rest_framework import status
 from django.contrib.auth.models import Group
@@ -21,19 +22,13 @@ class TestAPICConnectionViewSet:
 
         # Create some connections
         conn1 = APICConnection.objects.create(
-            name='APIC 1',
-            url='https://apic1.example.com',
-            username='admin',
-            created_by=user
+            name='APIC 1', url='https://apic1.example.com', username='admin', created_by=user
         )
         conn1.set_password('password')
         conn1.save()
 
         conn2 = APICConnection.objects.create(
-            name='APIC 2',
-            url='https://apic2.example.com',
-            username='admin',
-            created_by=user
+            name='APIC 2', url='https://apic2.example.com', username='admin', created_by=user
         )
         conn2.set_password('password')
         conn2.save()
@@ -49,10 +44,7 @@ class TestAPICConnectionViewSet:
 
         # User's own connection
         my_conn = APICConnection.objects.create(
-            name='My APIC',
-            url='https://my-apic.example.com',
-            username='admin',
-            created_by=user
+            name='My APIC', url='https://my-apic.example.com', username='admin', created_by=user
         )
         my_conn.set_password('password')
         my_conn.save()
@@ -63,7 +55,7 @@ class TestAPICConnectionViewSet:
             url='https://other-apic.example.com',
             username='admin',
             created_by=other_user,
-            is_public=False
+            is_public=False,
         )
         other_conn.set_password('password')
         other_conn.save()
@@ -74,7 +66,7 @@ class TestAPICConnectionViewSet:
             url='https://public-apic.example.com',
             username='admin',
             created_by=other_user,
-            is_public=True
+            is_public=True,
         )
         public_conn.set_password('password')
         public_conn.save()
@@ -98,7 +90,7 @@ class TestAPICConnectionViewSet:
             'username': 'admin',
             'password': 'newpassword',
             'verify_ssl': False,
-            'is_public': True
+            'is_public': True,
         }
 
         response = authenticated_client.post('/api/apic/connections/', data, format='json')
@@ -112,7 +104,7 @@ class TestAPICConnectionViewSet:
             'name': 'New APIC',
             'url': 'https://new-apic.example.com',
             'username': 'admin',
-            'password': 'newpassword'
+            'password': 'newpassword',
         }
 
         response = authenticated_client.post('/api/apic/connections/', data, format='json')
@@ -122,23 +114,15 @@ class TestAPICConnectionViewSet:
     def test_update_connection_as_owner(self, authenticated_client, user):
         """Test updating connection as owner"""
         connection = APICConnection.objects.create(
-            name='My APIC',
-            url='https://my-apic.example.com',
-            username='admin',
-            created_by=user
+            name='My APIC', url='https://my-apic.example.com', username='admin', created_by=user
         )
         connection.set_password('password')
         connection.save()
 
-        data = {
-            'name': 'Updated APIC',
-            'url': 'https://updated-apic.example.com'
-        }
+        data = {'name': 'Updated APIC', 'url': 'https://updated-apic.example.com'}
 
         response = authenticated_client.patch(
-            f'/api/apic/connections/{connection.id}/',
-            data,
-            format='json'
+            f'/api/apic/connections/{connection.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -152,7 +136,7 @@ class TestAPICConnectionViewSet:
             name='Other APIC',
             url='https://other-apic.example.com',
             username='admin',
-            created_by=other_user
+            created_by=other_user,
         )
         connection.set_password('password')
         connection.save()
@@ -160,9 +144,7 @@ class TestAPICConnectionViewSet:
         data = {'name': 'Hacked APIC'}
 
         response = authenticated_client.patch(
-            f'/api/apic/connections/{connection.id}/',
-            data,
-            format='json'
+            f'/api/apic/connections/{connection.id}/', data, format='json'
         )
 
         # Returns 404 because queryset filters out connections user can't access
@@ -171,10 +153,7 @@ class TestAPICConnectionViewSet:
     def test_delete_connection_as_owner(self, authenticated_client, user):
         """Test deleting connection as owner"""
         connection = APICConnection.objects.create(
-            name='My APIC',
-            url='https://my-apic.example.com',
-            username='admin',
-            created_by=user
+            name='My APIC', url='https://my-apic.example.com', username='admin', created_by=user
         )
         connection.set_password('password')
         connection.save()
@@ -187,10 +166,7 @@ class TestAPICConnectionViewSet:
     def test_retrieve_connection(self, authenticated_client, user):
         """Test retrieving single connection"""
         connection = APICConnection.objects.create(
-            name='My APIC',
-            url='https://my-apic.example.com',
-            username='admin',
-            created_by=user
+            name='My APIC', url='https://my-apic.example.com', username='admin', created_by=user
         )
         connection.set_password('password')
         connection.save()
@@ -203,10 +179,7 @@ class TestAPICConnectionViewSet:
     def test_test_connection_action_mock(self, authenticated_client, user, mocker):
         """Test the test connection action with mocked APIC client"""
         connection = APICConnection.objects.create(
-            name='Test APIC',
-            url='https://test-apic.example.com',
-            username='admin',
-            created_by=user
+            name='Test APIC', url='https://test-apic.example.com', username='admin', created_by=user
         )
         connection.set_password('password')
         connection.save()

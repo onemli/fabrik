@@ -7,6 +7,7 @@ Tests cover:
   - send_or_fallback never raises exceptions
   - Graceful degradation when email is disabled
 """
+
 from unittest.mock import patch, MagicMock
 from django.test import TestCase, override_settings
 
@@ -34,22 +35,22 @@ class EmailServiceAvailabilityTest(TestCase):
         self.assertFalse(EmailService.is_email_available())
 
     @override_settings(
-        EMAIL_ENABLED=True,
-        EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+        EMAIL_ENABLED=True, EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
     )
     def test_available_with_console_backend(self):
         """Console backend is always considered available (dev mode)"""
         from django.core.cache import cache
+
         cache.delete('email_service_health')
         self.assertTrue(EmailService.is_email_available())
 
     @override_settings(
-        EMAIL_ENABLED=True,
-        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
+        EMAIL_ENABLED=True, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
     )
     def test_available_with_locmem_backend(self):
         """Locmem backend is always considered available (test mode)"""
         from django.core.cache import cache
+
         cache.delete('email_service_health')
         self.assertTrue(EmailService.is_email_available())
 
@@ -63,25 +64,35 @@ class EmailServiceSendTest(TestCase):
         result = EmailService.send_or_fallback(
             subject='Test',
             template_name='users/password_reset_email.html',
-            context={'user': MagicMock(first_name='Test'), 'reset_url': 'http://x', 'expiry_minutes': 30, 'site_url': 'http://x'},
+            context={
+                'user': MagicMock(first_name='Test'),
+                'reset_url': 'http://x',
+                'expiry_minutes': 30,
+                'site_url': 'http://x',
+            },
             recipient_email='test@example.com',
         )
         self.assertFalse(result['sent'])
         self.assertEqual(result['reason'], 'email_disabled')
 
     @override_settings(
-        EMAIL_ENABLED=True,
-        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
+        EMAIL_ENABLED=True, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
     )
     def test_send_succeeds_with_locmem(self):
         """Email sends successfully with locmem backend"""
         from django.core.cache import cache
+
         cache.delete('email_service_health')
 
         result = EmailService.send_or_fallback(
             subject='Test Email',
             template_name='users/password_reset_email.html',
-            context={'user': MagicMock(first_name='Test'), 'reset_url': 'http://x', 'expiry_minutes': 30, 'site_url': 'http://x'},
+            context={
+                'user': MagicMock(first_name='Test'),
+                'reset_url': 'http://x',
+                'expiry_minutes': 30,
+                'site_url': 'http://x',
+            },
             recipient_email='test@example.com',
         )
         self.assertTrue(result['sent'])
@@ -93,7 +104,12 @@ class EmailServiceSendTest(TestCase):
         result = EmailService.send_or_fallback(
             subject='Test',
             template_name='users/password_reset_email.html',
-            context={'user': MagicMock(first_name='Test'), 'reset_url': 'http://x', 'expiry_minutes': 30, 'site_url': 'http://x'},
+            context={
+                'user': MagicMock(first_name='Test'),
+                'reset_url': 'http://x',
+                'expiry_minutes': 30,
+                'site_url': 'http://x',
+            },
             recipient_email='test@example.com',
         )
         self.assertFalse(result['sent'])
@@ -109,11 +125,11 @@ class EmailServiceHealthStatusTest(TestCase):
         self.assertEqual(status['status'], 'disabled')
 
     @override_settings(
-        EMAIL_ENABLED=True,
-        EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+        EMAIL_ENABLED=True, EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
     )
     def test_health_healthy_console(self):
         from django.core.cache import cache
+
         cache.delete('email_service_health')
         status = EmailService.get_health_status()
         self.assertEqual(status['status'], 'healthy')

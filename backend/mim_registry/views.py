@@ -57,9 +57,13 @@ def status_view(request):
     active_row = MIMVersion.active()
     loaded = active_row.apic_version if active_row else None
 
-    active_devnet_run = MIMImportRun.objects.filter(
-        state__in=[MIMImportRun.STATE_PENDING, MIMImportRun.STATE_RUNNING],
-    ).order_by('-started_at').first()
+    active_devnet_run = (
+        MIMImportRun.objects.filter(
+            state__in=[MIMImportRun.STATE_PENDING, MIMImportRun.STATE_RUNNING],
+        )
+        .order_by('-started_at')
+        .first()
+    )
 
     active_import = None
     if active_devnet_run:
@@ -72,14 +76,17 @@ def status_view(request):
             'state': active_devnet_run.state,
         }
 
-    return Response({
-        'loaded_version': loaded,
-        'active': MIMVersionSerializer(active_row).data if active_row else None,
-        'active_import': active_import,
-        'history': MIMVersionSerializer(
-            MIMVersion.objects.all()[:20], many=True,
-        ).data,
-    })
+    return Response(
+        {
+            'loaded_version': loaded,
+            'active': MIMVersionSerializer(active_row).data if active_row else None,
+            'active_import': active_import,
+            'history': MIMVersionSerializer(
+                MIMVersion.objects.all()[:20],
+                many=True,
+            ).data,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +121,8 @@ def devnet_install_view(request):
     requested_concurrency = serializer.validated_data.get('concurrency')
 
     devnet = DevNetVersion.objects.filter(
-        version_key=version_key, is_supported=True,
+        version_key=version_key,
+        is_supported=True,
     ).first()
     if not devnet:
         return Response(
@@ -122,9 +130,13 @@ def devnet_install_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    active_run = MIMImportRun.objects.filter(
-        state__in=[MIMImportRun.STATE_PENDING, MIMImportRun.STATE_RUNNING],
-    ).order_by('-started_at').first()
+    active_run = (
+        MIMImportRun.objects.filter(
+            state__in=[MIMImportRun.STATE_PENDING, MIMImportRun.STATE_RUNNING],
+        )
+        .order_by('-started_at')
+        .first()
+    )
     if active_run:
         return Response(
             {
@@ -164,12 +176,14 @@ def devnet_install_view(request):
             pkg = entry['pkg']
             cls_short = entry['class']
             normalized = f'{pkg}{cls_short}' if cls_short and cls_short[:1].isupper() else cls_short
-            jobs.append(MIMImportJob(
-                run=run,
-                class_pkg=pkg,
-                class_name=normalized,
-                qualified_name=f'{pkg}:{cls_short}',
-            ))
+            jobs.append(
+                MIMImportJob(
+                    run=run,
+                    class_pkg=pkg,
+                    class_name=normalized,
+                    qualified_name=f'{pkg}:{cls_short}',
+                )
+            )
         MIMImportJob.objects.bulk_create(jobs, batch_size=2000)
 
     run_id = str(run.id)
@@ -207,10 +221,12 @@ def devnet_run_view(request, run_id):
         state__in=[MIMImportJob.STATE_FAILED, MIMImportJob.STATE_NOT_FOUND],
     ).order_by('-updated_at')[:25]
 
-    return Response({
-        'run': MIMImportRunSerializer(run).data,
-        'failed_recent': MIMImportJobSummarySerializer(failed_recent, many=True).data,
-    })
+    return Response(
+        {
+            'run': MIMImportRunSerializer(run).data,
+            'failed_recent': MIMImportJobSummarySerializer(failed_recent, many=True).data,
+        }
+    )
 
 
 @api_view(['POST'])
@@ -268,5 +284,6 @@ def devnet_run_resume_view(request, run_id):
         started_by=request.user.get_username() if request.user.is_authenticated else None,
     )
 
-    return Response({'task_id': str(run_id), 'run_id': str(run_id)},
-                    status=status.HTTP_202_ACCEPTED)
+    return Response(
+        {'task_id': str(run_id), 'run_id': str(run_id)}, status=status.HTTP_202_ACCEPTED
+    )

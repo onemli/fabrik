@@ -14,6 +14,7 @@ from .throttles import TokenRefreshRateThrottle
 class ThrottledTokenRefreshView(TokenRefreshView):
     throttle_classes = [TokenRefreshRateThrottle]
 
+
 from .views import (
     UserRegistrationView,
     UserProfileView,
@@ -51,7 +52,6 @@ urlpatterns = [
     path('login/', SecureLoginView.as_view(), name='token_obtain_pair'),
     path('ldap-login/', LDAPLoginView.as_view(), name='ldap_login'),
     path('token/refresh/', ThrottledTokenRefreshView.as_view(), name='token_refresh'),
-
     # Registration & Profile
     path('register/', UserRegistrationView.as_view(), name='register'),
     path('profile/', UserProfileView.as_view(), name='profile'),
@@ -59,15 +59,14 @@ urlpatterns = [
     path('password/change/', PasswordChangeView.as_view(), name='password_change'),
     path('stats/', user_stats, name='user_stats'),
     path('session-timeout/', SessionTimeoutView.as_view(), name='session-timeout'),
-
     # Password reset (dual-channel: email token + admin code)
     path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
-    path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-
+    path(
+        'password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'
+    ),
     # Email verification (soft)
     path('email/send-verification/', send_verification_email, name='send_verification_email'),
     path('email/verify/', verify_email, name='verify_email'),
-
     # MFA / TOTP
     path('mfa/setup/', mfa_setup, name='mfa_setup'),
     path('mfa/verify/', mfa_verify, name='mfa_verify'),
@@ -75,11 +74,9 @@ urlpatterns = [
     path('mfa/status/', mfa_status, name='mfa_status'),
     path('mfa/backup-codes/', mfa_regenerate_backup_codes, name='mfa_backup_codes'),
     path('mfa-login/', MFALoginView.as_view(), name='mfa_login'),
-
     # Auth health & quota
     path('health/', auth_health, name='auth_health'),
     path('quota-usage/', quota_usage, name='quota_usage'),
-
     # Admin-only ViewSets
     path('', include(router.urls)),
 ]

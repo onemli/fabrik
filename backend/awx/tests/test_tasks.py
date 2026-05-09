@@ -11,8 +11,11 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from awx.models import (
-    AWXConnection, TemplateCategory, AutomationTemplate,
-    AutomationRequest, AutomationExecution,
+    AWXConnection,
+    TemplateCategory,
+    AutomationTemplate,
+    AutomationRequest,
+    AutomationExecution,
 )
 from awx.tasks import execute_automation_request, sync_running_jobs
 
@@ -21,32 +24,42 @@ User = get_user_model()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def make_user(username='u'):
-    return User.objects.create_user(
-        username=username, email=f'{username}@t.com', password='p'
-    )
+    return User.objects.create_user(username=username, email=f'{username}@t.com', password='p')
 
 
 def make_full_stack(user):
     conn = AWXConnection.objects.create(
         name='AWX', url='https://awx.test', auth_type='token', created_by=user
     )
-    conn.set_token('t'); conn.save()
+    conn.set_token('t')
+    conn.save()
     cat = TemplateCategory.objects.create(name='Cat', created_by=user)
     tmpl = AutomationTemplate.objects.create(
-        name='T', awx_type='job_template', awx_template_id=1,
-        awx_template_name='JT', awx_connection=conn, category=cat,
+        name='T',
+        awx_type='job_template',
+        awx_template_id=1,
+        awx_template_name='JT',
+        awx_connection=conn,
+        category=cat,
         execution_mode='bulk',
-        table_schemas=[{
-            'name': 'Sheet1', 'awx_variable_name': 'sheet1',
-            'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
-        }],
+        table_schemas=[
+            {
+                'name': 'Sheet1',
+                'awx_variable_name': 'sheet1',
+                'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
+            }
+        ],
         variable_mappings={'tenant_name': 'tenant'},
         created_by=user,
     )
     req = AutomationRequest.objects.create(
-        title='Req', template=tmpl, awx_connection=conn,
-        requested_by=user, status='pending',
+        title='Req',
+        template=tmpl,
+        awx_connection=conn,
+        requested_by=user,
+        status='pending',
         input_data={'data': [{'tenant_name': 'TenantA'}]},
     )
     return conn, tmpl, req
@@ -54,8 +67,8 @@ def make_full_stack(user):
 
 # ── execute_automation_request ────────────────────────────────────────────────
 
-class ExecuteAutomationRequestTaskTests(TestCase):
 
+class ExecuteAutomationRequestTaskTests(TestCase):
     def setUp(self):
         self.user = make_user('task_user')
         self.conn, self.tmpl, self.req = make_full_stack(self.user)
@@ -63,9 +76,7 @@ class ExecuteAutomationRequestTaskTests(TestCase):
     @patch('awx.tasks.ExecutionEngine')
     def test_successful_execution_marks_request_running(self, MockEngine):
         engine_instance = MockEngine.return_value
-        engine_instance.execute_request.return_value = (
-            True, [str(self.req.id)], None
-        )
+        engine_instance.execute_request.return_value = (True, [str(self.req.id)], None)
 
         execute_automation_request(str(self.req.id))
 
@@ -76,9 +87,7 @@ class ExecuteAutomationRequestTaskTests(TestCase):
     @patch('awx.tasks.ExecutionEngine')
     def test_engine_failure_marks_request_failed(self, MockEngine):
         engine_instance = MockEngine.return_value
-        engine_instance.execute_request.return_value = (
-            False, [], 'AWX connection refused'
-        )
+        engine_instance.execute_request.return_value = (False, [], 'AWX connection refused')
 
         execute_automation_request(str(self.req.id))
 
@@ -87,6 +96,7 @@ class ExecuteAutomationRequestTaskTests(TestCase):
 
     def test_nonexistent_request_id_does_not_crash(self):
         import uuid
+
         # Should raise or return, not crash the worker
         try:
             execute_automation_request(str(uuid.uuid4()))
@@ -105,9 +115,7 @@ class ExecuteAutomationRequestTaskTests(TestCase):
     @patch('awx.tasks.ExecutionEngine')
     def test_returns_execution_ids_on_success(self, MockEngine):
         fake_exec_id = 'exec-uuid-1234'
-        MockEngine.return_value.execute_request.return_value = (
-            True, [fake_exec_id], None
-        )
+        MockEngine.return_value.execute_request.return_value = (True, [fake_exec_id], None)
 
         result = execute_automation_request(str(self.req.id))
 
@@ -117,8 +125,8 @@ class ExecuteAutomationRequestTaskTests(TestCase):
 
 # ── sync_running_jobs ─────────────────────────────────────────────────────────
 
-class SyncRunningJobsTaskTests(TestCase):
 
+class SyncRunningJobsTaskTests(TestCase):
     def setUp(self):
         self.user = make_user('sync_user')
 
@@ -127,7 +135,9 @@ class SyncRunningJobsTaskTests(TestCase):
     def test_sync_calls_job_monitor(self, mock_cache, MockMonitor):
         mock_cache.add.return_value = True  # Acquire lock
         MockMonitor.return_value.sync_running_jobs.return_value = {
-            'total': 3, 'synced': 3, 'failed': 0
+            'total': 3,
+            'synced': 3,
+            'failed': 0,
         }
 
         sync_running_jobs()
@@ -150,7 +160,9 @@ class SyncRunningJobsTaskTests(TestCase):
     def test_sync_releases_lock_on_success(self, mock_cache, MockMonitor):
         mock_cache.add.return_value = True
         MockMonitor.return_value.sync_running_jobs.return_value = {
-            'total': 0, 'synced': 0, 'failed': 0
+            'total': 0,
+            'synced': 0,
+            'failed': 0,
         }
 
         sync_running_jobs()
@@ -174,8 +186,8 @@ class SyncRunningJobsTaskTests(TestCase):
 
 # ── cleanup_stale_executions ──────────────────────────────────────────────────
 
-class CleanupStaleExecutionsTests(TestCase):
 
+class CleanupStaleExecutionsTests(TestCase):
     def setUp(self):
         self.user = make_user('cleanup_user')
         self.conn, self.tmpl, self.req = make_full_stack(self.user)

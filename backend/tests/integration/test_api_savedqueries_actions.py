@@ -1,6 +1,7 @@
 """
 Integration tests for SavedQuery ViewSet actions
 """
+
 import pytest
 from rest_framework import status
 from queries.models import SavedQuery
@@ -42,11 +43,13 @@ class TestSavedQueryActions:
             description='Test description',
             created_by=user,
             category=category,
-            tags='tag1,tag2'
+            tags='tag1,tag2',
         )
 
         initial_count = SavedQuery.objects.count()
-        response = authenticated_client.post(f'/api/queries/saved-queries/{source_query.id}/duplicate/')
+        response = authenticated_client.post(
+            f'/api/queries/saved-queries/{source_query.id}/duplicate/'
+        )
 
         assert response.status_code == status.HTTP_201_CREATED
         assert '(Copy)' in response.data['name'] or 'Copy of' in response.data['name']
@@ -129,7 +132,7 @@ class TestSavedQueryActions:
         response = authenticated_client.post(
             '/api/queries/saved-queries/export/',
             {'query_ids': [query1.id, query2.id]},
-            format='json'
+            format='json',
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -142,9 +145,7 @@ class TestSavedQueryActions:
         query = SavedQueryFactory(created_by=other_user, is_public=False)
 
         response = authenticated_client.post(
-            '/api/queries/saved-queries/export/',
-            {'query_ids': [query.id]},
-            format='json'
+            '/api/queries/saved-queries/export/', {'query_ids': [query.id]}, format='json'
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -156,12 +157,8 @@ class TestSavedQueryActions:
 
         response = authenticated_client.post(
             f'/api/queries/saved-queries/{query.id}/execute/',
-            {
-                'connection_id': 1,
-                'execution_time_ms': 150,
-                'result_count': 10
-            },
-            format='json'
+            {'connection_id': 1, 'execution_time_ms': 150, 'result_count': 10},
+            format='json',
         )
 
         # Should log execution

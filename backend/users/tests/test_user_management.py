@@ -3,6 +3,7 @@ User Management Tests
 
 Tests for admin-only user management endpoints
 """
+
 from django.test import TestCase
 from django.contrib.auth.models import User, Group
 from rest_framework.test import APIClient
@@ -19,27 +20,18 @@ class UserManagementViewSetTest(TestCase):
 
         # Create admin user
         self.admin_user = User.objects.create_user(
-            username='admin',
-            email='admin@test.com',
-            password='admin123',
-            is_active=True
+            username='admin', email='admin@test.com', password='admin123', is_active=True
         )
         self.admin_user.groups.add(self.admin_group)
 
         # Create regular user
         self.regular_user = User.objects.create_user(
-            username='regular',
-            email='regular@test.com',
-            password='regular123',
-            is_active=True
+            username='regular', email='regular@test.com', password='regular123', is_active=True
         )
 
         # Create inactive user
         self.inactive_user = User.objects.create_user(
-            username='inactive',
-            email='inactive@test.com',
-            password='inactive123',
-            is_active=False
+            username='inactive', email='inactive@test.com', password='inactive123', is_active=False
         )
 
         self.client = APIClient()
@@ -50,7 +42,9 @@ class UserManagementViewSetTest(TestCase):
         response = self.client.get('/api/auth/management/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data['results']), 3)  # at least admin, regular, inactive
+        self.assertGreaterEqual(
+            len(response.data['results']), 3
+        )  # at least admin, regular, inactive
 
     def test_list_users_as_regular_user(self):
         """Regular user cannot list users"""
@@ -71,7 +65,7 @@ class UserManagementViewSetTest(TestCase):
             'first_name': 'New',
             'last_name': 'User',
             'is_active': True,
-            'group_ids': [self.admin_group.id]
+            'group_ids': [self.admin_group.id],
         }
 
         response = self.client.post('/api/auth/management/', data, format='json')
@@ -105,13 +99,11 @@ class UserManagementViewSetTest(TestCase):
         """CRITICAL: Admin can update user"""
         self.client.force_authenticate(user=self.admin_user)
 
-        data = {
-            'email': 'updated@test.com',
-            'first_name': 'Updated',
-            'last_name': 'Name'
-        }
+        data = {'email': 'updated@test.com', 'first_name': 'Updated', 'last_name': 'Name'}
 
-        response = self.client.patch(f'/api/auth/management/{self.regular_user.id}/', data, format='json')
+        response = self.client.patch(
+            f'/api/auth/management/{self.regular_user.id}/', data, format='json'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -125,11 +117,11 @@ class UserManagementViewSetTest(TestCase):
 
         viewer_group = Group.objects.create(name='Viewer')
 
-        data = {
-            'group_ids': [viewer_group.id]
-        }
+        data = {'group_ids': [viewer_group.id]}
 
-        response = self.client.patch(f'/api/auth/management/{self.regular_user.id}/', data, format='json')
+        response = self.client.patch(
+            f'/api/auth/management/{self.regular_user.id}/', data, format='json'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -160,10 +152,7 @@ class UserManagementViewSetTest(TestCase):
 
         # Create second admin
         admin2 = User.objects.create_user(
-            username='admin2',
-            email='admin2@test.com',
-            password='admin123',
-            is_active=True
+            username='admin2', email='admin2@test.com', password='admin123', is_active=True
         )
         admin2.groups.add(self.admin_group)
 
@@ -208,12 +197,11 @@ class UserManagementViewSetTest(TestCase):
         """CRITICAL: Admin can reset user password"""
         self.client.force_authenticate(user=self.admin_user)
 
-        data = {
-            'new_password': 'newpassword123!',
-            'new_password_confirm': 'newpassword123!'
-        }
+        data = {'new_password': 'newpassword123!', 'new_password_confirm': 'newpassword123!'}
 
-        response = self.client.post(f'/api/auth/management/{self.regular_user.id}/reset_password/', data, format='json')
+        response = self.client.post(
+            f'/api/auth/management/{self.regular_user.id}/reset_password/', data, format='json'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

@@ -1,6 +1,7 @@
 """
 Integration tests for ScheduledTask ViewSet actions
 """
+
 import pytest
 from datetime import time
 from rest_framework import status
@@ -22,7 +23,7 @@ class TestScheduledTaskActions:
             saved_query=query,
             frequency=ScheduledTask.FREQ_DAILY,
             time_of_day=time(10, 0),
-            status=ScheduledTask.STATUS_ACTIVE
+            status=ScheduledTask.STATUS_ACTIVE,
         )
 
         response = authenticated_client.post(f'/api/queries/scheduled-tasks/{task.id}/pause/')
@@ -43,7 +44,7 @@ class TestScheduledTaskActions:
             saved_query=query,
             frequency=ScheduledTask.FREQ_DAILY,
             time_of_day=time(10, 0),
-            status=ScheduledTask.STATUS_PAUSED
+            status=ScheduledTask.STATUS_PAUSED,
         )
 
         response = authenticated_client.post(f'/api/queries/scheduled-tasks/{task.id}/resume/')
@@ -63,7 +64,7 @@ class TestScheduledTaskActions:
             created_by=user,
             saved_query=query,
             frequency=ScheduledTask.FREQ_DAILY,
-            time_of_day=time(10, 0)
+            time_of_day=time(10, 0),
         )
 
         response = authenticated_client.get(f'/api/queries/scheduled-tasks/{task.id}/executions/')
@@ -80,7 +81,7 @@ class TestScheduledTaskActions:
             created_by=user,
             saved_query=query,
             frequency=ScheduledTask.FREQ_DAILY,
-            time_of_day=time(10, 0)
+            time_of_day=time(10, 0),
         )
         ScheduledTask.objects.create(
             name='Test Task 2',
@@ -88,7 +89,7 @@ class TestScheduledTaskActions:
             saved_query=query,
             frequency=ScheduledTask.FREQ_WEEKLY,
             time_of_day=time(14, 30),
-            day_of_week='monday'
+            day_of_week='monday',
         )
 
         response = authenticated_client.get('/api/queries/scheduled-tasks/')

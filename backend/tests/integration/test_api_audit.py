@@ -1,6 +1,7 @@
 """
 Integration tests for Audit ViewSets
 """
+
 import pytest
 from rest_framework import status
 from django.contrib.auth.models import Group
@@ -21,6 +22,7 @@ class TestAuditLogViewSet:
 
         # Import factory here to avoid circular import
         from tests.factories.audit_factory import AuditLogFactory
+
         AuditLogFactory.create_batch(3)
 
         response = authenticated_client.get('/api/audit/logs/')
@@ -33,6 +35,7 @@ class TestAuditLogViewSet:
     def test_list_audit_logs_as_non_admin_forbidden(self, authenticated_client, user):
         """Test that non-admin cannot list audit logs"""
         from tests.factories.audit_factory import AuditLogFactory
+
         AuditLogFactory.create_batch(3)
 
         response = authenticated_client.get('/api/audit/logs/')
@@ -47,6 +50,7 @@ class TestAuditLogViewSet:
         user.save()
 
         from tests.factories.audit_factory import AuditLogFactory
+
         log = AuditLogFactory()
 
         response = authenticated_client.get(f'/api/audit/logs/{log.id}/')
@@ -65,7 +69,7 @@ class TestAuditLogViewSet:
             'username': 'testuser',
             'category': 'user_management',
             'action': 'user_created',
-            'description': 'Test log'
+            'description': 'Test log',
         }
 
         response = authenticated_client.post('/api/audit/logs/', data, format='json')
@@ -81,6 +85,7 @@ class TestAuditLogViewSet:
         user.save()
 
         from tests.factories.audit_factory import AuditLogFactory
+
         log = AuditLogFactory()
 
         data = {'description': 'Updated description'}
@@ -98,6 +103,7 @@ class TestAuditLogViewSet:
         user.save()
 
         from tests.factories.audit_factory import AuditLogFactory
+
         log = AuditLogFactory()
 
         response = authenticated_client.delete(f'/api/audit/logs/{log.id}/')
@@ -113,6 +119,7 @@ class TestAuditLogViewSet:
         user.save()
 
         from tests.factories.audit_factory import AuditLogFactory
+
         AuditLogFactory(category='user_management')
         AuditLogFactory(category='query_execution')
         AuditLogFactory(category='user_management')
@@ -131,6 +138,7 @@ class TestAuditLogViewSet:
         user.save()
 
         from tests.factories.audit_factory import AuditLogFactory
+
         AuditLogFactory(username='admin', description='Admin action')
         AuditLogFactory(username='operator', description='Operator action')
 
@@ -154,6 +162,7 @@ class TestLoginAttemptViewSet:
         user.save()
 
         from tests.factories.audit_factory import LoginAttemptFactory
+
         LoginAttemptFactory.create_batch(3)
 
         response = authenticated_client.get('/api/audit/login-attempts/')
@@ -165,6 +174,7 @@ class TestLoginAttemptViewSet:
     def test_list_login_attempts_as_non_admin_forbidden(self, authenticated_client, user):
         """Test that non-admin cannot list login attempts"""
         from tests.factories.audit_factory import LoginAttemptFactory
+
         LoginAttemptFactory.create_batch(3)
 
         response = authenticated_client.get('/api/audit/login-attempts/')
@@ -179,6 +189,7 @@ class TestLoginAttemptViewSet:
         user.save()
 
         from tests.factories.audit_factory import LoginAttemptFactory
+
         attempt = LoginAttemptFactory()
 
         response = authenticated_client.get(f'/api/audit/login-attempts/{attempt.id}/')
@@ -194,6 +205,7 @@ class TestLoginAttemptViewSet:
         user.save()
 
         from tests.factories.audit_factory import LoginAttemptFactory, FailedLoginAttemptFactory
+
         LoginAttemptFactory()  # Successful
         FailedLoginAttemptFactory.create_batch(2)  # Failed
 
@@ -218,6 +230,7 @@ class TestAuditStatsEndpoint:
         user.save()
 
         from tests.factories.audit_factory import AuditLogFactory
+
         AuditLogFactory.create_batch(5, category='user_management')
         AuditLogFactory.create_batch(3, category='query_execution')
 

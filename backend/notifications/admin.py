@@ -14,7 +14,13 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(NotificationPreference)
 class NotificationPreferenceAdmin(admin.ModelAdmin):
-    list_display = ('user', 'in_app_enabled', 'email_enabled', 'digest_enabled', 'quiet_hours_enabled')
+    list_display = (
+        'user',
+        'in_app_enabled',
+        'email_enabled',
+        'digest_enabled',
+        'quiet_hours_enabled',
+    )
     list_filter = ('in_app_enabled', 'email_enabled', 'digest_enabled')
 
 

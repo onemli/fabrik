@@ -25,38 +25,50 @@ User = get_user_model()
 
 
 class RelaunchViewTestCase(TestCase):
-
     def setUp(self):
         self.user = User.objects.create_user(
-            username='r-user', email='r@example.com', password='x',
+            username='r-user',
+            email='r@example.com',
+            password='x',
         )
         self.category = TemplateCategory.objects.create(
-            name='RCat', created_by=self.user,
+            name='RCat',
+            created_by=self.user,
         )
         self.connection = AWXConnection.objects.create(
-            name='AWX', url='https://awx.example.com',
-            auth_type=AWXConnection.AUTH_TYPE_TOKEN, created_by=self.user,
+            name='AWX',
+            url='https://awx.example.com',
+            auth_type=AWXConnection.AUTH_TYPE_TOKEN,
+            created_by=self.user,
         )
         self.connection.set_token('t')
         self.connection.save()
 
         self.template = AutomationTemplate.objects.create(
-            name='WF', awx_type=AutomationTemplate.AWX_TYPE_WORKFLOW,
-            awx_template_id=777, awx_template_name='WF',
-            awx_connection=self.connection, category=self.category,
+            name='WF',
+            awx_type=AutomationTemplate.AWX_TYPE_WORKFLOW,
+            awx_template_id=777,
+            awx_template_name='WF',
+            awx_connection=self.connection,
+            category=self.category,
             execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
             table_schemas=[{'sheet_name': 'Data', 'columns': []}],
             created_by=self.user,
         )
         self.request = AutomationRequest.objects.create(
-            title='req', template=self.template,
-            awx_connection=self.connection, requested_by=self.user,
-            input_data={'data': []}, awx_credential_id=99,
+            title='req',
+            template=self.template,
+            awx_connection=self.connection,
+            requested_by=self.user,
+            input_data={'data': []},
+            awx_credential_id=99,
             status=AutomationRequest.STATUS_SUCCESSFUL,
         )
         self.execution = AutomationExecution.objects.create(
-            automation_request=self.request, awx_connection=self.connection,
-            awx_job_id=1001, status=AutomationExecution.STATUS_SUCCESSFUL,
+            automation_request=self.request,
+            awx_connection=self.connection,
+            awx_job_id=1001,
+            status=AutomationExecution.STATUS_SUCCESSFUL,
             execution_mode='bulk',
         )
 
@@ -69,10 +81,14 @@ class RelaunchViewTestCase(TestCase):
         mock_execute.return_value = (True, [new_id], None)
 
         new_execution = AutomationExecution.objects.create(
-            id=new_id, automation_request=self.request,
-            awx_connection=self.connection, awx_job_id=2002,
-            status=AutomationExecution.STATUS_PENDING, execution_mode='bulk',
-            relaunch_of=self.execution, relaunch_count=1,
+            id=new_id,
+            automation_request=self.request,
+            awx_connection=self.connection,
+            awx_job_id=2002,
+            status=AutomationExecution.STATUS_PENDING,
+            execution_mode='bulk',
+            relaunch_of=self.execution,
+            relaunch_count=1,
         )
 
         response = self.client.post(
@@ -108,7 +124,9 @@ class RelaunchViewTestCase(TestCase):
 
     def test_relaunch_blocked_for_other_user(self):
         other = User.objects.create_user(
-            username='intruder', email='i@example.com', password='x',
+            username='intruder',
+            email='i@example.com',
+            password='x',
         )
         self.client.force_authenticate(user=other)
 

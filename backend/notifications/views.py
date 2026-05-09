@@ -28,7 +28,7 @@ def _push_unread_count(user):
             {'type': 'notification_count', 'count': count},
         )
     except Exception:
-        logger.warning("Failed to push unread count to WebSocket for user %s", user.id)
+        logger.warning('Failed to push unread count to WebSocket for user %s', user.id)
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -72,9 +72,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def mark_all_read(self, request):
-        count = Notification.objects.filter(
-            user=request.user, is_read=False
-        ).update(is_read=True, read_at=timezone.now())
+        count = Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True, read_at=timezone.now()
+        )
         _push_unread_count(request.user)
         return Response({'status': 'success', 'message': f'{count} notifications marked as read'})
 
@@ -93,7 +93,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         try:
             limit = min(int(request.query_params.get('limit', 10)), 200)
         except (ValueError, TypeError):
-            return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+            )
         notifications = self.get_queryset()[:limit]
         serializer = self.get_serializer(notifications, many=True)
         return Response(serializer.data)
@@ -101,6 +103,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
 class NotificationPreferenceViewSet(viewsets.GenericViewSet):
     """GET returns current preferences (auto-creates defaults), PUT/PATCH updates."""
+
     serializer_class = NotificationPreferenceSerializer
     permission_classes = [IsAuthenticated]
 

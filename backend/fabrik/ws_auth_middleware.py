@@ -29,6 +29,7 @@ def get_user_from_ticket(ticket):
 
     try:
         from django.contrib.auth import get_user_model
+
         User = get_user_model()
         return User.objects.get(id=user_id)
     except Exception:
@@ -42,6 +43,7 @@ def get_user_from_token(token_string):
         access_token = AccessToken(token_string)
         user_id = access_token['user_id']
         from django.contrib.auth import get_user_model
+
         User = get_user_model()
         return User.objects.get(id=user_id)
     except (TokenError, KeyError, Exception):

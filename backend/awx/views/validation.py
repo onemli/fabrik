@@ -33,8 +33,11 @@ def _clamp_page_size(request: Request, default: int = 50) -> int:
 
 from awx.models import ValidationList, ValidationUsage, RegexPattern
 from awx.serializers import (
-    ValidationListSerializer, ValidationListCreateSerializer, ValidationUsageSerializer,
-    RegexPatternSerializer, RegexPatternCreateSerializer,
+    ValidationListSerializer,
+    ValidationListCreateSerializer,
+    ValidationUsageSerializer,
+    RegexPatternSerializer,
+    RegexPatternCreateSerializer,
 )
 
 
@@ -46,6 +49,7 @@ class ValidationListViewSet(viewsets.ModelViewSet):
     that reference the list. The validate_async action offloads APIC-backed
     validation to a Celery task and returns a task ID the client polls.
     """
+
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
@@ -55,9 +59,7 @@ class ValidationListViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[ValidationList]:
         """Filter validation lists based on ownership and sharing"""
         user = self.request.user
-        return ValidationList.objects.filter(
-            Q(created_by=user) | Q(is_public=True)
-        ).distinct()
+        return ValidationList.objects.filter(Q(created_by=user) | Q(is_public=True)).distinct()
 
     def get_serializer_class(self) -> type[BaseSerializer]:
         """Use different serializers for create/list/update"""
@@ -85,7 +87,7 @@ class ValidationListViewSet(viewsets.ModelViewSet):
                 'case_sensitive': instance.case_sensitive,
                 'is_public': instance.is_public,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer: BaseSerializer) -> None:
@@ -109,7 +111,7 @@ class ValidationListViewSet(viewsets.ModelViewSet):
                 'old_values_count': old_values_count,
                 'new_values_count': new_values_count,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance: ValidationList) -> None:
@@ -119,7 +121,9 @@ class ValidationListViewSet(viewsets.ModelViewSet):
         # Check if in use - raise exception so DRF returns proper error response
         if instance.usage_count > 0:
             raise DRFValidationError(
-                {'error': f'Cannot delete validation list that is in use ({instance.usage_count} usages)'}
+                {
+                    'error': f'Cannot delete validation list that is in use ({instance.usage_count} usages)'
+                }
             )
 
         # Audit log
@@ -134,7 +138,7 @@ class ValidationListViewSet(viewsets.ModelViewSet):
             metadata={
                 'values_count': len(instance.values) if instance.values else 0,
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -150,14 +154,16 @@ class ValidationListViewSet(viewsets.ModelViewSet):
         usages = ValidationUsage.objects.filter(validation_list=validation_list)
         serializer = ValidationUsageSerializer(usages, many=True, context={'request': request})
 
-        return Response({
-            'validation_list': {
-                'id': validation_list.id,
-                'name': validation_list.name,
-            },
-            'usage_count': validation_list.usage_count,
-            'usages': serializer.data
-        })
+        return Response(
+            {
+                'validation_list': {
+                    'id': validation_list.id,
+                    'name': validation_list.name,
+                },
+                'usage_count': validation_list.usage_count,
+                'usages': serializer.data,
+            }
+        )
 
 
 class RegexPatternViewSet(viewsets.ModelViewSet):
@@ -171,9 +177,7 @@ class RegexPatternViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self) -> QuerySet[RegexPattern]:
         user = self.request.user
-        qs = RegexPattern.objects.filter(
-            Q(created_by=user) | Q(is_public=True)
-        ).distinct()
+        qs = RegexPattern.objects.filter(Q(created_by=user) | Q(is_public=True)).distinct()
 
         category = self.request.query_params.get('category')
         if category:
@@ -219,6 +223,7 @@ class RegexPatternViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance: RegexPattern) -> None:
         from rest_framework.exceptions import ValidationError as DRFValidationError
+
         if instance.usage_count > 0:
             raise DRFValidationError(
                 {'error': f'Cannot delete regex pattern in use ({instance.usage_count} usages)'}
@@ -241,6 +246,7 @@ class RegexPatternViewSet(viewsets.ModelViewSet):
         # Live-test a regex pattern against multiple strings without saving.
         # POST { "pattern": "^\\d+$", "flags": ["i"], "test_strings": ["123", "abc"] }
         import re
+
         pattern_str = request.data.get('pattern', '')
         flag_list = request.data.get('flags', [])
         test_strings = request.data.get('test_strings', [])
@@ -262,12 +268,14 @@ class RegexPatternViewSet(viewsets.ModelViewSet):
         for entry in test_strings[:50]:  # cap at 50
             value = entry if isinstance(entry, str) else str(entry)
             match = compiled.search(value)
-            results.append({
-                'value': value,
-                'is_match': bool(match),
-                'match_start': match.start() if match else None,
-                'match_end': match.end() if match else None,
-                'matched_text': match.group() if match else None,
-            })
+            results.append(
+                {
+                    'value': value,
+                    'is_match': bool(match),
+                    'match_start': match.start() if match else None,
+                    'match_end': match.end() if match else None,
+                    'matched_text': match.group() if match else None,
+                }
+            )
 
         return Response({'valid': True, 'error': None, 'results': results})

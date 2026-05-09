@@ -1,6 +1,7 @@
 """
 Root conftest.py - Shared fixtures for all tests
 """
+
 import pytest
 import os
 import sys
@@ -21,6 +22,7 @@ User = get_user_model()
 
 # ==================== Django Setup ====================
 
+
 @pytest.fixture(scope='session')
 def django_db_setup():
     """Setup test database"""
@@ -38,16 +40,13 @@ def django_db_setup():
 
 # ==================== User Fixtures ====================
 
+
 @pytest.fixture
 def user(db):
     """Create a regular test user"""
     user, created = User.objects.get_or_create(
         username='testuser',
-        defaults={
-            'email': 'test@example.com',
-            'first_name': 'Test',
-            'last_name': 'User'
-        }
+        defaults={'email': 'test@example.com', 'first_name': 'Test', 'last_name': 'User'},
     )
     if created:
         user.set_password('testpass123')
@@ -65,8 +64,8 @@ def admin_user(db):
             'first_name': 'Admin',
             'last_name': 'User',
             'is_staff': True,
-            'is_superuser': True
-        }
+            'is_superuser': True,
+        },
     )
     if created:
         user.set_password('adminpass123')
@@ -83,8 +82,8 @@ def staff_user(db):
             'email': 'staff@example.com',
             'first_name': 'Staff',
             'last_name': 'User',
-            'is_staff': True
-        }
+            'is_staff': True,
+        },
     )
     if created:
         user.set_password('staffpass123')
@@ -93,6 +92,7 @@ def staff_user(db):
 
 
 # ==================== API Client Fixtures ====================
+
 
 @pytest.fixture
 def api_client():
@@ -129,23 +129,25 @@ def staff_client(staff_user):
 
 # ==================== Test Data Helpers ====================
 
+
 @pytest.fixture
 def create_users(db):
     """Factory to create multiple users"""
+
     def _create_users(count=3):
         users = []
         for i in range(count):
             user = User.objects.create_user(
-                username=f'user{i}',
-                email=f'user{i}@example.com',
-                password='testpass123'
+                username=f'user{i}', email=f'user{i}@example.com', password='testpass123'
             )
             users.append(user)
         return users
+
     return _create_users
 
 
 # ==================== Celery Testing ====================
+
 
 @pytest.fixture(scope='session')
 def celery_config():
@@ -160,14 +162,17 @@ def celery_config():
 
 # ==================== Time Mocking ====================
 
+
 @pytest.fixture
 def freeze_time():
     """Fixture to freeze time for testing"""
     from freezegun import freeze_time as _freeze_time
+
     return _freeze_time
 
 
 # ==================== Cleanup ====================
+
 
 @pytest.fixture(autouse=True)
 def enable_db_access_for_all_tests(db):
@@ -181,23 +186,12 @@ def reset_sequences(db):
 
 # ==================== Markers ====================
 
+
 def pytest_configure(config):
     """Register custom markers"""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow"
-    )
-    config.addinivalue_line(
-        "markers", "apic: mark test as requiring APIC interaction"
-    )
-    config.addinivalue_line(
-        "markers", "celery: mark test as a Celery task test"
-    )
-    config.addinivalue_line(
-        "markers", "websocket: mark test as a WebSocket test"
-    )
+    config.addinivalue_line('markers', 'unit: mark test as a unit test')
+    config.addinivalue_line('markers', 'integration: mark test as an integration test')
+    config.addinivalue_line('markers', 'slow: mark test as slow')
+    config.addinivalue_line('markers', 'apic: mark test as requiring APIC interaction')
+    config.addinivalue_line('markers', 'celery: mark test as a Celery task test')
+    config.addinivalue_line('markers', 'websocket: mark test as a WebSocket test')

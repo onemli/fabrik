@@ -18,15 +18,13 @@ User = get_user_model()
 
 
 def make_user(username='u'):
-    return User.objects.create_user(
-        username=username, email=f'{username}@t.com', password='p'
-    )
+    return User.objects.create_user(username=username, email=f'{username}@t.com', password='p')
 
 
 # ── Token auth validation ─────────────────────────────────────────────────────
 
-class TokenAuthValidationTests(TestCase):
 
+class TokenAuthValidationTests(TestCase):
     def setUp(self):
         self.user = make_user('ser_user')
 
@@ -37,7 +35,9 @@ class TokenAuthValidationTests(TestCase):
 
     def test_token_auth_requires_token_on_create(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test', 'auth_type': 'token',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'token',
         }
         s = AWXConnectionCreateSerializer(data=data)
         with self.assertRaises(ValidationError) as ctx:
@@ -46,8 +46,10 @@ class TokenAuthValidationTests(TestCase):
 
     def test_token_auth_with_token_passes(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'token', 'token': 'mytoken',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'token',
+            'token': 'mytoken',
         }
         s = AWXConnectionCreateSerializer(data=data)
         self.assertTrue(s.is_valid())
@@ -55,14 +57,14 @@ class TokenAuthValidationTests(TestCase):
     def test_token_update_without_token_passes(self):
         """Updating token-auth connection without providing new token is OK."""
         conn = AWXConnection.objects.create(
-            name='AWX', url='https://awx.test',
-            auth_type='token', created_by=self.user
+            name='AWX', url='https://awx.test', auth_type='token', created_by=self.user
         )
         conn.set_token('old-token')
         conn.save()
 
         data = {
-            'name': 'AWX Updated', 'url': 'https://awx.test',
+            'name': 'AWX Updated',
+            'url': 'https://awx.test',
             'auth_type': 'token',  # Not changing auth_type, no token needed
         }
         s = AWXConnectionCreateSerializer(instance=conn, data=data)
@@ -71,14 +73,18 @@ class TokenAuthValidationTests(TestCase):
     def test_switching_to_token_auth_requires_token(self):
         """Switching from basic to token auth requires the new token."""
         conn = AWXConnection.objects.create(
-            name='AWX', url='https://awx.test',
-            auth_type='basic', username='admin', created_by=self.user
+            name='AWX',
+            url='https://awx.test',
+            auth_type='basic',
+            username='admin',
+            created_by=self.user,
         )
         conn.set_password('oldpass')
         conn.save()
 
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
+            'name': 'AWX',
+            'url': 'https://awx.test',
             'auth_type': 'token',  # switching to token — must provide token
         }
         s = AWXConnectionCreateSerializer(instance=conn, data=data)
@@ -89,14 +95,16 @@ class TokenAuthValidationTests(TestCase):
 
 # ── Basic auth validation ─────────────────────────────────────────────────────
 
-class BasicAuthValidationTests(TestCase):
 
+class BasicAuthValidationTests(TestCase):
     def setUp(self):
         self.user = make_user('basic_user')
 
     def test_basic_auth_requires_username_and_password_on_create(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test', 'auth_type': 'basic',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'basic',
         }
         s = AWXConnectionCreateSerializer(data=data)
         with self.assertRaises(ValidationError) as ctx:
@@ -106,8 +114,10 @@ class BasicAuthValidationTests(TestCase):
 
     def test_basic_auth_missing_password_fails(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'basic', 'username': 'admin',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'basic',
+            'username': 'admin',
         }
         s = AWXConnectionCreateSerializer(data=data)
         with self.assertRaises(ValidationError) as ctx:
@@ -116,8 +126,11 @@ class BasicAuthValidationTests(TestCase):
 
     def test_basic_auth_with_both_credentials_passes(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'basic', 'username': 'admin', 'password': 'pass',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'basic',
+            'username': 'admin',
+            'password': 'pass',
         }
         s = AWXConnectionCreateSerializer(data=data)
         self.assertTrue(s.is_valid())
@@ -125,14 +138,14 @@ class BasicAuthValidationTests(TestCase):
     def test_switching_to_basic_auth_requires_username_and_password(self):
         """Switching from token to basic auth requires both credentials."""
         conn = AWXConnection.objects.create(
-            name='AWX', url='https://awx.test',
-            auth_type='token', created_by=self.user
+            name='AWX', url='https://awx.test', auth_type='token', created_by=self.user
         )
         conn.set_token('tok')
         conn.save()
 
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
+            'name': 'AWX',
+            'url': 'https://awx.test',
             'auth_type': 'basic',  # switching — must provide username + password
         }
         s = AWXConnectionCreateSerializer(instance=conn, data=data)
@@ -142,15 +155,17 @@ class BasicAuthValidationTests(TestCase):
 
 # ── Create/Update credential storage ─────────────────────────────────────────
 
-class CredentialStorageTests(TestCase):
 
+class CredentialStorageTests(TestCase):
     def setUp(self):
         self.user = make_user('cred_user')
 
     def test_create_stores_token_encrypted(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'token', 'token': 'secret-token',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'token',
+            'token': 'secret-token',
         }
         s = AWXConnectionCreateSerializer(data=data)
         s.is_valid(raise_exception=True)
@@ -163,15 +178,16 @@ class CredentialStorageTests(TestCase):
 
     def test_update_stores_new_token(self):
         conn = AWXConnection.objects.create(
-            name='AWX', url='https://awx.test',
-            auth_type='token', created_by=self.user
+            name='AWX', url='https://awx.test', auth_type='token', created_by=self.user
         )
         conn.set_token('old')
         conn.save()
 
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'token', 'token': 'new-token',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'token',
+            'token': 'new-token',
         }
         s = AWXConnectionCreateSerializer(instance=conn, data=data)
         s.is_valid(raise_exception=True)
@@ -181,8 +197,11 @@ class CredentialStorageTests(TestCase):
 
     def test_create_stores_password_encrypted(self):
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'basic', 'username': 'admin', 'password': 'secret',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'basic',
+            'username': 'admin',
+            'password': 'secret',
         }
         s = AWXConnectionCreateSerializer(data=data)
         s.is_valid(raise_exception=True)
@@ -193,8 +212,10 @@ class CredentialStorageTests(TestCase):
     def test_shared_with_ids_set_on_create(self):
         other = make_user('shared_user')
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'token', 'token': 'tok',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'token',
+            'token': 'tok',
             'shared_with_ids': [other.id],
         }
         s = AWXConnectionCreateSerializer(data=data)
@@ -206,8 +227,10 @@ class CredentialStorageTests(TestCase):
     def test_token_write_only_not_in_list_response(self):
         """Token field is write_only — must not appear in serialized output."""
         data = {
-            'name': 'AWX', 'url': 'https://awx.test',
-            'auth_type': 'token', 'token': 'secret',
+            'name': 'AWX',
+            'url': 'https://awx.test',
+            'auth_type': 'token',
+            'token': 'secret',
         }
         s = AWXConnectionCreateSerializer(data=data)
         s.is_valid(raise_exception=True)

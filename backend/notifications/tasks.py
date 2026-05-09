@@ -27,9 +27,7 @@ def cleanup_old_notifications():
     read_cutoff = timezone.now() - timedelta(days=read_days)
     unread_cutoff = timezone.now() - timedelta(days=unread_days)
 
-    deleted_read, _ = Notification.objects.filter(
-        is_read=True, created_at__lt=read_cutoff
-    ).delete()
+    deleted_read, _ = Notification.objects.filter(is_read=True, created_at__lt=read_cutoff).delete()
 
     deleted_unread, _ = Notification.objects.filter(
         is_read=False, created_at__lt=unread_cutoff
@@ -63,10 +61,13 @@ def send_notification_email(notification_id):
         return 'no_email_address'
 
     try:
-        html_body = render_to_string('notifications/email_notification.html', {
-            'notification': notification,
-            'user': notification.user,
-        })
+        html_body = render_to_string(
+            'notifications/email_notification.html',
+            {
+                'notification': notification,
+                'user': notification.user,
+            },
+        )
     except Exception:
         html_body = None
 
@@ -106,12 +107,20 @@ def flush_notification_digests():
             errors = sum(1 for g in group if g.type in ('error', 'warning'))
             total = len(group)
 
-            worst_type = 'error' if errors > 0 else 'warning' if any(g.type == 'warning' for g in group) else 'success'
+            worst_type = (
+                'error'
+                if errors > 0
+                else 'warning'
+                if any(g.type == 'warning' for g in group)
+                else 'success'
+            )
             notification = Notification.objects.create(
                 user=pref.user,
                 type=worst_type,
                 title=f'{total} {source.replace("_", " ")} events',
-                message=f'{success} succeeded, {errors} failed' if errors else f'{total} completed successfully',
+                message=f'{success} succeeded, {errors} failed'
+                if errors
+                else f'{total} completed successfully',
                 metadata={'source': source, 'count': total, 'digest': True},
             )
 
@@ -137,11 +146,15 @@ def check_escalations():
         min_rank = SEVERITY_RANK.get(rule.min_severity, 3)
         cutoff = timezone.now() - timedelta(minutes=rule.escalate_after_minutes)
 
-        candidates = Notification.objects.filter(
-            is_read=False,
-            created_at__lte=cutoff,
-        ).select_related('user').exclude(
-            metadata__escalated=True,
+        candidates = (
+            Notification.objects.filter(
+                is_read=False,
+                created_at__lte=cutoff,
+            )
+            .select_related('user')
+            .exclude(
+                metadata__escalated=True,
+            )
         )
 
         for notif in candidates:
@@ -149,7 +162,9 @@ def check_escalations():
                 continue
 
             # Check source match if rule specifies one
-            notif_source = notif.metadata.get('source', '') if isinstance(notif.metadata, dict) else ''
+            notif_source = (
+                notif.metadata.get('source', '') if isinstance(notif.metadata, dict) else ''
+            )
             if rule.source and notif_source != rule.source:
                 continue
 
@@ -160,7 +175,10 @@ def check_escalations():
                     title=f'[ESCALATED] {notif.title}',
                     message=f'Unread for {rule.escalate_after_minutes}m. Original user: {notif.user.username}. {notif.message[:150]}',
                     source='system_maintenance',
-                    metadata={'escalated_from': str(notif.id), 'original_user': notif.user.username},
+                    metadata={
+                        'escalated_from': str(notif.id),
+                        'original_user': notif.user.username,
+                    },
                 )
 
             notif.metadata = notif.metadata or {}

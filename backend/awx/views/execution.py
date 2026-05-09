@@ -71,15 +71,12 @@ def _heal_missing_events(execution: 'AutomationExecution', db_chunks: list) -> l
         client = AWXClient.for_connection(execution.awx_connection)
 
         enrichable_counters = {
-            c.counter for c in db_chunks
-            if c.event_type in _ANSIBLE_RESULT_EVENTS
-            and not (c.event_data or {}).get('res')
+            c.counter
+            for c in db_chunks
+            if c.event_type in _ANSIBLE_RESULT_EVENTS and not (c.event_data or {}).get('res')
         }
 
-        check_url = (
-            f"{client.base_url}/api/v2/jobs/{execution.awx_job_id}/job_events/"
-            f"?page_size=1"
-        )
+        check_url = f'{client.base_url}/api/v2/jobs/{execution.awx_job_id}/job_events/?page_size=1'
         r = client.session.get(check_url, verify=client.verify_ssl, timeout=10)
         if r.status_code != 200:
             return db_chunks
@@ -100,15 +97,18 @@ def _heal_missing_events(execution: 'AutomationExecution', db_chunks: list) -> l
         cursor = 0 if needs_enrichment else last_db_counter
 
         logger.info(
-            "Healing execution %s (job %s): db=%d, awx=%d, missing=%d, "
-            "enrichable=%d, cursor_start=%d",
-            execution.id, execution.awx_job_id, db_count, awx_total,
-            max(0, awx_total - db_count), len(enrichable_counters), cursor,
+            'Healing execution %s (job %s): db=%d, awx=%d, missing=%d, '
+            'enrichable=%d, cursor_start=%d',
+            execution.id,
+            execution.awx_job_id,
+            db_count,
+            awx_total,
+            max(0, awx_total - db_count),
+            len(enrichable_counters),
+            cursor,
         )
 
-        base_url = (
-            f"{client.base_url}/api/v2/jobs/{execution.awx_job_id}/job_events/"
-        )
+        base_url = f'{client.base_url}/api/v2/jobs/{execution.awx_job_id}/job_events/'
         touched_chunks = []
 
         while True:
@@ -183,8 +183,9 @@ def _heal_missing_events(execution: 'AutomationExecution', db_chunks: list) -> l
 
         if touched_chunks:
             logger.info(
-                "Healed/enriched %d events for execution %s",
-                len(touched_chunks), execution.id,
+                'Healed/enriched %d events for execution %s',
+                len(touched_chunks),
+                execution.id,
             )
             merged = {c.counter: c for c in db_chunks}
             for c in touched_chunks:
@@ -193,8 +194,9 @@ def _heal_missing_events(execution: 'AutomationExecution', db_chunks: list) -> l
 
     except Exception as e:
         logger.warning(
-            "Event healing failed for execution %s (non-critical): %s",
-            execution.id, e,
+            'Event healing failed for execution %s (non-critical): %s',
+            execution.id,
+            e,
         )
 
     return db_chunks
@@ -225,6 +227,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for automation executions (read-only)
     """
+
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['automation_request', 'status']
@@ -237,9 +240,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         return AutomationExecution.objects.select_related(
             'automation_request', 'awx_connection'
-        ).filter(
-            automation_request__requested_by=user
-        )
+        ).filter(automation_request__requested_by=user)
 
     def get_serializer_class(self) -> type[BaseSerializer]:
         if self.action == 'list':
@@ -265,15 +266,15 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
                 # Check ownership
                 if execution.automation_request.requested_by != request.user:
-                    return Response({
-                        'error': 'Permission denied'
-                    }, status=status.HTTP_403_FORBIDDEN)
+                    return Response(
+                        {'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN
+                    )
 
                 # Check if cancellable (re-check under lock)
                 if execution.is_terminal_status:
-                    return Response({
-                        'error': 'Execution already finished'
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {'error': 'Execution already finished'}, status=status.HTTP_400_BAD_REQUEST
+                    )
 
                 # Create client for this execution's connection
                 client = AWXClient.for_connection(execution.awx_connection)
@@ -292,27 +293,22 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
                         category='awx_automation',
                         resource_type='AutomationExecution',
                         resource_id=execution.id,
-                        description=f"Execution {execution.awx_job_id} cancelled",
-                        request=self.request
+                        description=f'Execution {execution.awx_job_id} cancelled',
+                        request=self.request,
                     )
 
-                    return Response({
-                        'message': 'Execution cancelled'
-                    })
+                    return Response({'message': 'Execution cancelled'})
                 else:
-                    return Response({
-                        'error': error
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except AutomationExecution.DoesNotExist:
-            return Response({
-                'error': 'Execution not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Execution not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception:
-            logger.exception("AWX API request failed")
-            return Response({
-                'error': 'An internal error occurred'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('AWX API request failed')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     MAX_RELAUNCH_COUNT = 3
 
@@ -330,7 +326,9 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         try:
             execution = AutomationExecution.objects.select_related(
-                'automation_request', 'automation_request__template', 'awx_connection',
+                'automation_request',
+                'automation_request__template',
+                'awx_connection',
             ).get(pk=pk)
         except AutomationExecution.DoesNotExist:
             return Response(
@@ -340,7 +338,8 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         if execution.automation_request.requested_by != request.user:
             return Response(
-                {'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN,
+                {'error': 'Permission denied'},
+                status=status.HTTP_403_FORBIDDEN,
             )
         if not execution.is_terminal_status:
             return Response(
@@ -360,7 +359,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
                 relaunch_of_execution_id=execution.id,
             )
         except Exception:
-            logger.exception("Relaunch failed for execution %s", pk)
+            logger.exception('Relaunch failed for execution %s', pk)
             return Response(
                 {'error': 'An internal error occurred'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -381,18 +380,19 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
             resource_type='AutomationExecution',
             resource_id=execution.id,
             description=(
-                f"Execution {execution.awx_job_id} relaunched → "
-                f"new job {new_execution.awx_job_id}"
+                f'Execution {execution.awx_job_id} relaunched → new job {new_execution.awx_job_id}'
             ),
             metadata={'new_execution_id': str(new_execution.id)},
             request=self.request,
         )
 
-        return Response({
-            'message': 'Execution relaunched',
-            'new_execution_id': str(new_execution.id),
-            'new_awx_job_id': new_execution.awx_job_id,
-        })
+        return Response(
+            {
+                'message': 'Execution relaunched',
+                'new_execution_id': str(new_execution.id),
+                'new_awx_job_id': new_execution.awx_job_id,
+            }
+        )
 
     @action(detail=True, methods=['get'])
     def output(self, request: Request, pk: Any = None) -> Response:
@@ -406,9 +406,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Check ownership
         if execution.automation_request.requested_by != request.user:
-            return Response({
-                'error': 'Permission denied'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         # Get all chunks ordered by counter
         chunks = list(execution.output_chunks.all().order_by('counter'))
@@ -426,30 +424,34 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         full_stdout = '\n'.join([chunk.stdout for chunk in chunks if chunk.stdout])
         full_stderr = '\n'.join([chunk.stderr for chunk in chunks if chunk.stderr])
 
-        return Response({
-            'execution_id': str(execution.id),
-            'awx_job_id': execution.awx_job_id,
-            'status': execution.status,
-            'chunk_count': len(chunks),
-            'stdout': full_stdout,
-            'stderr': full_stderr,
-            'chunks': [
-                {
-                    'counter': chunk.counter,
-                    'event_type': chunk.event_type,
-                    'stdout': chunk.stdout,
-                    'stderr': chunk.stderr,
-                    'timestamp': chunk.awx_created.isoformat(),
-                    'event_data': chunk.event_data,
-                    'awx_job_id': chunk.awx_job_id,
-                    'task': chunk.event_data.get('task', '') if chunk.event_data else '',
-                    'play': chunk.event_data.get('play', '') if chunk.event_data else '',
-                    'role': chunk.event_data.get('role', '') if chunk.event_data else '',
-                    'host_name': chunk.event_data.get('host_name', '') if chunk.event_data else '',
-                }
-                for chunk in chunks
-            ]
-        })
+        return Response(
+            {
+                'execution_id': str(execution.id),
+                'awx_job_id': execution.awx_job_id,
+                'status': execution.status,
+                'chunk_count': len(chunks),
+                'stdout': full_stdout,
+                'stderr': full_stderr,
+                'chunks': [
+                    {
+                        'counter': chunk.counter,
+                        'event_type': chunk.event_type,
+                        'stdout': chunk.stdout,
+                        'stderr': chunk.stderr,
+                        'timestamp': chunk.awx_created.isoformat(),
+                        'event_data': chunk.event_data,
+                        'awx_job_id': chunk.awx_job_id,
+                        'task': chunk.event_data.get('task', '') if chunk.event_data else '',
+                        'play': chunk.event_data.get('play', '') if chunk.event_data else '',
+                        'role': chunk.event_data.get('role', '') if chunk.event_data else '',
+                        'host_name': chunk.event_data.get('host_name', '')
+                        if chunk.event_data
+                        else '',
+                    }
+                    for chunk in chunks
+                ],
+            }
+        )
 
     @action(detail=True, methods=['get'])
     def download_output(self, request: Request, pk: Any = None) -> Union[Response, HttpResponse]:
@@ -464,9 +466,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Check ownership
         if execution.automation_request.requested_by != request.user:
-            return Response({
-                'error': 'Permission denied'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         chunks = execution.output_chunks.all().order_by('counter')
         full_output = '\n'.join([chunk.stdout for chunk in chunks if chunk.stdout])
@@ -477,14 +477,16 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
             category='awx_automation',
             resource_type='AutomationExecution',
             resource_id=execution.id,
-            resource_name=f"Execution #{execution.id}",
-            description=f"Downloaded output for AWX job {execution.awx_job_id}",
+            resource_name=f'Execution #{execution.id}',
+            description=f'Downloaded output for AWX job {execution.awx_job_id}',
             metadata={'awx_job_id': execution.awx_job_id},
             request=request,
         )
 
         response = HttpResponse(full_output, content_type='text/plain')
-        response['Content-Disposition'] = f'attachment; filename="job_{execution.awx_job_id}_output.txt"'
+        response['Content-Disposition'] = (
+            f'attachment; filename="job_{execution.awx_job_id}_output.txt"'
+        )
         return response
 
     @action(detail=True, methods=['get'], url_path='workflow-nodes')
@@ -501,24 +503,17 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Check ownership
         if execution.automation_request.requested_by != request.user:
-            return Response({
-                'error': 'Permission denied'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         # Check if this is a workflow job
         if not execution.awx_job_id:
-            return Response({
-                'nodes': []
-            })
+            return Response({'nodes': []})
 
         # First check execution_metadata for cached workflow nodes (from job_monitor)
         if 'workflow_nodes' in execution.execution_metadata:
             cached_nodes = execution.execution_metadata['workflow_nodes']
             if cached_nodes:
-                return Response({
-                    'nodes': cached_nodes,
-                    'cached': True
-                })
+                return Response({'nodes': cached_nodes, 'cached': True})
 
         # If not in metadata, fetch from AWX API (for old executions or initial load)
         try:
@@ -530,28 +525,26 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
                 return Response({'nodes': []})
 
             # Direct workflow job - get nodes
-            workflow_nodes_url = f"{client.base_url}/api/v2/workflow_jobs/{execution.awx_job_id}/workflow_nodes/"
+            workflow_nodes_url = (
+                f'{client.base_url}/api/v2/workflow_jobs/{execution.awx_job_id}/workflow_nodes/'
+            )
             nodes_response = client.session.get(
-                workflow_nodes_url,
-                verify=client.verify_ssl,
-                timeout=client.timeout
+                workflow_nodes_url, verify=client.verify_ssl, timeout=client.timeout
             )
 
             if nodes_response.status_code == 200:
                 nodes_data = nodes_response.json()
-                return Response({
-                    'nodes': nodes_data.get('results', []),
-                    'cached': False
-                })
+                return Response({'nodes': nodes_data.get('results', []), 'cached': False})
 
             logger.warning(
-                "AWX returned %d when fetching workflow nodes for execution %s",
-                nodes_response.status_code, pk
+                'AWX returned %d when fetching workflow nodes for execution %s',
+                nodes_response.status_code,
+                pk,
             )
             return Response({'nodes': [], 'error': 'Failed to fetch workflow nodes from AWX'})
 
         except Exception:
-            logger.exception("Error fetching workflow nodes for execution %s", pk)
+            logger.exception('Error fetching workflow nodes for execution %s', pk)
             return Response({'nodes': []})
 
     @action(detail=True, methods=['get'], url_path='node-output/(?P<awx_job_id>[0-9]+)')
@@ -568,9 +561,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Check ownership
         if execution.automation_request.requested_by != request.user:
-            return Response({
-                'error': 'Permission denied'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         # Validate awx_job_id belongs to this execution's workflow
         # For workflow templates, the node jobs should be related to the execution's main job
@@ -578,35 +569,36 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         if not execution.execution_metadata.get('workflow_nodes'):
             # Not a workflow execution or no cached nodes - verify direct match
             if str(awx_job_id) != str(execution.awx_job_id):
-                return Response({
-                    'error': 'Job ID does not belong to this execution'
-                }, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {'error': 'Job ID does not belong to this execution'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
         else:
             # Workflow execution - verify the job is in the cached workflow nodes
             valid_job_ids = {
                 str(node.get('summary_fields', {}).get('job', {}).get('id', ''))
                 for node in execution.execution_metadata.get('workflow_nodes', [])
             }
-            if str(awx_job_id) not in valid_job_ids and str(awx_job_id) != str(execution.awx_job_id):
-                return Response({
-                    'error': 'Job ID does not belong to this execution workflow'
-                }, status=status.HTTP_403_FORBIDDEN)
+            if str(awx_job_id) not in valid_job_ids and str(awx_job_id) != str(
+                execution.awx_job_id
+            ):
+                return Response(
+                    {'error': 'Job ID does not belong to this execution workflow'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         try:
             # Create client for this execution's connection
             client = AWXClient.for_connection(execution.awx_connection)
 
             # Fetch job events from AWX
-            events_url = f"{client.base_url}/api/v2/jobs/{awx_job_id}/job_events/"
+            events_url = f'{client.base_url}/api/v2/jobs/{awx_job_id}/job_events/'
 
             response = client.session.get(
                 events_url,
-                params={
-                    'page_size': 200,
-                    'order_by': 'counter'
-                },
+                params={'page_size': 200, 'order_by': 'counter'},
                 verify=client.verify_ssl,
-                timeout=client.timeout
+                timeout=client.timeout,
             )
 
             if response.status_code == 200:
@@ -615,15 +607,17 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
                 # Transform to our format (similar to output endpoint)
                 chunks = []
                 for event in events_data.get('results', []):
-                    chunks.append({
-                        'counter': event.get('counter', 0),
-                        'event_type': event.get('event', 'runner_on_ok'),
-                        'stdout': event.get('stdout', ''),
-                        'stderr': '',
-                        'timestamp': event.get('created', ''),
-                        'event_data': event.get('event_data', {}),
-                        'awx_job_id': int(awx_job_id)
-                    })
+                    chunks.append(
+                        {
+                            'counter': event.get('counter', 0),
+                            'event_type': event.get('event', 'runner_on_ok'),
+                            'stdout': event.get('stdout', ''),
+                            'stderr': '',
+                            'timestamp': event.get('created', ''),
+                            'event_data': event.get('event_data', {}),
+                            'awx_job_id': int(awx_job_id),
+                        }
+                    )
 
                 AuditService.log(
                     user=request.user,
@@ -631,29 +625,27 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
                     category='awx_automation',
                     resource_type='AutomationExecution',
                     resource_id=execution.id,
-                    resource_name=f"Execution #{execution.id}",
-                    description=f"Accessed node output for AWX job {awx_job_id} (execution #{pk})",
+                    resource_name=f'Execution #{execution.id}',
+                    description=f'Accessed node output for AWX job {awx_job_id} (execution #{pk})',
                     metadata={'awx_job_id': int(awx_job_id), 'chunk_count': len(chunks)},
                     request=request,
                 )
 
-                return Response({
-                    'awx_job_id': int(awx_job_id),
-                    'chunk_count': len(chunks),
-                    'chunks': chunks
-                })
+                return Response(
+                    {'awx_job_id': int(awx_job_id), 'chunk_count': len(chunks), 'chunks': chunks}
+                )
 
-            return Response({
-                'error': f'Failed to fetch events from AWX: {response.status_code}',
-                'chunks': []
-            }, status=response.status_code)
+            return Response(
+                {'error': f'Failed to fetch events from AWX: {response.status_code}', 'chunks': []},
+                status=response.status_code,
+            )
 
         except Exception:
-            logger.exception(f"Error fetching node output for job {awx_job_id}")
-            return Response({
-                'error': 'Failed to fetch node output',
-                'chunks': []
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f'Error fetching node output for job {awx_job_id}')
+            return Response(
+                {'error': 'Failed to fetch node output', 'chunks': []},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='row-results')
     def row_results(self, request: Request, pk: Any = None) -> Response:
@@ -669,10 +661,12 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         if not execution.row_results:
             return Response(
                 {'detail': 'No per-row results available for this execution'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        return Response({
-            'execution_id': str(execution.id),
-            'row_results': execution.row_results,
-        })
+        return Response(
+            {
+                'execution_id': str(execution.id),
+                'row_results': execution.row_results,
+            }
+        )

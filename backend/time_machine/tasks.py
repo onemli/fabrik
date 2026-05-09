@@ -30,7 +30,7 @@ def cleanup_time_machine_snapshots():
         # (e.g. for forensics, compliance hold, migration) we skip the whole task
         # rather than running with unexpected retention.
         if not settings.auto_cleanup_enabled:
-            logger.info("Time Machine cleanup skipped: auto_cleanup_enabled is False")
+            logger.info('Time Machine cleanup skipped: auto_cleanup_enabled is False')
             return {
                 'success': True,
                 'deleted_count': 0,
@@ -38,11 +38,12 @@ def cleanup_time_machine_snapshots():
             }
 
         deleted_count = settings.execute_cleanup()
-        logger.info("Time Machine cleanup completed: %d snapshots deleted", deleted_count)
+        logger.info('Time Machine cleanup completed: %d snapshots deleted', deleted_count)
 
         # Only ping admins when there's something worth reporting — no noise for quiet nights
         if deleted_count > 0:
             from django.contrib.auth import get_user_model
+
             User = get_user_model()
 
             for admin in User.objects.filter(is_superuser=True):
@@ -61,12 +62,13 @@ def cleanup_time_machine_snapshots():
         }
 
     except Exception as e:
-        logger.error("Time Machine cleanup failed: %s", e, exc_info=True)
+        logger.error('Time Machine cleanup failed: %s', e, exc_info=True)
 
         # Best-effort admin notification — wrapped in its own try so a broken
         # notification system doesn't mask the original error in the logs.
         try:
             from django.contrib.auth import get_user_model
+
             User = get_user_model()
 
             for admin in User.objects.filter(is_superuser=True):

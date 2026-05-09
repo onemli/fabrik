@@ -10,6 +10,7 @@ from .common import UserSerializer
 
 class ColumnTemplateSerializer(serializers.ModelSerializer):
     """Column template serializer"""
+
     created_by = UserSerializer(read_only=True)
     shared_with = UserSerializer(many=True, read_only=True)
     can_edit = serializers.SerializerMethodField()
@@ -18,10 +19,19 @@ class ColumnTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ColumnTemplate
         fields = [
-            'id', 'name', 'description', 'column_data',
-            'scope', 'is_public', 'created_by', 'shared_with',
-            'usage_count', 'created_at', 'updated_at',
-            'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'column_data',
+            'scope',
+            'is_public',
+            'created_by',
+            'shared_with',
+            'usage_count',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = ['id', 'created_by', 'usage_count', 'created_at', 'updated_at']
 

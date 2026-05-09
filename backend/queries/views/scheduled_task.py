@@ -25,6 +25,7 @@ from ..serializers import ScheduledTaskSerializer, ScheduledTaskExecutionSeriali
 
 class ScheduledTaskViewSet(viewsets.ModelViewSet):
     """CRUD + lifecycle actions for scheduled tasks."""
+
     serializer_class = ScheduledTaskSerializer
     permission_classes = [FabrikModelPermissions]
     filter_backends = [filters.OrderingFilter]
@@ -73,10 +74,13 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Prevent creating system tasks via API (use seed command)
         if serializer.validated_data.get('is_system_task', False):
-            raise PermissionDenied("System tasks cannot be created via API. Use management command.")
+            raise PermissionDenied(
+                'System tasks cannot be created via API. Use management command.'
+            )
 
         # Quota enforcement
         from users.quota_service import QuotaService
+
         user = self.request.user
         allowed, reason = QuotaService.check_feature(user, 'can_create_scheduled')
         if not allowed:
@@ -102,7 +106,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                 'saved_query': instance.saved_query.name if instance.saved_query else None,
                 'priority': instance.priority,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer):
@@ -115,7 +119,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
         # System tasks: Only admins can update status/priority (not config)
         if instance.is_system_task:
             if not is_admin:
-                raise PermissionDenied("Only administrators can modify system tasks")
+                raise PermissionDenied('Only administrators can modify system tasks')
 
             # Allow only specific fields to be updated for system tasks
             allowed_fields = {'status', 'priority', 'order'}
@@ -124,9 +128,9 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
 
             if forbidden_fields:
                 raise PermissionDenied(
-                    f"System task configuration cannot be modified. "
-                    f"Only status, priority, and order can be changed. "
-                    f"Attempted to change: {', '.join(forbidden_fields)}"
+                    f'System task configuration cannot be modified. '
+                    f'Only status, priority, and order can be changed. '
+                    f'Attempted to change: {", ".join(forbidden_fields)}'
                 )
 
         # User tasks: Owner or admin can edit
@@ -153,7 +157,9 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             'status': updated_instance.status,
             'frequency': updated_instance.frequency,
             'priority': updated_instance.priority,
-            'saved_query': updated_instance.saved_query.name if updated_instance.saved_query else None,
+            'saved_query': updated_instance.saved_query.name
+            if updated_instance.saved_query
+            else None,
         }
         for key, old_val in old_data.items():
             new_val = new_data[key]
@@ -170,7 +176,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             resource_name=updated_instance.name,
             description=f"Scheduled task '{updated_instance.name}' updated",
             metadata={'changes': changes} if changes else {},
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance):
@@ -205,7 +211,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                 'execution_count': instance.execution_count,
                 'created_by': instance.created_by.username,
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -226,7 +232,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             resource_id=task.id,
             resource_name=task.name,
             description=f"Scheduled task '{task.name}' paused",
-            request=request
+            request=request,
         )
 
         return Response({'status': 'paused', 'message': 'Task paused successfully'})
@@ -247,7 +253,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             resource_id=task.id,
             resource_name=task.name,
             description=f"Scheduled task '{task.name}' resumed",
-            request=request
+            request=request,
         )
 
         return Response({'status': 'active', 'message': 'Task resumed successfully'})
@@ -269,7 +275,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             if not is_admin:
                 return Response(
                     {'error': 'Only administrators can execute system tasks'},
-                    status=status.HTTP_403_FORBIDDEN
+                    status=status.HTTP_403_FORBIDDEN,
                 )
         else:
             # User tasks: Owner or admin
@@ -277,12 +283,13 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             if not (is_owner or is_admin):
                 return Response(
                     {'error': 'You do not have permission to execute this task'},
-                    status=status.HTTP_403_FORBIDDEN
+                    status=status.HTTP_403_FORBIDDEN,
                 )
 
         try:
             # Queue task for immediate execution
             from .tasks import execute_scheduled_task
+
             result = execute_scheduled_task.delay(str(task.id))
 
             # Audit log
@@ -299,25 +306,25 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                     'task_type': task.task_type,
                     'celery_task_id': result.id,
                 },
-                request=request
+                request=request,
             )
 
-            return Response({
-                'success': True,
-                'message': f"Task '{task.name}' queued for execution",
-                'celery_task_id': result.id,
-                'task_type': task.task_type,
-                'is_system_task': task.is_system_task,
-            })
+            return Response(
+                {
+                    'success': True,
+                    'message': f"Task '{task.name}' queued for execution",
+                    'celery_task_id': result.id,
+                    'task_type': task.task_type,
+                    'is_system_task': task.is_system_task,
+                }
+            )
 
         except Exception as e:
             import traceback
+
             return Response(
-                {
-                    'error': str(e),
-                    'traceback': traceback.format_exc()
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': str(e), 'traceback': traceback.format_exc()},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=['post'])
@@ -327,12 +334,11 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
 
         if source_task.is_system_task:
             return Response(
-                {'error': 'System tasks cannot be cloned'},
-                status=status.HTTP_403_FORBIDDEN
+                {'error': 'System tasks cannot be cloned'}, status=status.HTTP_403_FORBIDDEN
             )
 
         new_task = ScheduledTask.objects.create(
-            name=f"{source_task.name} (Copy)",
+            name=f'{source_task.name} (Copy)',
             description=source_task.description,
             priority=source_task.priority,
             created_by=request.user,
@@ -353,7 +359,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
             day_of_month=source_task.day_of_month,
             scheduled_datetime=source_task.scheduled_datetime,
             timezone=source_task.timezone,
-            status=ScheduledTask.STATUS_PAUSED
+            status=ScheduledTask.STATUS_PAUSED,
         )
 
         # Audit log
@@ -370,7 +376,7 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                 'source_task_name': source_task.name,
                 'new_task_id': str(new_task.id),
             },
-            request=request
+            request=request,
         )
 
         serializer = ScheduledTaskSerializer(new_task, context={'request': request})
@@ -380,9 +386,9 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
     def executions(self, request, pk=None):
         """Get execution history for a specific task"""
         task = self.get_object()
-        executions = ScheduledTaskExecution.objects.filter(
-            scheduled_task=task
-        ).order_by('-created_at')
+        executions = ScheduledTaskExecution.objects.filter(scheduled_task=task).order_by(
+            '-created_at'
+        )
 
         # Apply pagination
         page = self.paginate_queryset(executions)
@@ -397,10 +403,11 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
     def upcoming(self, request):
         """Get upcoming scheduled tasks"""
         limit = int(request.query_params.get('limit', 10))
-        tasks = self.get_queryset().filter(
-            status=ScheduledTask.STATUS_ACTIVE,
-            next_run_at__isnull=False
-        ).order_by('next_run_at')[:limit]
+        tasks = (
+            self.get_queryset()
+            .filter(status=ScheduledTask.STATUS_ACTIVE, next_run_at__isnull=False)
+            .order_by('next_run_at')[:limit]
+        )
 
         serializer = self.get_serializer(tasks, many=True)
         return Response(serializer.data)
@@ -412,6 +419,7 @@ class ScheduledTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     Supports filtering by task_id, status, and connection_id so the UI
     can show per-task or per-connection history without loading everything.
     """
+
     serializer_class = ScheduledTaskExecutionSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
@@ -425,9 +433,7 @@ class ScheduledTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         if is_admin:
             queryset = ScheduledTaskExecution.objects.all()
         else:
-            queryset = ScheduledTaskExecution.objects.filter(
-                scheduled_task__created_by=user
-            )
+            queryset = ScheduledTaskExecution.objects.filter(scheduled_task__created_by=user)
 
         # Filter by task
         task_id = self.request.query_params.get('task_id')
@@ -455,10 +461,12 @@ class ScheduledTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         failed = queryset.filter(status=ScheduledTaskExecution.STATUS_FAILED).count()
         running = queryset.filter(status=ScheduledTaskExecution.STATUS_RUNNING).count()
 
-        return Response({
-            'total_executions': total,
-            'successful': success,
-            'failed': failed,
-            'running': running,
-            'success_rate': round((success / total * 100) if total > 0 else 0, 2)
-        })
+        return Response(
+            {
+                'total_executions': total,
+                'successful': success,
+                'failed': failed,
+                'running': running,
+                'success_rate': round((success / total * 100) if total > 0 else 0, 2),
+            }
+        )

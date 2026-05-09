@@ -10,6 +10,7 @@ from .common import UserSerializer
 
 class ValidationListSerializer(serializers.ModelSerializer):
     """Serializer for validation lists."""
+
     created_by = UserSerializer(read_only=True)
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
@@ -17,14 +18,29 @@ class ValidationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ValidationList
         fields = [
-            'id', 'name', 'description', 'values', 'case_sensitive',
-            'error_message', 'error_message_title', 'created_by',
-            'is_public', 'usage_count', 'last_used_at',
-            'created_at', 'updated_at', 'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'values',
+            'case_sensitive',
+            'error_message',
+            'error_message_title',
+            'created_by',
+            'is_public',
+            'usage_count',
+            'last_used_at',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'usage_count', 'last_used_at',
-            'created_at', 'updated_at'
+            'id',
+            'created_by',
+            'usage_count',
+            'last_used_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_can_edit(self, obj):
@@ -52,10 +68,10 @@ class ValidationListSerializer(serializers.ModelSerializer):
     def validate_values(self, value):
         """Validate that values is a list of strings."""
         if not isinstance(value, list):
-            raise serializers.ValidationError("Values must be a list")
+            raise serializers.ValidationError('Values must be a list')
 
         if len(value) == 0:
-            raise serializers.ValidationError("Values list cannot be empty")
+            raise serializers.ValidationError('Values list cannot be empty')
 
         return [str(v) for v in value]
 
@@ -78,18 +94,24 @@ class ValidationListCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ValidationList
         fields = [
-            'id', 'name', 'description', 'values', 'case_sensitive',
-            'error_message', 'error_message_title', 'is_public'
+            'id',
+            'name',
+            'description',
+            'values',
+            'case_sensitive',
+            'error_message',
+            'error_message_title',
+            'is_public',
         ]
         read_only_fields = ['id']
 
     def validate_values(self, value):
         """Validate that values is a list of strings."""
         if not isinstance(value, list):
-            raise serializers.ValidationError("Values must be a list")
+            raise serializers.ValidationError('Values must be a list')
 
         if len(value) == 0:
-            raise serializers.ValidationError("Values list cannot be empty")
+            raise serializers.ValidationError('Values list cannot be empty')
 
         return [str(v) for v in value]
 
@@ -104,30 +126,34 @@ class ValidationListCreateSerializer(serializers.ModelSerializer):
 
 class ValidationUsageSerializer(serializers.ModelSerializer):
     """Serializer for validation usage tracking."""
+
     template_name = serializers.CharField(source='template.name', read_only=True)
     validation_list_name = serializers.CharField(
-        source='validation_list.name',
-        read_only=True,
-        allow_null=True
+        source='validation_list.name', read_only=True, allow_null=True
     )
     validation_query_name = serializers.CharField(
-        source='validation_query.name',
-        read_only=True,
-        allow_null=True
+        source='validation_query.name', read_only=True, allow_null=True
     )
     created_by_username = serializers.CharField(
-        source='created_by.username',
-        read_only=True,
-        allow_null=True
+        source='created_by.username', read_only=True, allow_null=True
     )
 
     class Meta:
         model = ValidationUsage
         fields = [
-            'id', 'template', 'template_name', 'sheet_name', 'column_name',
-            'validation_type', 'validation_list', 'validation_list_name',
-            'validation_query', 'validation_query_name',
-            'created_at', 'created_by', 'created_by_username'
+            'id',
+            'template',
+            'template_name',
+            'sheet_name',
+            'column_name',
+            'validation_type',
+            'validation_list',
+            'validation_list_name',
+            'validation_query',
+            'validation_query_name',
+            'created_at',
+            'created_by',
+            'created_by_username',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -139,22 +165,22 @@ class ValidationUsageSerializer(serializers.ModelSerializer):
 
         if validation_type == 'static_list':
             if not validation_list:
-                raise serializers.ValidationError({
-                    'validation_list': 'Validation list is required for static_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_list': 'Validation list is required for static_list type'}
+                )
             if validation_query:
-                raise serializers.ValidationError({
-                    'validation_query': 'Cannot specify validation_query for static_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_query': 'Cannot specify validation_query for static_list type'}
+                )
         elif validation_type == 'query_list':
             if not validation_query:
-                raise serializers.ValidationError({
-                    'validation_query': 'Validation query is required for query_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_query': 'Validation query is required for query_list type'}
+                )
             if validation_list:
-                raise serializers.ValidationError({
-                    'validation_list': 'Cannot specify validation_list for query_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_list': 'Cannot specify validation_list for query_list type'}
+                )
         elif validation_type == 'regex':
             if validation_list or validation_query:
                 raise serializers.ValidationError(
@@ -194,8 +220,7 @@ class ValidationUsageSerializer(serializers.ModelSerializer):
         if old_validation_query != new_validation_query:
             if old_validation_query:
                 old_validation_query.validation_usage_count = max(
-                    0,
-                    old_validation_query.validation_usage_count - 1
+                    0, old_validation_query.validation_usage_count - 1
                 )
                 old_validation_query.save(update_fields=['validation_usage_count'])
             if new_validation_query:
@@ -213,14 +238,30 @@ class RegexPatternSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegexPattern
         fields = [
-            'id', 'name', 'description', 'pattern', 'category',
-            'test_strings', 'flags', 'error_message',
-            'created_by', 'is_public', 'usage_count', 'last_used_at',
-            'created_at', 'updated_at', 'can_edit', 'can_delete',
+            'id',
+            'name',
+            'description',
+            'pattern',
+            'category',
+            'test_strings',
+            'flags',
+            'error_message',
+            'created_by',
+            'is_public',
+            'usage_count',
+            'last_used_at',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'usage_count', 'last_used_at',
-            'created_at', 'updated_at',
+            'id',
+            'created_by',
+            'usage_count',
+            'last_used_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_can_edit(self, obj):
@@ -245,18 +286,17 @@ class RegexPatternSerializer(serializers.ModelSerializer):
 
     def validate_pattern(self, value):
         import re
+
         try:
             re.compile(value)
         except re.error as exc:
-            raise serializers.ValidationError(f"Invalid regex: {exc}")
+            raise serializers.ValidationError(f'Invalid regex: {exc}')
         return value
 
     def validate_name(self, value):
         instance_id = self.instance.id if self.instance else None
         if RegexPattern.objects.filter(name=value).exclude(id=instance_id).exists():
-            raise serializers.ValidationError(
-                f"A regex pattern with name '{value}' already exists"
-            )
+            raise serializers.ValidationError(f"A regex pattern with name '{value}' already exists")
         return value
 
 
@@ -264,22 +304,28 @@ class RegexPatternCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegexPattern
         fields = [
-            'id', 'name', 'description', 'pattern', 'category',
-            'test_strings', 'flags', 'error_message', 'is_public',
+            'id',
+            'name',
+            'description',
+            'pattern',
+            'category',
+            'test_strings',
+            'flags',
+            'error_message',
+            'is_public',
         ]
         read_only_fields = ['id']
 
     def validate_pattern(self, value):
         import re
+
         try:
             re.compile(value)
         except re.error as exc:
-            raise serializers.ValidationError(f"Invalid regex: {exc}")
+            raise serializers.ValidationError(f'Invalid regex: {exc}')
         return value
 
     def validate_name(self, value):
         if RegexPattern.objects.filter(name=value).exists():
-            raise serializers.ValidationError(
-                f"A regex pattern with name '{value}' already exists"
-            )
+            raise serializers.ValidationError(f"A regex pattern with name '{value}' already exists")
         return value

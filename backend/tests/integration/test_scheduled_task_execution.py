@@ -2,6 +2,7 @@
 Integration tests for Scheduled Task Execution with Time Machine
 CRITICAL: These tests verify the scheduled task + Time Machine integration
 """
+
 import pytest
 import responses
 from unittest.mock import patch
@@ -14,7 +15,7 @@ from tests.factories import (
     SavedQueryFactory,
     TimeMachineEnabledQueryFactory,
     ScheduledTaskFactory,
-    APICConnectionFactory
+    APICConnectionFactory,
 )
 
 
@@ -36,7 +37,7 @@ class TestScheduledTaskBasicExecution:
             created_by=user,
             saved_query=query,
             apic_connection_ids=[connection.id],
-            status=ScheduledTask.STATUS_ACTIVE
+            status=ScheduledTask.STATUS_ACTIVE,
         )
 
         # Mock APIC login
@@ -45,7 +46,7 @@ class TestScheduledTaskBasicExecution:
             f'{connection.url}/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token'},
         )
 
         # Mock APIC query
@@ -56,10 +57,10 @@ class TestScheduledTaskBasicExecution:
                 'totalCount': '2',
                 'imdata': [
                     {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
-                    {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}}
-                ]
+                    {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
+                ],
             },
-            status=200
+            status=200,
         )
 
         # Execute
@@ -84,9 +85,7 @@ class TestScheduledTaskBasicExecution:
         connection = APICConnectionFactory(created_by=user)
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection.id]
         )
 
         # Mock APIC login failure
@@ -94,16 +93,11 @@ class TestScheduledTaskBasicExecution:
             responses.POST,
             f'{connection.url}/api/aaaLogin.json',
             json={
-                'imdata': [{
-                    'error': {
-                        'attributes': {
-                            'code': '401',
-                            'text': 'Authentication failed'
-                        }
-                    }
-                }]
+                'imdata': [
+                    {'error': {'attributes': {'code': '401', 'text': 'Authentication failed'}}}
+                ]
             },
-            status=401
+            status=401,
         )
 
         # Execute
@@ -139,9 +133,7 @@ class TestScheduledTaskTimeMachineIntegration:
         connection = APICConnectionFactory(created_by=user)
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection.id]
         )
 
         # Mock APIC responses
@@ -150,7 +142,7 @@ class TestScheduledTaskTimeMachineIntegration:
             f'{connection.url}/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token'},
         )
 
         responses.add(
@@ -161,10 +153,10 @@ class TestScheduledTaskTimeMachineIntegration:
                 'imdata': [
                     {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}},
                     {'fvTenant': {'attributes': {'name': 'tenant2', 'dn': 'uni/tn-tenant2'}}},
-                    {'fvTenant': {'attributes': {'name': 'tenant3', 'dn': 'uni/tn-tenant3'}}}
-                ]
+                    {'fvTenant': {'attributes': {'name': 'tenant3', 'dn': 'uni/tn-tenant3'}}},
+                ],
             },
-            status=200
+            status=200,
         )
 
         # Execute scheduled task
@@ -200,9 +192,7 @@ class TestScheduledTaskTimeMachineIntegration:
         query.save()
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection.id]
         )
 
         # Mock APIC responses
@@ -211,16 +201,19 @@ class TestScheduledTaskTimeMachineIntegration:
             f'{connection.url}/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token'},
         )
 
         responses.add(
             responses.GET,
             f'{connection.url}/api/class/fvTenant.json',
-            json={'totalCount': '1', 'imdata': [
-                {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-            ]},
-            status=200
+            json={
+                'totalCount': '1',
+                'imdata': [
+                    {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
+                ],
+            },
+            status=200,
         )
 
         # Execute scheduled task
@@ -241,7 +234,7 @@ class TestScheduledTaskTimeMachineIntegration:
             name='Hourly Tenant Check',
             created_by=user,
             saved_query=query,
-            apic_connection_ids=[connection.id]
+            apic_connection_ids=[connection.id],
         )
 
         # Mock APIC responses
@@ -250,14 +243,14 @@ class TestScheduledTaskTimeMachineIntegration:
             f'{connection.url}/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token'},
         )
 
         responses.add(
             responses.GET,
             f'{connection.url}/api/class/fvTenant.json',
             json={'totalCount': '0', 'imdata': []},
-            status=200
+            status=200,
         )
 
         # Execute
@@ -287,9 +280,7 @@ class TestScheduledTaskMultipleConnections:
         connection2 = APICConnectionFactory(name='APIC 2', created_by=user)
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection1.id, connection2.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection1.id, connection2.id]
         )
 
         # Mock responses for both connections
@@ -299,16 +290,19 @@ class TestScheduledTaskMultipleConnections:
                 f'{conn.url}/api/aaaLogin.json',
                 json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
                 status=200,
-                headers={'Set-Cookie': 'APIC-cookie=test-token'}
+                headers={'Set-Cookie': 'APIC-cookie=test-token'},
             )
 
             responses.add(
                 responses.GET,
                 f'{conn.url}/api/class/fvTenant.json',
-                json={'totalCount': '1', 'imdata': [
-                    {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-                ]},
-                status=200
+                json={
+                    'totalCount': '1',
+                    'imdata': [
+                        {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
+                    ],
+                },
+                status=200,
             )
 
         # Execute
@@ -337,9 +331,7 @@ class TestScheduledTaskMultipleConnections:
         connection2 = APICConnectionFactory(name='APIC 2', created_by=user)
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection1.id, connection2.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection1.id, connection2.id]
         )
 
         # Mock responses
@@ -349,16 +341,19 @@ class TestScheduledTaskMultipleConnections:
                 f'{conn.url}/api/aaaLogin.json',
                 json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
                 status=200,
-                headers={'Set-Cookie': 'APIC-cookie=test-token'}
+                headers={'Set-Cookie': 'APIC-cookie=test-token'},
             )
 
             responses.add(
                 responses.GET,
                 f'{conn.url}/api/class/fvTenant.json',
-                json={'totalCount': '1', 'imdata': [
-                    {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
-                ]},
-                status=200
+                json={
+                    'totalCount': '1',
+                    'imdata': [
+                        {'fvTenant': {'attributes': {'name': 'tenant1', 'dn': 'uni/tn-tenant1'}}}
+                    ],
+                },
+                status=200,
             )
 
         # Execute
@@ -386,9 +381,7 @@ class TestScheduledTaskFailureHandling:
         connection = APICConnectionFactory(created_by=user)
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection.id]
         )
 
         with patch('time_machine.services.time_machine_service.capture_snapshot') as mock_capture:
@@ -399,14 +392,14 @@ class TestScheduledTaskFailureHandling:
                     f'{connection.url}/api/aaaLogin.json',
                     json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
                     status=200,
-                    headers={'Set-Cookie': 'APIC-cookie=test-token'}
+                    headers={'Set-Cookie': 'APIC-cookie=test-token'},
                 )
 
                 rsps.add(
                     responses.GET,
                     f'{connection.url}/api/class/fvTenant.json',
                     json={'totalCount': '0', 'imdata': []},
-                    status=200
+                    status=200,
                 )
 
                 # Mock Time Machine failure
@@ -431,9 +424,7 @@ class TestScheduledTaskFailureHandling:
         connection2 = APICConnectionFactory(name='Broken APIC', created_by=user)
 
         task = ScheduledTaskFactory(
-            created_by=user,
-            saved_query=query,
-            apic_connection_ids=[connection1.id, connection2.id]
+            created_by=user, saved_query=query, apic_connection_ids=[connection1.id, connection2.id]
         )
 
         # Connection 1 succeeds
@@ -442,13 +433,13 @@ class TestScheduledTaskFailureHandling:
             f'{connection1.url}/api/aaaLogin.json',
             json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
             status=200,
-            headers={'Set-Cookie': 'APIC-cookie=test-token'}
+            headers={'Set-Cookie': 'APIC-cookie=test-token'},
         )
         responses.add(
             responses.GET,
             f'{connection1.url}/api/class/fvTenant.json',
             json={'totalCount': '0', 'imdata': []},
-            status=200
+            status=200,
         )
 
         # Connection 2 fails
@@ -456,7 +447,7 @@ class TestScheduledTaskFailureHandling:
             responses.POST,
             f'{connection2.url}/api/aaaLogin.json',
             json={'imdata': [{'error': {'attributes': {'text': 'Auth failed'}}}]},
-            status=401
+            status=401,
         )
 
         # Execute
@@ -492,7 +483,7 @@ class TestScheduledTaskNextRun:
             saved_query=query,
             apic_connection_ids=[connection.id],
             frequency=ScheduledTask.FREQ_ONCE,
-            scheduled_datetime=timezone.now()
+            scheduled_datetime=timezone.now(),
         )
 
         with responses.RequestsMock() as rsps:
@@ -501,13 +492,13 @@ class TestScheduledTaskNextRun:
                 f'{connection.url}/api/aaaLogin.json',
                 json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
                 status=200,
-                headers={'Set-Cookie': 'APIC-cookie=test-token'}
+                headers={'Set-Cookie': 'APIC-cookie=test-token'},
             )
             rsps.add(
                 responses.GET,
                 f'{connection.url}/api/class/fvTenant.json',
                 json={'totalCount': '0', 'imdata': []},
-                status=200
+                status=200,
             )
 
             # Execute
@@ -528,7 +519,7 @@ class TestScheduledTaskNextRun:
             created_by=user,
             saved_query=query,
             apic_connection_ids=[connection.id],
-            frequency=ScheduledTask.FREQ_DAILY
+            frequency=ScheduledTask.FREQ_DAILY,
         )
 
         with responses.RequestsMock() as rsps:
@@ -537,13 +528,13 @@ class TestScheduledTaskNextRun:
                 f'{connection.url}/api/aaaLogin.json',
                 json={'imdata': [{'aaaLogin': {'attributes': {'token': 'test-token'}}}]},
                 status=200,
-                headers={'Set-Cookie': 'APIC-cookie=test-token'}
+                headers={'Set-Cookie': 'APIC-cookie=test-token'},
             )
             rsps.add(
                 responses.GET,
                 f'{connection.url}/api/class/fvTenant.json',
                 json={'totalCount': '0', 'imdata': []},
-                status=200
+                status=200,
             )
 
             # Execute

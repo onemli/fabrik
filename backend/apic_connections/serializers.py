@@ -12,6 +12,7 @@ from .models import APICConnection
 
 class APICConnectionListSerializer(serializers.ModelSerializer):
     """Connection summary for the list view — never includes the password."""
+
     created_by = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
@@ -19,15 +20,31 @@ class APICConnectionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = APICConnection
         fields = [
-            'id', 'name', 'description', 'url', 'username',
-            'verify_ssl', 'timeout', 'is_active', 'is_public',
-            'last_tested_at', 'last_test_status', 'last_test_message',
-            'created_by', 'created_at', 'updated_at',
-            'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'url',
+            'username',
+            'verify_ssl',
+            'timeout',
+            'is_active',
+            'is_public',
+            'last_tested_at',
+            'last_test_status',
+            'last_test_message',
+            'created_by',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_at', 'updated_at', 'last_tested_at',
-            'last_test_status', 'last_test_message'
+            'id',
+            'created_at',
+            'updated_at',
+            'last_tested_at',
+            'last_test_status',
+            'last_test_message',
         ]
 
     def get_created_by(self, obj: APICConnection) -> dict:
@@ -53,10 +70,9 @@ class APICConnectionListSerializer(serializers.ModelSerializer):
 
 class APICConnectionDetailSerializer(APICConnectionListSerializer):
     """Detailed serializer with shared users"""
+
     shared_with = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.objects.all(),
-        required=False
+        many=True, queryset=User.objects.all(), required=False
     )
 
     class Meta(APICConnectionListSerializer.Meta):
@@ -65,23 +81,30 @@ class APICConnectionDetailSerializer(APICConnectionListSerializer):
 
 class APICConnectionCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating connections with password"""
+
     password = serializers.CharField(
         write_only=True,
         required=True,  # Changed to True - password is mandatory for new connections
         min_length=1,
-        help_text='APIC password (required)'
+        help_text='APIC password (required)',
     )
     shared_with = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.objects.all(),
-        required=False
+        many=True, queryset=User.objects.all(), required=False
     )
 
     class Meta:
         model = APICConnection
         fields = [
-            'name', 'description', 'url', 'username', 'password',
-            'verify_ssl', 'timeout', 'is_active', 'is_public', 'shared_with'
+            'name',
+            'description',
+            'url',
+            'username',
+            'password',
+            'verify_ssl',
+            'timeout',
+            'is_active',
+            'is_public',
+            'shared_with',
         ]
 
     def create(self, validated_data: dict) -> APICConnection:
@@ -129,7 +152,10 @@ class APICConnectionCreateUpdateSerializer(serializers.ModelSerializer):
 
 class APICQueryExecutionSerializer(serializers.Serializer):
     """Serializer for executing queries on APIC"""
+
     connection_id = serializers.IntegerField(required=True)
-    query_path = serializers.CharField(required=True, help_text='APIC API path (e.g., /api/class/fvTenant.json)')
+    query_path = serializers.CharField(
+        required=True, help_text='APIC API path (e.g., /api/class/fvTenant.json)'
+    )
     method = serializers.ChoiceField(choices=['GET', 'POST', 'PUT', 'DELETE'], default='GET')
     data = serializers.JSONField(required=False, allow_null=True)

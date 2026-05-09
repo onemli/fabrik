@@ -61,14 +61,16 @@ DEFAULT_BATCH_SIZE = 2000
 
 # Fields whose presence in a class dict confirms devnet format (vs v1 enhanced).
 # Any one of these is a strong signal; we require at least one.
-_DEVNET_MARKER_FIELDS = frozenset({
-    'containedBy',
-    'superClasses',
-    'dnFormats',
-    'classId',
-    'relationTo',
-    'relationFrom',
-})
+_DEVNET_MARKER_FIELDS = frozenset(
+    {
+        'containedBy',
+        'superClasses',
+        'dnFormats',
+        'classId',
+        'relationTo',
+        'relationFrom',
+    }
+)
 
 
 ProgressCallback = Callable[[str, int, str], None]
@@ -77,6 +79,7 @@ ProgressCallback = Callable[[str, int, str], None]
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
+
 
 def normalize_class_name(qualified_name: str) -> str:
     """Convert package-qualified 'fv:Tenant' form to codebase-standard 'fvTenant'.
@@ -87,7 +90,7 @@ def normalize_class_name(qualified_name: str) -> str:
     if not qualified_name or ':' not in qualified_name:
         return qualified_name
     pkg, _sep, cls = qualified_name.partition(':')
-    return f"{pkg}{cls}"
+    return f'{pkg}{cls}'
 
 
 def safe_neo4j_value(value: Any) -> Any:
@@ -111,14 +114,14 @@ def _open_meta(path: Path):
 def validate_devnet_payload(data: Any) -> None:
     """Raise ValueError if payload does not look like a devnet MIM dump."""
     if not isinstance(data, dict):
-        raise ValueError("MIM payload must be a JSON object")
+        raise ValueError('MIM payload must be a JSON object')
     if 'classes' not in data:
         raise ValueError("MIM payload missing top-level 'classes' key")
     classes = data['classes']
     if not isinstance(classes, dict):
         raise ValueError("MIM payload 'classes' must be an object")
     if not classes:
-        raise ValueError("MIM payload contains no classes")
+        raise ValueError('MIM payload contains no classes')
 
     first_key = next(iter(classes))
     first_value = classes[first_key]
@@ -128,14 +131,15 @@ def validate_devnet_payload(data: Any) -> None:
     if not (_DEVNET_MARKER_FIELDS & first_value.keys()):
         raise ValueError(
             f"Payload does not look like devnet format: class '{first_key}' "
-            f"has none of {sorted(_DEVNET_MARKER_FIELDS)}. "
-            "If this is the older enhanced-meta format, use MIMLoader (v1)."
+            f'has none of {sorted(_DEVNET_MARKER_FIELDS)}. '
+            'If this is the older enhanced-meta format, use MIMLoader (v1).'
         )
 
 
 # ---------------------------------------------------------------------------
 # Stats container
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ImportStatsV2:
@@ -149,7 +153,7 @@ class ImportStatsV2:
     relates_to_count: int = 0
     relates_from_count: int = 0
     has_stat_count: int = 0
-    events_written: int = 0    # stored as JSON on Class, count total entries
+    events_written: int = 0  # stored as JSON on Class, count total entries
     faults_written: int = 0
 
     @property
@@ -186,6 +190,7 @@ class ImportStatsV2:
 # Prepared (parsed + normalized) batch containers
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _Prepared:
     classes: list = field(default_factory=list)
@@ -203,6 +208,7 @@ class _Prepared:
 # ---------------------------------------------------------------------------
 # Loader
 # ---------------------------------------------------------------------------
+
 
 class MIMLoaderV2:
     """Imports a devnet-format MIM dump into Neo4j.
@@ -362,59 +368,62 @@ class MIMLoaderV2:
         stats.faults_written += len(faults_serialized)
 
         # ---- Class node payload ----
-        out.classes.append({
-            # Identity
-            'className': class_name,
-            'qualifiedName': qualified_name,
-            'sourceVersion': source_version,
-            'classPkg': cdata.get('classPkg', ''),
-            'classId': str(cdata.get('classId', '')),
-            'label': cdata.get('label', ''),
-            'comment': cdata.get('comment', []) or [],
-            # v1-compatible booleans
-            'isAbstract': bool(cdata.get('isAbstract', False)),
-            'isConfigurable': bool(cdata.get('isConfigurable', False)),
-            'isContextRoot': bool(cdata.get('isContextRoot', False)),
-            'isDeprecated': bool(cdata.get('isDeprecated', False)),
-            'isHidden': bool(cdata.get('isHidden', False)),
-            # v2 additions — behavioral flags
-            'isDomainable': bool(cdata.get('isDomainable', False)),
-            'isFaultable': bool(cdata.get('isFaultable', False)),
-            'isHealthScorable': bool(cdata.get('isHealthScorable', False)),
-            'isEncrypted': bool(cdata.get('isEncrypted', False)),
-            'isExportable': bool(cdata.get('isExportable', False)),
-            'isPersistent': bool(cdata.get('isPersistent', False)),
-            'isCreatableDeletable': bool(cdata.get('isCreatableDeletable', False)),
-            'isObservable': bool(cdata.get('isObservable', False)),
-            'isStat': bool(cdata.get('isStat', False)),
-            'isSubjectToQuota': bool(cdata.get('isSubjectToQuota', False)),
-            'isNxosConverged': bool(cdata.get('isNxosConverged', False)),
-            'hasStats': bool(cdata.get('hasStats', False)),
-            'hasEventRules': bool(cdata.get('hasEventRules', False)),
-            'shouldCollectHealthStats': bool(cdata.get('shouldCollectHealthStats', False)),
-            # Metadata strings
-            'moCategory': cdata.get('moCategory', ''),
-            'featureTag': cdata.get('featureTag', ''),
-            'abstractionLayer': cdata.get('abstractionLayer', ''),
-            'apicNxProcessing': cdata.get('apicNxProcessing', ''),
-            'healthCollectionSource': cdata.get('healthCollectionSource', ''),
-            'monitoringPolicySource': cdata.get('monitoringPolicySource', ''),
-            'rnFormat': cdata.get('rnFormat', ''),
-            # Lists
-            'dnFormats': self._coerce_str_list(cdata.get('dnFormats', [])),
-            'identifiedBy': self._coerce_str_list(cdata.get('identifiedBy', [])),
-            'platformFlavors': self._coerce_str_list(cdata.get('platformFlavors', [])),
-            'readAccess': self._coerce_str_list(cdata.get('readAccess', [])),
-            'writeAccess': self._coerce_str_list(cdata.get('writeAccess', [])),
-            # superClasses normalized to codebase form
-            'superClasses': [
-                normalize_class_name(s) for s in (cdata.get('superClasses') or [])
-                if isinstance(s, str) and s
-            ],
-            # Events/faults as JSON strings (consumers parse)
-            'events': json.dumps(events_serialized, ensure_ascii=False),
-            'faults': json.dumps(faults_serialized, ensure_ascii=False),
-        })
+        out.classes.append(
+            {
+                # Identity
+                'className': class_name,
+                'qualifiedName': qualified_name,
+                'sourceVersion': source_version,
+                'classPkg': cdata.get('classPkg', ''),
+                'classId': str(cdata.get('classId', '')),
+                'label': cdata.get('label', ''),
+                'comment': cdata.get('comment', []) or [],
+                # v1-compatible booleans
+                'isAbstract': bool(cdata.get('isAbstract', False)),
+                'isConfigurable': bool(cdata.get('isConfigurable', False)),
+                'isContextRoot': bool(cdata.get('isContextRoot', False)),
+                'isDeprecated': bool(cdata.get('isDeprecated', False)),
+                'isHidden': bool(cdata.get('isHidden', False)),
+                # v2 additions — behavioral flags
+                'isDomainable': bool(cdata.get('isDomainable', False)),
+                'isFaultable': bool(cdata.get('isFaultable', False)),
+                'isHealthScorable': bool(cdata.get('isHealthScorable', False)),
+                'isEncrypted': bool(cdata.get('isEncrypted', False)),
+                'isExportable': bool(cdata.get('isExportable', False)),
+                'isPersistent': bool(cdata.get('isPersistent', False)),
+                'isCreatableDeletable': bool(cdata.get('isCreatableDeletable', False)),
+                'isObservable': bool(cdata.get('isObservable', False)),
+                'isStat': bool(cdata.get('isStat', False)),
+                'isSubjectToQuota': bool(cdata.get('isSubjectToQuota', False)),
+                'isNxosConverged': bool(cdata.get('isNxosConverged', False)),
+                'hasStats': bool(cdata.get('hasStats', False)),
+                'hasEventRules': bool(cdata.get('hasEventRules', False)),
+                'shouldCollectHealthStats': bool(cdata.get('shouldCollectHealthStats', False)),
+                # Metadata strings
+                'moCategory': cdata.get('moCategory', ''),
+                'featureTag': cdata.get('featureTag', ''),
+                'abstractionLayer': cdata.get('abstractionLayer', ''),
+                'apicNxProcessing': cdata.get('apicNxProcessing', ''),
+                'healthCollectionSource': cdata.get('healthCollectionSource', ''),
+                'monitoringPolicySource': cdata.get('monitoringPolicySource', ''),
+                'rnFormat': cdata.get('rnFormat', ''),
+                # Lists
+                'dnFormats': self._coerce_str_list(cdata.get('dnFormats', [])),
+                'identifiedBy': self._coerce_str_list(cdata.get('identifiedBy', [])),
+                'platformFlavors': self._coerce_str_list(cdata.get('platformFlavors', [])),
+                'readAccess': self._coerce_str_list(cdata.get('readAccess', [])),
+                'writeAccess': self._coerce_str_list(cdata.get('writeAccess', [])),
+                # superClasses normalized to codebase form
+                'superClasses': [
+                    normalize_class_name(s)
+                    for s in (cdata.get('superClasses') or [])
+                    if isinstance(s, str) and s
+                ],
+                # Events/faults as JSON strings (consumers parse)
+                'events': json.dumps(events_serialized, ensure_ascii=False),
+                'faults': json.dumps(faults_serialized, ensure_ascii=False),
+            }
+        )
         stats.class_count += 1
 
         # ---- Properties ----
@@ -425,115 +434,133 @@ class MIMLoaderV2:
 
         for prop_name, pdata in properties.items():
             if not isinstance(pdata, dict):
-                logger.warning(f"{qualified_name}.{prop_name}: property entry is not an object, skipping")
+                logger.warning(
+                    f'{qualified_name}.{prop_name}: property entry is not an object, skipping'
+                )
                 continue
 
-            out.properties.append({
-                'className': class_name,
-                'propName': prop_name,
-                # Semantic metadata (new in v2 — the key win for advisor/UI)
-                'label': pdata.get('label', ''),
-                'comment': pdata.get('comment', []) or [],
-                'baseType': pdata.get('baseType', ''),
-                'modelType': pdata.get('modelType', ''),
-                'uitype': pdata.get('uitype', ''),
-                'propGlobalId': str(pdata.get('propGlobalId', '')),
-                'propLocalId': str(pdata.get('propLocalId', '')),
-                # Boolean flags
-                'isConfigurable': bool(pdata.get('isConfigurable', False)),
-                'isDeprecated': bool(pdata.get('isDeprecated', False)),
-                'isHidden': bool(pdata.get('isHidden', False)),
-                'isNaming': bool(pdata.get('isNaming', False)),
-                'readOnly': bool(pdata.get('readOnly', False)),
-                'readWrite': bool(pdata.get('readWrite', False)),
-                'createOnly': bool(pdata.get('createOnly', False)),
-                'mandatory': bool(pdata.get('mandatory', False)),
-                'secure': bool(pdata.get('secure', False)),
-                'implicit': bool(pdata.get('implicit', False)),
-                'isOverride': bool(pdata.get('isOverride', False)),
-                'isLike': bool(pdata.get('isLike', False)),
-                'isNxosConverged': bool(pdata.get('isNxosConverged', False)),
-                'needsPropDelimiters': bool(pdata.get('needsPropDelimiters', False)),
-                # Default value (may be str / int / None)
-                'default': self._scalar_to_str(pdata.get('default')),
-                # Reference to another property (for inherited/like props)
-                'likeProp': pdata.get('likeProp', ''),
-                'platformFlavors': self._coerce_str_list(pdata.get('platformFlavors', [])),
-                # Validators as JSON (always consumed as a whole)
-                'validators': json.dumps(pdata.get('validators') or [], ensure_ascii=False),
-            })
+            out.properties.append(
+                {
+                    'className': class_name,
+                    'propName': prop_name,
+                    # Semantic metadata (new in v2 — the key win for advisor/UI)
+                    'label': pdata.get('label', ''),
+                    'comment': pdata.get('comment', []) or [],
+                    'baseType': pdata.get('baseType', ''),
+                    'modelType': pdata.get('modelType', ''),
+                    'uitype': pdata.get('uitype', ''),
+                    'propGlobalId': str(pdata.get('propGlobalId', '')),
+                    'propLocalId': str(pdata.get('propLocalId', '')),
+                    # Boolean flags
+                    'isConfigurable': bool(pdata.get('isConfigurable', False)),
+                    'isDeprecated': bool(pdata.get('isDeprecated', False)),
+                    'isHidden': bool(pdata.get('isHidden', False)),
+                    'isNaming': bool(pdata.get('isNaming', False)),
+                    'readOnly': bool(pdata.get('readOnly', False)),
+                    'readWrite': bool(pdata.get('readWrite', False)),
+                    'createOnly': bool(pdata.get('createOnly', False)),
+                    'mandatory': bool(pdata.get('mandatory', False)),
+                    'secure': bool(pdata.get('secure', False)),
+                    'implicit': bool(pdata.get('implicit', False)),
+                    'isOverride': bool(pdata.get('isOverride', False)),
+                    'isLike': bool(pdata.get('isLike', False)),
+                    'isNxosConverged': bool(pdata.get('isNxosConverged', False)),
+                    'needsPropDelimiters': bool(pdata.get('needsPropDelimiters', False)),
+                    # Default value (may be str / int / None)
+                    'default': self._scalar_to_str(pdata.get('default')),
+                    # Reference to another property (for inherited/like props)
+                    'likeProp': pdata.get('likeProp', ''),
+                    'platformFlavors': self._coerce_str_list(pdata.get('platformFlavors', [])),
+                    # Validators as JSON (always consumed as a whole)
+                    'validators': json.dumps(pdata.get('validators') or [], ensure_ascii=False),
+                }
+            )
             stats.property_count += 1
 
             # ---- Enum values → separate :EnumValue nodes ----
-            for vv in (pdata.get('validValues') or []):
+            for vv in pdata.get('validValues') or []:
                 if not isinstance(vv, dict):
                     continue
-                out.enum_values.append({
-                    'className': class_name,
-                    'propName': prop_name,
-                    'value': self._scalar_to_str(vv.get('value', '')),
-                    'localName': vv.get('localName', ''),
-                    'label': vv.get('label', ''),
-                    'comment': vv.get('comment', []) or [],
-                    'platformFlavors': self._coerce_str_list(vv.get('platformFlavors', [])),
-                })
+                out.enum_values.append(
+                    {
+                        'className': class_name,
+                        'propName': prop_name,
+                        'value': self._scalar_to_str(vv.get('value', '')),
+                        'localName': vv.get('localName', ''),
+                        'label': vv.get('label', ''),
+                        'comment': vv.get('comment', []) or [],
+                        'platformFlavors': self._coerce_str_list(vv.get('platformFlavors', [])),
+                    }
+                )
                 stats.enum_value_count += 1
 
         # ---- contains (Class → Class) ----
         for child_qualified in (cdata.get('contains') or {}).keys():
             if child_qualified:
-                out.contains.append({
-                    'parentClass': class_name,
-                    'childClass': normalize_class_name(child_qualified),
-                })
+                out.contains.append(
+                    {
+                        'parentClass': class_name,
+                        'childClass': normalize_class_name(child_qualified),
+                    }
+                )
                 stats.contains_count += 1
 
         # ---- containedBy (Class → Class, inverse of CONTAINS) ----
         for parent_qualified in (cdata.get('containedBy') or {}).keys():
             if parent_qualified:
-                out.contained_by.append({
-                    'childClass': class_name,
-                    'parentClass': normalize_class_name(parent_qualified),
-                })
+                out.contained_by.append(
+                    {
+                        'childClass': class_name,
+                        'parentClass': normalize_class_name(parent_qualified),
+                    }
+                )
                 stats.contained_by_count += 1
 
         # ---- superClasses → SUBCLASS_OF ----
-        for super_qualified in (cdata.get('superClasses') or []):
+        for super_qualified in cdata.get('superClasses') or []:
             if isinstance(super_qualified, str) and super_qualified:
-                out.subclass_of.append({
-                    'childClass': class_name,
-                    'parentClass': normalize_class_name(super_qualified),
-                })
+                out.subclass_of.append(
+                    {
+                        'childClass': class_name,
+                        'parentClass': normalize_class_name(super_qualified),
+                    }
+                )
                 stats.subclass_count += 1
 
         # ---- rnMap (Class → Class with RN prefix) ----
         for rn_prefix, target_qualified in (cdata.get('rnMap') or {}).items():
             if target_qualified:
-                out.rn_mappings.append({
-                    'parentClass': class_name,
-                    'childClass': normalize_class_name(target_qualified),
-                    'rnPrefix': rn_prefix,
-                })
+                out.rn_mappings.append(
+                    {
+                        'parentClass': class_name,
+                        'childClass': normalize_class_name(target_qualified),
+                        'rnPrefix': rn_prefix,
+                    }
+                )
                 stats.rn_mapping_count += 1
 
         # ---- relationTo ----
         for reln_key, target_qualified in (cdata.get('relationTo') or {}).items():
             if target_qualified:
-                out.relates_to.append({
-                    'fromClass': class_name,
-                    'toClass': normalize_class_name(target_qualified),
-                    'via': normalize_class_name(reln_key),
-                })
+                out.relates_to.append(
+                    {
+                        'fromClass': class_name,
+                        'toClass': normalize_class_name(target_qualified),
+                        'via': normalize_class_name(reln_key),
+                    }
+                )
                 stats.relates_to_count += 1
 
         # ---- relationFrom ----
         for reln_key, target_qualified in (cdata.get('relationFrom') or {}).items():
             if target_qualified:
-                out.relates_from.append({
-                    'toClass': class_name,
-                    'fromClass': normalize_class_name(target_qualified),
-                    'via': normalize_class_name(reln_key),
-                })
+                out.relates_from.append(
+                    {
+                        'toClass': class_name,
+                        'fromClass': normalize_class_name(target_qualified),
+                        'via': normalize_class_name(reln_key),
+                    }
+                )
                 stats.relates_from_count += 1
 
         # ---- stats (Class → stat Class) ----
@@ -551,12 +578,14 @@ class MIMLoaderV2:
                     comment = [str(c) for c in raw_comment if c is not None]
                 elif isinstance(raw_comment, str):
                     comment = [raw_comment]
-            out.has_stat.append({
-                'className': class_name,
-                'targetClass': normalize_class_name(stat_qualified),
-                'qualifiedName': stat_qualified,
-                'comment': comment,
-            })
+            out.has_stat.append(
+                {
+                    'className': class_name,
+                    'targetClass': normalize_class_name(stat_qualified),
+                    'qualifiedName': stat_qualified,
+                    'comment': comment,
+                }
+            )
             stats.has_stat_count += 1
 
     # ---- Write pipeline ----
@@ -570,7 +599,7 @@ class MIMLoaderV2:
         # Work estimate (rough) for proportional progress
         total_work = max(
             1,
-            stats.class_count * 3           # classes are fattest
+            stats.class_count * 3  # classes are fattest
             + stats.property_count * 2
             + stats.enum_value_count
             + stats.contains_count
@@ -602,7 +631,9 @@ class MIMLoaderV2:
         # Enum values
         w = alloc(stats.enum_value_count)
         self._emit('enum_values', pct, f'Writing {stats.enum_value_count:,} enum values...')
-        self._batch_iter(prepared.enum_values, 'enum_values', pct, pct + w, _CYPHER_WRITE_ENUM_VALUES)
+        self._batch_iter(
+            prepared.enum_values, 'enum_values', pct, pct + w, _CYPHER_WRITE_ENUM_VALUES
+        )
         pct += w
 
         # CONTAINS
@@ -613,8 +644,12 @@ class MIMLoaderV2:
 
         # CONTAINED_BY
         w = alloc(stats.contained_by_count)
-        self._emit('contained_by', pct, f'Writing {stats.contained_by_count:,} CONTAINED_BY edges...')
-        self._batch_iter(prepared.contained_by, 'contained_by', pct, pct + w, _CYPHER_WRITE_CONTAINED_BY)
+        self._emit(
+            'contained_by', pct, f'Writing {stats.contained_by_count:,} CONTAINED_BY edges...'
+        )
+        self._batch_iter(
+            prepared.contained_by, 'contained_by', pct, pct + w, _CYPHER_WRITE_CONTAINED_BY
+        )
         pct += w
 
         # SUBCLASS_OF
@@ -637,8 +672,12 @@ class MIMLoaderV2:
 
         # RELATES_FROM
         w = alloc(stats.relates_from_count)
-        self._emit('relates_from', pct, f'Writing {stats.relates_from_count:,} RELATES_FROM edges...')
-        self._batch_iter(prepared.relates_from, 'relates_from', pct, pct + w, _CYPHER_WRITE_RELATES_FROM)
+        self._emit(
+            'relates_from', pct, f'Writing {stats.relates_from_count:,} RELATES_FROM edges...'
+        )
+        self._batch_iter(
+            prepared.relates_from, 'relates_from', pct, pct + w, _CYPHER_WRITE_RELATES_FROM
+        )
         pct += w
 
         # HAS_STAT
@@ -653,17 +692,17 @@ class MIMLoaderV2:
         """Drop constraints, indexes, then all nodes in chunks."""
         # Constraints before indexes: dropping an index that backs a constraint
         # raises. Constraints auto-drop their backing index.
-        for rec in self._execute("SHOW CONSTRAINTS"):
+        for rec in self._execute('SHOW CONSTRAINTS'):
             name = rec.get('name')
             if name:
-                self._execute(f"DROP CONSTRAINT {name} IF EXISTS")
+                self._execute(f'DROP CONSTRAINT {name} IF EXISTS')
 
-        for rec in self._execute("SHOW INDEXES"):
+        for rec in self._execute('SHOW INDEXES'):
             name = rec.get('name')
             idx_type = rec.get('type', '')
             # Skip LOOKUP indexes — they're internal and can't be dropped.
             if name and idx_type != 'LOOKUP':
-                self._execute(f"DROP INDEX {name} IF EXISTS")
+                self._execute(f'DROP INDEX {name} IF EXISTS')
 
         # Two-phase wipe: drop relationships first, then nodes. DETACH DELETE on
         # a single highly-connected node (e.g. topRoot with 10k+ inbound edges)
@@ -672,32 +711,28 @@ class MIMLoaderV2:
         # work lets Neo4j commit each batch cleanly.
         #
         # CALL IN TRANSACTIONS requires auto-commit — session.run() provides it.
-        self._execute(
-            "MATCH ()-[r]->() CALL { WITH r DELETE r } IN TRANSACTIONS OF 5000 ROWS"
-        )
-        self._execute(
-            "MATCH (n) CALL { WITH n DELETE n } IN TRANSACTIONS OF 5000 ROWS"
-        )
+        self._execute('MATCH ()-[r]->() CALL { WITH r DELETE r } IN TRANSACTIONS OF 5000 ROWS')
+        self._execute('MATCH (n) CALL { WITH n DELETE n } IN TRANSACTIONS OF 5000 ROWS')
 
     def _create_indexes(self) -> None:
         """Create constraints + indexes. v1-compatible ones first, v2 additions after."""
         statements = [
             # v1 constraints/indexes — preserve exact names for compatibility
-            "CREATE CONSTRAINT class_unique IF NOT EXISTS FOR (c:Class) REQUIRE c.className IS UNIQUE",
-            "CREATE INDEX class_pkg_idx IF NOT EXISTS FOR (c:Class) ON (c.classPkg)",
-            "CREATE INDEX property_name_idx IF NOT EXISTS FOR (p:Property) ON (p.name)",
-            "CREATE CONSTRAINT mim_meta_unique IF NOT EXISTS FOR (m:MIMMeta) REQUIRE m.key IS UNIQUE",
+            'CREATE CONSTRAINT class_unique IF NOT EXISTS FOR (c:Class) REQUIRE c.className IS UNIQUE',
+            'CREATE INDEX class_pkg_idx IF NOT EXISTS FOR (c:Class) ON (c.classPkg)',
+            'CREATE INDEX property_name_idx IF NOT EXISTS FOR (p:Property) ON (p.name)',
+            'CREATE CONSTRAINT mim_meta_unique IF NOT EXISTS FOR (m:MIMMeta) REQUIRE m.key IS UNIQUE',
             # v2 additions — search-friendly fields
-            "CREATE INDEX class_qualified_name_idx IF NOT EXISTS FOR (c:Class) ON (c.qualifiedName)",
-            "CREATE INDEX class_label_idx IF NOT EXISTS FOR (c:Class) ON (c.label)",
-            "CREATE INDEX class_mo_category_idx IF NOT EXISTS FOR (c:Class) ON (c.moCategory)",
-            "CREATE INDEX class_feature_tag_idx IF NOT EXISTS FOR (c:Class) ON (c.featureTag)",
-            "CREATE INDEX property_class_idx IF NOT EXISTS FOR (p:Property) ON (p.className)",
-            "CREATE INDEX property_label_idx IF NOT EXISTS FOR (p:Property) ON (p.label)",
-            "CREATE INDEX property_base_type_idx IF NOT EXISTS FOR (p:Property) ON (p.baseType)",
-            "CREATE INDEX property_ui_type_idx IF NOT EXISTS FOR (p:Property) ON (p.uitype)",
-            "CREATE INDEX enumvalue_value_idx IF NOT EXISTS FOR (v:EnumValue) ON (v.value)",
-            "CREATE INDEX enumvalue_local_name_idx IF NOT EXISTS FOR (v:EnumValue) ON (v.localName)",
+            'CREATE INDEX class_qualified_name_idx IF NOT EXISTS FOR (c:Class) ON (c.qualifiedName)',
+            'CREATE INDEX class_label_idx IF NOT EXISTS FOR (c:Class) ON (c.label)',
+            'CREATE INDEX class_mo_category_idx IF NOT EXISTS FOR (c:Class) ON (c.moCategory)',
+            'CREATE INDEX class_feature_tag_idx IF NOT EXISTS FOR (c:Class) ON (c.featureTag)',
+            'CREATE INDEX property_class_idx IF NOT EXISTS FOR (p:Property) ON (p.className)',
+            'CREATE INDEX property_label_idx IF NOT EXISTS FOR (p:Property) ON (p.label)',
+            'CREATE INDEX property_base_type_idx IF NOT EXISTS FOR (p:Property) ON (p.baseType)',
+            'CREATE INDEX property_ui_type_idx IF NOT EXISTS FOR (p:Property) ON (p.uitype)',
+            'CREATE INDEX enumvalue_value_idx IF NOT EXISTS FOR (v:EnumValue) ON (v.value)',
+            'CREATE INDEX enumvalue_local_name_idx IF NOT EXISTS FOR (v:EnumValue) ON (v.localName)',
         ]
         for stmt in statements:
             try:
@@ -705,7 +740,7 @@ class MIMLoaderV2:
             except Exception as e:
                 # Index creation on existing Neo4j can warn rather than fail;
                 # don't abort the whole import over index hygiene.
-                logger.warning(f"Index creation warning: {e}")
+                logger.warning(f'Index creation warning: {e}')
 
     def _execute(self, query: str, parameters: Optional[dict] = None) -> list:
         with self._driver.session() as session:
@@ -728,14 +763,14 @@ class MIMLoaderV2:
             if isinstance(value, dict):
                 raise ValueError(
                     f"[{stage}] payload field '{key}' is a dict — "
-                    f"Neo4j properties must be primitives or arrays of primitives"
+                    f'Neo4j properties must be primitives or arrays of primitives'
                 )
             if isinstance(value, list):
                 for element in value:
                     if isinstance(element, (dict, list)):
                         raise ValueError(
                             f"[{stage}] payload field '{key}' is a nested/complex list — "
-                            f"Neo4j properties must be primitives or flat arrays of primitives"
+                            f'Neo4j properties must be primitives or flat arrays of primitives'
                         )
 
     def _batch_iter(
@@ -752,7 +787,7 @@ class MIMLoaderV2:
         self._assert_neo4j_safe(items, stage)
         span = max(pct_end - pct_start, 1)
         for i in range(0, total, self._batch_size):
-            batch = items[i:i + self._batch_size]
+            batch = items[i : i + self._batch_size]
             self._execute(query, {'batch': batch})
             done = min(i + self._batch_size, total)
             pct = pct_start + int(span * done / total)
@@ -815,7 +850,7 @@ class MIMLoaderV2:
             return
         self._assert_neo4j_safe(items, stage)
         for i in range(0, len(items), self._batch_size):
-            self._execute(query, {'batch': items[i:i + self._batch_size]})
+            self._execute(query, {'batch': items[i : i + self._batch_size]})
 
     def _write_nodes_only(self, prepared: _Prepared) -> None:
         """Write Class nodes + Properties + EnumValues. No edges between Classes."""
@@ -841,10 +876,10 @@ class MIMLoaderV2:
     def create_fulltext_indexes(self) -> None:
         """Create full-text search indexes on Class and Property after import."""
         statements = [
-            "CREATE FULLTEXT INDEX class_search IF NOT EXISTS "
-            "FOR (c:Class) ON EACH [c.className, c.label, c.classPkg, c.qualifiedName]",
-            "CREATE FULLTEXT INDEX property_search IF NOT EXISTS "
-            "FOR (p:Property) ON EACH [p.name, p.label, p.className]",
+            'CREATE FULLTEXT INDEX class_search IF NOT EXISTS '
+            'FOR (c:Class) ON EACH [c.className, c.label, c.classPkg, c.qualifiedName]',
+            'CREATE FULLTEXT INDEX property_search IF NOT EXISTS '
+            'FOR (p:Property) ON EACH [p.name, p.label, p.className]',
         ]
         for stmt in statements:
             try:
@@ -901,12 +936,14 @@ class MIMLoaderV2:
                 event_type = entry_value
             if target_qualified:
                 target_normalized = normalize_class_name(target_qualified)
-            out.append({
-                'id': str(entry_id),
-                'type': event_type,
-                'target': target_normalized,
-                'targetQualified': target_qualified,
-            })
+            out.append(
+                {
+                    'id': str(entry_id),
+                    'type': event_type,
+                    'target': target_normalized,
+                    'targetQualified': target_qualified,
+                }
+            )
         return out
 
 

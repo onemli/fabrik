@@ -34,11 +34,7 @@ from typing import List, Dict, Optional, Tuple
 from abc import ABC, abstractmethod
 from urllib.parse import urlencode
 import re
-from .class_hierarchy import (
-    build_rn,
-    can_build_dn_from_filter,
-    get_rn_format
-)
+from .class_hierarchy import build_rn, can_build_dn_from_filter, get_rn_format
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +46,14 @@ class QueryIntent:
     The constructor does all the graph walking once so strategies don't repeat it.
     """
 
-    def __init__(self, flow_data: dict, target_node_id: str = None,
-                 enable_pagination: bool = False, page: int = 0, page_size: int = 50):
+    def __init__(
+        self,
+        flow_data: dict,
+        target_node_id: str = None,
+        enable_pagination: bool = False,
+        page: int = 0,
+        page_size: int = 50,
+    ):
         """Parse the canvas and build the class chain.
 
         target_node_id is used by the preview endpoint to run the query only
@@ -75,14 +77,14 @@ class QueryIntent:
             self.target_node = self._find_final_class_node()
 
         if not self.target_node or self.target_node.get('type') != 'classNode':
-            raise ValueError("No valid ClassNode found in flow")
+            raise ValueError('No valid ClassNode found in flow')
 
         self.class_name = self.target_node.get('data', {}).get('className')
         self.scope = self.target_node.get('data', {}).get('scope', 'self')
         self.property_include = self.target_node.get('data', {}).get('propertyInclude', 'all')
 
         if not self.class_name:
-            raise ValueError("ClassNode must have className configured")
+            raise ValueError('ClassNode must have className configured')
 
         # Build class chain (parent hierarchy)
         self.class_chain = self._build_class_chain()
@@ -112,10 +114,13 @@ class QueryIntent:
 
                 # Skip pipeline edges during backward traversal
                 incoming_edge = next(
-                    (e for e in self.edges
-                     if e['target'] == current_id
-                     and e.get('data', {}).get('edgeType') != 'pipeline'),
-                    None
+                    (
+                        e
+                        for e in self.edges
+                        if e['target'] == current_id
+                        and e.get('data', {}).get('edgeType') != 'pipeline'
+                    ),
+                    None,
                 )
                 if not incoming_edge:
                     break
@@ -147,7 +152,9 @@ class QueryIntent:
         Pipeline edges (edgeType='pipeline') are skipped during traversal —
         they connect separate pipeline stages, not ACI containment relationships.
         """
-        logger.info(f"[QueryIntent._build_class_chain] Starting with target_node: id={self.target_node.get('id')}, class={self.target_node.get('data', {}).get('className')}")
+        logger.info(
+            f'[QueryIntent._build_class_chain] Starting with target_node: id={self.target_node.get("id")}, class={self.target_node.get("data", {}).get("className")}'
+        )
 
         chain = []
 
@@ -162,10 +169,12 @@ class QueryIntent:
 
             # Skip pipeline edges — they connect separate stages, not ACI containment
             incoming_edge = next(
-                (e for e in self.edges
-                 if e['target'] == current_id
-                 and e.get('data', {}).get('edgeType') != 'pipeline'),
-                None
+                (
+                    e
+                    for e in self.edges
+                    if e['target'] == current_id and e.get('data', {}).get('edgeType') != 'pipeline'
+                ),
+                None,
             )
             if not incoming_edge:
                 break
@@ -176,11 +185,15 @@ class QueryIntent:
 
             if source_node['type'] == 'classNode':
                 path_nodes.insert(0, source_node)  # Insert parent at beginning
-                logger.info(f"[QueryIntent._build_class_chain] Found parent class: id={source_node.get('id')}, class={source_node.get('data', {}).get('className')}")
+                logger.info(
+                    f'[QueryIntent._build_class_chain] Found parent class: id={source_node.get("id")}, class={source_node.get("data", {}).get("className")}'
+                )
 
             current_id = source_node['id']
 
-        logger.info(f"_build_class_chain: Found {len(path_nodes)} class nodes in path: {[n.get('data', {}).get('className') for n in path_nodes]}")
+        logger.info(
+            f'_build_class_chain: Found {len(path_nodes)} class nodes in path: {[n.get("data", {}).get("className") for n in path_nodes]}'
+        )
 
         # Build chain with filters
         for node in path_nodes:
@@ -190,19 +203,21 @@ class QueryIntent:
             # For backward compatibility, also keep first filter as 'filter_node'
             filter_node = filter_nodes[0] if filter_nodes else None
 
-            logger.info(f"_build_class_chain: Node {node_id}, filters_found={len(filter_nodes)}")
+            logger.info(f'_build_class_chain: Node {node_id}, filters_found={len(filter_nodes)}')
             if filter_nodes:
                 for idx, f in enumerate(filter_nodes):
-                    logger.info(f"_build_class_chain: Filter {idx+1}: {f.get('data')}")
+                    logger.info(f'_build_class_chain: Filter {idx + 1}: {f.get("data")}')
 
-            chain.append({
-                'class_node': node,
-                'filter_node': filter_node,  # First filter (for backward compatibility)
-                'filter_nodes': filter_nodes,  # ALL filters (new)
-                'class_name': node.get('data', {}).get('className'),
-            })
+            chain.append(
+                {
+                    'class_node': node,
+                    'filter_node': filter_node,  # First filter (for backward compatibility)
+                    'filter_nodes': filter_nodes,  # ALL filters (new)
+                    'class_name': node.get('data', {}).get('className'),
+                }
+            )
 
-        logger.info(f"_build_class_chain: Built chain with {len(chain)} items")
+        logger.info(f'_build_class_chain: Built chain with {len(chain)} items')
         return chain
 
     def _find_connected_filter(self, node_id: str) -> Optional[dict]:
@@ -223,10 +238,12 @@ class QueryIntent:
                     filter_type = data.get('filterType')
                     # Accept both property and query-target-filter types
                     if filter_type in ['property', 'query-target-filter']:
-                        logger.info(f"_find_connected_filter: Found {filter_type} filter for {node_id}")
+                        logger.info(
+                            f'_find_connected_filter: Found {filter_type} filter for {node_id}'
+                        )
                         return target
 
-        logger.info(f"_find_connected_filter: No filter found for {node_id}")
+        logger.info(f'_find_connected_filter: No filter found for {node_id}')
         return None
 
     def _find_all_connected_filters(self, node_id: str) -> List[dict]:
@@ -271,7 +288,7 @@ class QueryIntent:
 
             current_id = next_node['id']
 
-        logger.info(f"_find_all_connected_filters: Found {len(filters)} filters for {node_id}")
+        logger.info(f'_find_all_connected_filters: Found {len(filters)} filters for {node_id}')
         return filters
 
     def can_build_dn(self) -> bool:
@@ -282,27 +299,29 @@ class QueryIntent:
         the full DN and have to fall back to partial DN or class query.
         """
         if not self.class_chain:
-            logger.debug("can_build_dn: No class_chain")
+            logger.debug('can_build_dn: No class_chain')
             return False
 
         for item in self.class_chain:
             filter_node = item['filter_node']
             class_name = item['class_name']
 
-            logger.debug(f"can_build_dn: Checking {class_name}, filter_node={filter_node is not None}")
+            logger.debug(
+                f'can_build_dn: Checking {class_name}, filter_node={filter_node is not None}'
+            )
 
             if not filter_node or not class_name:
-                logger.debug(f"can_build_dn: Missing filter or class_name for {class_name}")
+                logger.debug(f'can_build_dn: Missing filter or class_name for {class_name}')
                 return False
 
             filter_data = filter_node.get('data', {})
-            logger.debug(f"can_build_dn: filter_data={filter_data}")
+            logger.debug(f'can_build_dn: filter_data={filter_data}')
 
             if not can_build_dn_from_filter(class_name, filter_data):
-                logger.debug(f"can_build_dn: Cannot build DN from filter for {class_name}")
+                logger.debug(f'can_build_dn: Cannot build DN from filter for {class_name}')
                 return False
 
-        logger.debug("can_build_dn: Success! DN can be built")
+        logger.debug('can_build_dn: Success! DN can be built')
         return True
 
     def build_dn(self) -> Optional[str]:
@@ -335,7 +354,7 @@ class QueryIntent:
                 rn = build_rn(class_name, {property_name: value})
                 dn_parts.append(rn)
             except ValueError as e:
-                logger.warning(f"Cannot build RN for {class_name}: {e}")
+                logger.warning(f'Cannot build RN for {class_name}: {e}')
                 return None
 
         return '/'.join(dn_parts) if len(dn_parts) > 1 else None
@@ -372,7 +391,7 @@ class QueryIntent:
         if last_item['filter_node']:
             return False
 
-        logger.info("can_build_partial_dn: True (parent DN available for subtree query)")
+        logger.info('can_build_partial_dn: True (parent DN available for subtree query)')
         return True
 
     def build_partial_dn(self) -> Optional[str]:
@@ -400,11 +419,11 @@ class QueryIntent:
                 rn = build_rn(class_name, {property_name: value})
                 dn_parts.append(rn)
             except ValueError as e:
-                logger.warning(f"Cannot build RN for {class_name}: {e}")
+                logger.warning(f'Cannot build RN for {class_name}: {e}')
                 return None
 
         partial_dn = '/'.join(dn_parts) if len(dn_parts) > 1 else None
-        logger.info(f"build_partial_dn: Built partial DN: {partial_dn}")
+        logger.info(f'build_partial_dn: Built partial DN: {partial_dn}')
         return partial_dn
 
     def get_filters_for_node(self, node_id: str) -> List[dict]:
@@ -443,18 +462,14 @@ class QueryIntent:
         # If we have exact filters (eq), likely low result count
         filters = self.get_filters_for_node(self.target_node['id'])
 
-        has_eq_filter = any(
-            f.get('data', {}).get('operator') == 'eq'
-            for f in filters
-        )
+        has_eq_filter = any(f.get('data', {}).get('operator') == 'eq' for f in filters)
 
         if has_eq_filter:
             return 'low'
 
         # Wildcard or no filters = potentially high result count
         has_wildcard = any(
-            f.get('data', {}).get('operator') in ['wcard', 'contains']
-            for f in filters
+            f.get('data', {}).get('operator') in ['wcard', 'contains'] for f in filters
         )
 
         if has_wildcard or not filters:
@@ -513,7 +528,7 @@ class MOQueryStrategy(QueryStrategy):
         """MO strategy requires buildable DN (full or partial)"""
         can_full = intent.can_build_dn()
         can_partial = intent.can_build_partial_dn()
-        logger.info(f"[MOQueryStrategy] can_handle: full_dn={can_full}, partial_dn={can_partial}")
+        logger.info(f'[MOQueryStrategy] can_handle: full_dn={can_full}, partial_dn={can_partial}')
         return can_full or can_partial
 
     def _build_rsp_subtree_include(self, intent: QueryIntent) -> Optional[str]:
@@ -570,7 +585,7 @@ class MOQueryStrategy(QueryStrategy):
 
         if categories:
             result = ','.join(categories)
-            logger.info(f"[MOQueryStrategy] rsp-subtree-include: {result}")
+            logger.info(f'[MOQueryStrategy] rsp-subtree-include: {result}')
             return result
 
         return None
@@ -587,7 +602,7 @@ class MOQueryStrategy(QueryStrategy):
             is_partial = True
 
         if not dn:
-            raise ValueError("Cannot build DN for MO query")
+            raise ValueError('Cannot build DN for MO query')
 
         base_url = f'/api/mo/{dn}.json'
         params = {}
@@ -601,7 +616,7 @@ class MOQueryStrategy(QueryStrategy):
                 params['rsp-subtree'] = 'children'
             elif intent.scope == 'subtree':
                 params['rsp-subtree'] = 'full'
-            logger.info(f"[MOQueryStrategy] Using partial DN: {dn} → {intent.class_name}")
+            logger.info(f'[MOQueryStrategy] Using partial DN: {dn} → {intent.class_name}')
         else:
             # Full DN: Add scope if not self
             if intent.scope != 'self':
@@ -630,7 +645,9 @@ class MOQueryStrategy(QueryStrategy):
         if intent.enable_pagination:
             params['page'] = str(intent.page)
             params['page-size'] = str(intent.page_size)
-            logger.info(f"[MOQueryStrategy] Pagination enabled: page={intent.page}, page_size={intent.page_size}")
+            logger.info(
+                f'[MOQueryStrategy] Pagination enabled: page={intent.page}, page_size={intent.page_size}'
+            )
 
         # Build URL with proper encoding
         query_url = self._build_url(base_url, params)
@@ -640,10 +657,10 @@ class MOQueryStrategy(QueryStrategy):
             'dn': dn,
             'uses_dn': True,
             'is_partial_dn': is_partial,
-            'explanation': f'DN-based query for optimal performance (DN: {dn}{"[partial]" if is_partial else ""})'
+            'explanation': f'DN-based query for optimal performance (DN: {dn}{"[partial]" if is_partial else ""})',
         }
 
-        logger.info(f"[MOQueryStrategy] Generated: {query_url}")
+        logger.info(f'[MOQueryStrategy] Generated: {query_url}')
 
         return query_url, metadata
 
@@ -691,7 +708,7 @@ class MOQueryStrategy(QueryStrategy):
                 continue
 
             # Build expression
-            attr = f"{intent.class_name}.{prop}"
+            attr = f'{intent.class_name}.{prop}'
             expr = self._build_operator_expression(operator, attr, value)
 
             if expr:
@@ -703,7 +720,7 @@ class MOQueryStrategy(QueryStrategy):
         if len(filter_exprs) == 1:
             return filter_exprs[0]
 
-        return f"and({','.join(filter_exprs)})"
+        return f'and({",".join(filter_exprs)})'
 
     def _build_operator_expression(self, operator: str, attr: str, value: str) -> Optional[str]:
         """Build filter expression for an operator
@@ -742,7 +759,7 @@ class MOQueryStrategy(QueryStrategy):
         # IMPORTANT: APIC requires parentheses to be encoded in query strings
         # Do NOT use safe='(),' - encode everything for APIC compatibility
         query_string = urlencode(params)
-        return f"{base}?{query_string}"
+        return f'{base}?{query_string}'
 
 
 class ClassQueryStrategy(QueryStrategy):
@@ -813,7 +830,7 @@ class ClassQueryStrategy(QueryStrategy):
 
         if categories:
             result = ','.join(categories)
-            logger.info(f"[ClassQueryStrategy] rsp-subtree-include: {result}")
+            logger.info(f'[ClassQueryStrategy] rsp-subtree-include: {result}')
             return result
 
         return None
@@ -821,21 +838,27 @@ class ClassQueryStrategy(QueryStrategy):
     def execute(self, intent: QueryIntent) -> Tuple[str, dict]:
         """Execute class query"""
         # DEBUG: Log full class chain structure
-        logger.info(f"[ClassQueryStrategy] Class chain length: {len(intent.class_chain)}")
+        logger.info(f'[ClassQueryStrategy] Class chain length: {len(intent.class_chain)}')
         for idx, item in enumerate(intent.class_chain):
             class_name = item.get('class_name')
             filter_nodes = item.get('filter_nodes', [])
-            logger.info(f"[ClassQueryStrategy] Chain[{idx}]: class={class_name}, num_filters={len(filter_nodes)}")
+            logger.info(
+                f'[ClassQueryStrategy] Chain[{idx}]: class={class_name}, num_filters={len(filter_nodes)}'
+            )
             for f_idx, f_node in enumerate(filter_nodes):
                 f_data = f_node.get('data', {})
-                logger.info(f"[ClassQueryStrategy]   Filter[{f_idx}]: type={f_data.get('filterType')}, prop={f_data.get('property')}, value={f_data.get('value')}")
+                logger.info(
+                    f'[ClassQueryStrategy]   Filter[{f_idx}]: type={f_data.get("filterType")}, prop={f_data.get("property")}, value={f_data.get("value")}'
+                )
 
         # For multi-class chains, use root class as base URL
         # For single class, use target class
         if len(intent.class_chain) > 1:
             root_class = intent.class_chain[0].get('class_name')
             base_url = f'/api/class/{root_class}.json'
-            logger.info(f"[ClassQueryStrategy] Multi-class chain detected, using root class: {root_class}")
+            logger.info(
+                f'[ClassQueryStrategy] Multi-class chain detected, using root class: {root_class}'
+            )
         else:
             base_url = f'/api/class/{intent.class_name}.json'
 
@@ -862,7 +885,9 @@ class ClassQueryStrategy(QueryStrategy):
             dn_filter = self._build_dn_wildcard_filter(intent)
             if dn_filter:
                 if 'query-target-filter' in params:
-                    params['query-target-filter'] = f"and({params['query-target-filter']},{dn_filter})"
+                    params['query-target-filter'] = (
+                        f'and({params["query-target-filter"]},{dn_filter})'
+                    )
                 else:
                     params['query-target-filter'] = dn_filter
 
@@ -877,7 +902,9 @@ class ClassQueryStrategy(QueryStrategy):
                 params['rsp-subtree-class'] = ','.join(child_classes)
                 if child_filter:
                     params['rsp-subtree-filter'] = child_filter
-                logger.info(f"[ClassQueryStrategy] Added child classes: {child_classes}, filter: {child_filter}")
+                logger.info(
+                    f'[ClassQueryStrategy] Added child classes: {child_classes}, filter: {child_filter}'
+                )
 
         # Add supplemental data (monitoring, health, faults, etc.)
         rsp_subtree_include = self._build_rsp_subtree_include(intent)
@@ -892,17 +919,19 @@ class ClassQueryStrategy(QueryStrategy):
         if intent.enable_pagination:
             params['page'] = str(intent.page)
             params['page-size'] = str(intent.page_size)
-            logger.info(f"[ClassQueryStrategy] Pagination enabled: page={intent.page}, page_size={intent.page_size}")
+            logger.info(
+                f'[ClassQueryStrategy] Pagination enabled: page={intent.page}, page_size={intent.page_size}'
+            )
 
         query_url = self._build_url(base_url, params)
 
         metadata = {
             'strategy': 'Class',
             'uses_dn': False,
-            'explanation': 'Class-based query (DN could not be constructed or has wildcards)'
+            'explanation': 'Class-based query (DN could not be constructed or has wildcards)',
         }
 
-        logger.info(f"[ClassQueryStrategy] Generated: {query_url}")
+        logger.info(f'[ClassQueryStrategy] Generated: {query_url}')
 
         return query_url, metadata
 
@@ -930,14 +959,20 @@ class ClassQueryStrategy(QueryStrategy):
             filter_nodes = root_item.get('filter_nodes', [])
             class_name = root_item.get('class_name')
 
-            logger.info(f"[ClassQueryStrategy._build_filter_expression] Root class: {class_name}, filter_nodes count: {len(filter_nodes)}")
+            logger.info(
+                f'[ClassQueryStrategy._build_filter_expression] Root class: {class_name}, filter_nodes count: {len(filter_nodes)}'
+            )
 
             if not filter_nodes:
-                logger.info("[ClassQueryStrategy._build_filter_expression] No filters for root class")
+                logger.info(
+                    '[ClassQueryStrategy._build_filter_expression] No filters for root class'
+                )
                 return None
 
             filters = filter_nodes
-            logger.info(f"[ClassQueryStrategy._build_filter_expression] Building {len(filters)} filter(s) for root class: {class_name}")
+            logger.info(
+                f'[ClassQueryStrategy._build_filter_expression] Building {len(filters)} filter(s) for root class: {class_name}'
+            )
         else:
             # Single class: use target node filters
             filters = intent.get_filters_for_node(intent.target_node['id'])
@@ -961,7 +996,7 @@ class ClassQueryStrategy(QueryStrategy):
 
                 # IMPORTANT: APIC query-target-filter REQUIRES class prefix
                 # Use className.property format (e.g., "l1PhysIf.adminSt")
-                full_prop = f"{class_name}.{prop}"
+                full_prop = f'{class_name}.{prop}'
                 expr = MOQueryStrategy()._build_operator_expression(operator, full_prop, value)
 
                 if expr:
@@ -1008,7 +1043,7 @@ class ClassQueryStrategy(QueryStrategy):
         if len(filter_exprs) == 1:
             return filter_exprs[0]
 
-        return f"and({','.join(filter_exprs)})"
+        return f'and({",".join(filter_exprs)})'
 
     def _build_pattern_exprs(self, class_name: str, patterns: list) -> List[str]:
         """Build APIC filter expressions from a list of pattern dicts."""
@@ -1023,15 +1058,15 @@ class ClassQueryStrategy(QueryStrategy):
             if not prop or pattern is None:
                 continue
 
-            full_prop = f"{class_name}.{prop}"
+            full_prop = f'{class_name}.{prop}'
 
             if operator == 'wcard':
                 if match_type == 'starts':
-                    pattern = f"{pattern}.*"
+                    pattern = f'{pattern}.*'
                 elif match_type == 'ends':
-                    pattern = f".*{pattern}"
+                    pattern = f'.*{pattern}'
                 elif match_type == 'contains':
-                    pattern = f".*{pattern}.*"
+                    pattern = f'.*{pattern}.*'
                 expr = f'wcard({full_prop},"{pattern}")'
             else:
                 expr = MOQueryStrategy()._build_operator_expression(operator, full_prop, pattern)
@@ -1135,7 +1170,9 @@ class ClassQueryStrategy(QueryStrategy):
             - child_class_names: List of child class names for rsp-subtree-class
             - filter_expression: Combined filter for rsp-subtree-filter
         """
-        logger.info(f"[ClassQueryStrategy._build_child_class_query] Processing child classes from chain (total items: {len(intent.class_chain)})")
+        logger.info(
+            f'[ClassQueryStrategy._build_child_class_query] Processing child classes from chain (total items: {len(intent.class_chain)})'
+        )
         child_classes = []
         child_filters = []
 
@@ -1143,7 +1180,9 @@ class ClassQueryStrategy(QueryStrategy):
         for idx, item in enumerate(intent.class_chain[1:], start=1):
             class_name = item.get('class_name')
             filter_nodes = item.get('filter_nodes', [])
-            logger.info(f"[ClassQueryStrategy._build_child_class_query] Child[{idx}]: class={class_name}, filter_nodes count={len(filter_nodes)}")
+            logger.info(
+                f'[ClassQueryStrategy._build_child_class_query] Child[{idx}]: class={class_name}, filter_nodes count={len(filter_nodes)}'
+            )
 
             if not class_name:
                 continue
@@ -1163,8 +1202,10 @@ class ClassQueryStrategy(QueryStrategy):
                     if prop and value is not None:
                         # IMPORTANT: APIC rsp-subtree-filter REQUIRES class prefix
                         # Use className.property format (e.g., "ethpmPhysIf.operSt")
-                        full_prop = f"{class_name}.{prop}"
-                        expr = MOQueryStrategy()._build_operator_expression(operator, full_prop, value)
+                        full_prop = f'{class_name}.{prop}'
+                        expr = MOQueryStrategy()._build_operator_expression(
+                            operator, full_prop, value
+                        )
                         if expr:
                             child_filters.append(expr)
 
@@ -1183,16 +1224,16 @@ class ClassQueryStrategy(QueryStrategy):
                             continue
 
                         # IMPORTANT: APIC rsp-subtree-filter REQUIRES class prefix
-                        full_prop = f"{class_name}.{prop}"
+                        full_prop = f'{class_name}.{prop}'
 
                         # For wcard, apply match type patterns
                         if operator == 'wcard':
                             if match_type == 'starts':
-                                pattern = f"{pattern}.*"
+                                pattern = f'{pattern}.*'
                             elif match_type == 'ends':
-                                pattern = f".*{pattern}"
+                                pattern = f'.*{pattern}'
                             elif match_type == 'contains':
-                                pattern = f".*{pattern}.*"
+                                pattern = f'.*{pattern}.*'
                             pattern_exprs.append(f'wcard({full_prop},"{pattern}")')
                         else:
                             # Other operators (eq, ne, etc.)
@@ -1223,7 +1264,7 @@ class ClassQueryStrategy(QueryStrategy):
         # IMPORTANT: APIC requires parentheses to be encoded in query strings
         # Do NOT use safe='(),' - encode everything for APIC compatibility
         query_string = urlencode(params)
-        return f"{base}?{query_string}"
+        return f'{base}?{query_string}'
 
 
 class NodeClassQueryStrategy(QueryStrategy):
@@ -1286,7 +1327,7 @@ class QueryExecutor:
         best_strategy = self._select_best_strategy(intent)
 
         if not best_strategy:
-            raise ValueError("No suitable query strategy found")
+            raise ValueError('No suitable query strategy found')
 
         url, metadata = best_strategy.execute(intent)
 
@@ -1311,8 +1352,9 @@ class QueryExecutor:
         # Select strategy with lowest cost
         best_strategy, best_cost = min(candidates, key=lambda x: x[1])
 
-        logger.info(f"[QueryExecutor] Selected {best_strategy.__class__.__name__} "
-                   f"(estimated {best_cost}ms)")
+        logger.info(
+            f'[QueryExecutor] Selected {best_strategy.__class__.__name__} (estimated {best_cost}ms)'
+        )
 
         return best_strategy
 
@@ -1344,23 +1386,20 @@ class QueryExecutor:
             # Suggest using exact match instead of wildcard
             filters = intent.get_filters_for_node(intent.target_node['id'])
             has_wildcard = any(
-                f.get('data', {}).get('operator') in ['wcard', 'contains']
-                for f in filters
+                f.get('data', {}).get('operator') in ['wcard', 'contains'] for f in filters
             )
 
             if has_wildcard:
                 suggestions.append(
-                    "Using wildcard filters. Consider using exact matches (eq) for 10x faster queries."
+                    'Using wildcard filters. Consider using exact matches (eq) for 10x faster queries.'
                 )
 
             if not filters:
                 suggestions.append(
-                    "No filters applied. Add filters to improve performance and reduce result size."
+                    'No filters applied. Add filters to improve performance and reduce result size.'
                 )
 
         if isinstance(strategy, MOQueryStrategy):
-            suggestions.append(
-                "Great! Using DN-based query for optimal performance."
-            )
+            suggestions.append('Great! Using DN-based query for optimal performance.')
 
         return suggestions

@@ -22,9 +22,16 @@ SOURCE_PREF_MAP = {
 }
 
 
-def create_notification(user, type, title, message, source=None,
-                        related_task_id=None, related_execution_id=None,
-                        metadata=None):
+def create_notification(
+    user,
+    type,
+    title,
+    message,
+    source=None,
+    related_task_id=None,
+    related_execution_id=None,
+    metadata=None,
+):
     """Create an in-app notification for a user.
 
     Every app should use this function rather than Notification.objects.create()
@@ -45,8 +52,12 @@ def create_notification(user, type, title, message, source=None,
         # Digest buffering — buffer instead of creating immediately
         if prefs.digest_enabled and source:
             NotificationBuffer.objects.create(
-                user=user, source=source, type=type,
-                title=title, message=message, metadata=metadata or {},
+                user=user,
+                source=source,
+                type=type,
+                title=title,
+                message=message,
+                metadata=metadata or {},
             )
             return None
 
@@ -74,8 +85,10 @@ def create_notification(user, type, title, message, source=None,
 
         # Email delivery hook — dispatched asynchronously when enabled
         from django.conf import settings as django_settings
+
         if getattr(django_settings, 'NOTIFICATION_EMAIL_ENABLED', False) and prefs.email_enabled:
             from notifications.tasks import send_notification_email
+
             send_notification_email.delay(str(notification.id))
 
         return notification

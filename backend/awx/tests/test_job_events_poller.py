@@ -27,7 +27,7 @@ def mock_execution(db):
     user = User.objects.create_user(
         username=f'testuser_{unique_id}',
         email=f'test_{unique_id}@example.com',
-        password='testpass123'
+        password='testpass123',
     )
 
     # Create AWX connection
@@ -37,7 +37,7 @@ def mock_execution(db):
         username='admin',
         verify_ssl=False,
         timeout=30,
-        created_by=user
+        created_by=user,
     )
     awx_conn.set_token('test-token-123')
     awx_conn.save()
@@ -48,7 +48,7 @@ def mock_execution(db):
         awx_connection=awx_conn,
         awx_template_id=100,
         awx_type='job',
-        created_by=user
+        created_by=user,
     )
 
     # Create request
@@ -58,7 +58,7 @@ def mock_execution(db):
         awx_connection=awx_conn,
         requested_by=user,
         status='approved',
-        input_data=[]
+        input_data=[],
     )
 
     # Create execution
@@ -68,7 +68,7 @@ def mock_execution(db):
         awx_job_id='12345',
         awx_job_url='https://awx.example.com/jobs/12345',
         status='running',
-        execution_mode='bulk'
+        execution_mode='bulk',
     )
 
     return execution
@@ -99,9 +99,12 @@ class TestJobEventsPollerInitialization:
 
     def test_init_success(self, mock_execution, mock_awx_client, mock_publisher):
         """Test successful initialization"""
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id), poll_interval=2.0)
 
             assert poller.execution_id == str(mock_execution.id)
@@ -130,15 +133,15 @@ class TestJobEventsPollerInitialization:
         mock_execution.awx_job_id = None
         mock_execution.save()
 
-        with pytest.raises(ValueError, match="has no AWX job ID"):
+        with pytest.raises(ValueError, match='has no AWX job ID'):
             JobEventsPoller(str(mock_execution.id))
 
     def test_init_awx_client_error(self, mock_execution):
         """Test initialization when AWXClient configuration fails"""
         with patch('awx.services.job_events_poller.AWXClient') as mock_client_class:
-            mock_client_class.return_value.configure.side_effect = Exception("Connection failed")
+            mock_client_class.return_value.configure.side_effect = Exception('Connection failed')
 
-            with pytest.raises(Exception, match="Connection failed"):
+            with pytest.raises(Exception, match='Connection failed'):
                 JobEventsPoller(str(mock_execution.id))
 
 
@@ -151,9 +154,12 @@ class TestJobEventsPollerIsJobRunning:
         mock_response.json.return_value = {'status': 'running'}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             result = poller._is_job_running()
 
@@ -166,9 +172,12 @@ class TestJobEventsPollerIsJobRunning:
         mock_response.json.return_value = {'status': 'pending'}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             result = poller._is_job_running()
 
@@ -180,9 +189,12 @@ class TestJobEventsPollerIsJobRunning:
         mock_response.json.return_value = {'status': 'successful'}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             result = poller._is_job_running()
 
@@ -194,21 +206,29 @@ class TestJobEventsPollerIsJobRunning:
         mock_response.json.return_value = {'status': 'failed'}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             result = poller._is_job_running()
 
             assert result is False
 
-    def test_is_job_running_api_error_assumes_running(self, mock_execution, mock_awx_client, mock_publisher):
+    def test_is_job_running_api_error_assumes_running(
+        self, mock_execution, mock_awx_client, mock_publisher
+    ):
         """Test when API call fails - should assume job is still running"""
-        mock_awx_client.session.get.side_effect = RequestException("Network error")
+        mock_awx_client.session.get.side_effect = RequestException('Network error')
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             result = poller._is_job_running()
 
@@ -227,24 +247,27 @@ class TestJobEventsPollerFetchAndPublish:
                 'event': 'playbook_on_start',
                 'stdout': 'Starting playbook',
                 'stderr': '',
-                'created': '2026-01-02T00:00:00Z'
+                'created': '2026-01-02T00:00:00Z',
             },
             {
                 'counter': 2,
                 'event': 'runner_on_ok',
                 'stdout': 'Task completed',
                 'stderr': '',
-                'created': '2026-01-02T00:00:01Z'
-            }
+                'created': '2026-01-02T00:00:01Z',
+            },
         ]
 
         mock_response = Mock()
         mock_response.json.return_value = {'results': mock_events}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             count = poller._fetch_and_publish_events()
 
@@ -263,9 +286,12 @@ class TestJobEventsPollerFetchAndPublish:
         mock_response.json.return_value = {'results': []}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             count = poller._fetch_and_publish_events()
 
@@ -274,11 +300,14 @@ class TestJobEventsPollerFetchAndPublish:
 
     def test_fetch_api_error_returns_zero(self, mock_execution, mock_awx_client, mock_publisher):
         """Test when API call fails"""
-        mock_awx_client.session.get.side_effect = RequestException("API error")
+        mock_awx_client.session.get.side_effect = RequestException('API error')
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             count = poller._fetch_and_publish_events()
 
@@ -287,18 +316,39 @@ class TestJobEventsPollerFetchAndPublish:
     def test_fetch_updates_last_counter(self, mock_execution, mock_awx_client, mock_publisher):
         """Test that last_counter is updated correctly"""
         mock_events = [
-            {'counter': 10, 'event': 'test', 'stdout': 'test', 'stderr': '', 'created': '2026-01-02T00:00:00Z'},
-            {'counter': 5, 'event': 'test', 'stdout': 'test', 'stderr': '', 'created': '2026-01-02T00:00:01Z'},  # Out of order
-            {'counter': 15, 'event': 'test', 'stdout': 'test', 'stderr': '', 'created': '2026-01-02T00:00:02Z'}
+            {
+                'counter': 10,
+                'event': 'test',
+                'stdout': 'test',
+                'stderr': '',
+                'created': '2026-01-02T00:00:00Z',
+            },
+            {
+                'counter': 5,
+                'event': 'test',
+                'stdout': 'test',
+                'stderr': '',
+                'created': '2026-01-02T00:00:01Z',
+            },  # Out of order
+            {
+                'counter': 15,
+                'event': 'test',
+                'stdout': 'test',
+                'stderr': '',
+                'created': '2026-01-02T00:00:02Z',
+            },
         ]
 
         mock_response = Mock()
         mock_response.json.return_value = {'results': mock_events}
         mock_awx_client.session.get.return_value = mock_response
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller._fetch_and_publish_events()
 
@@ -320,12 +370,15 @@ class TestJobEventsPollerPublishEvent:
             'task': 'Setup',
             'play': 'Main',
             'role': '',
-            'host_name': 'localhost'
+            'host_name': 'localhost',
         }
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller._publish_event(event)
 
@@ -344,12 +397,15 @@ class TestJobEventsPollerPublishEvent:
             'event': 'runner_on_failed',
             'stdout': '',
             'stderr': 'Error occurred',
-            'created': '2026-01-02T00:00:00Z'
+            'created': '2026-01-02T00:00:00Z',
         }
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller._publish_event(event)
 
@@ -357,38 +413,48 @@ class TestJobEventsPollerPublishEvent:
             call_kwargs = mock_publisher.publish_event.call_args.kwargs
             assert call_kwargs['event_data']['stderr'] == 'Error occurred'
 
-    def test_publish_significant_event_without_output(self, mock_execution, mock_awx_client, mock_publisher):
+    def test_publish_significant_event_without_output(
+        self, mock_execution, mock_awx_client, mock_publisher
+    ):
         """Test publishing significant event even without stdout/stderr"""
         event = {
             'counter': 1,
             'event': 'playbook_on_start',
             'stdout': '',
             'stderr': '',
-            'created': '2026-01-02T00:00:00Z'
+            'created': '2026-01-02T00:00:00Z',
         }
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller._publish_event(event)
 
             # Significant events should be published even without output
             mock_publisher.publish_event.assert_called_once()
 
-    def test_skip_insignificant_event_without_output(self, mock_execution, mock_awx_client, mock_publisher):
+    def test_skip_insignificant_event_without_output(
+        self, mock_execution, mock_awx_client, mock_publisher
+    ):
         """Test skipping insignificant events without output"""
         event = {
             'counter': 1,
             'event': 'runner_item_on_ok',  # Not in significant_events list
             'stdout': '',
             'stderr': '',
-            'created': '2026-01-02T00:00:00Z'
+            'created': '2026-01-02T00:00:00Z',
         }
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller._publish_event(event)
 
@@ -402,15 +468,18 @@ class TestJobEventsPollerPublishEvent:
             'event': 'runner_on_ok',
             'stdout': 'Test',
             'stderr': '',
-            'created': '2026-01-02T00:00:00Z'
+            'created': '2026-01-02T00:00:00Z',
         }
 
         # Simulate publisher failure
-        mock_publisher.publish_event.return_value = (False, "RabbitMQ connection failed")
+        mock_publisher.publish_event.return_value = (False, 'RabbitMQ connection failed')
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             # Should not raise exception, just log error
             poller._publish_event(event)
@@ -423,9 +492,12 @@ class TestJobEventsPollerStartStop:
 
     def test_stop_sets_flag(self, mock_execution, mock_awx_client, mock_publisher):
         """Test stop() method sets should_stop flag"""
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             assert poller.should_stop is False
 
@@ -433,7 +505,9 @@ class TestJobEventsPollerStartStop:
             assert poller.should_stop is True
 
     @patch('time.sleep')  # Mock sleep to speed up test
-    def test_start_polls_until_job_finishes(self, mock_sleep, mock_execution, mock_awx_client, mock_publisher):
+    def test_start_polls_until_job_finishes(
+        self, mock_sleep, mock_execution, mock_awx_client, mock_publisher
+    ):
         """Test start() polls until job finishes"""
         # First 2 calls: job running, 3rd call: job finished
         running_response = Mock()
@@ -448,12 +522,15 @@ class TestJobEventsPollerStartStop:
             running_response,  # Second status check
             Mock(json=lambda: {'results': []}),  # Second event fetch
             finished_response,  # Third status check (job finished)
-            Mock(json=lambda: {'results': []})   # Final event fetch
+            Mock(json=lambda: {'results': []}),  # Final event fetch
         ]
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller.start()
 
@@ -461,7 +538,9 @@ class TestJobEventsPollerStartStop:
             assert poller.should_stop is True
 
     @patch('time.sleep')
-    def test_start_handles_polling_error(self, mock_sleep, mock_execution, mock_awx_client, mock_publisher):
+    def test_start_handles_polling_error(
+        self, mock_sleep, mock_execution, mock_awx_client, mock_publisher
+    ):
         """Test start() handles errors in polling loop"""
         # First call succeeds, second fails, third succeeds and finishes
         running_response = Mock()
@@ -473,16 +552,19 @@ class TestJobEventsPollerStartStop:
         mock_awx_client.session.get.side_effect = [
             running_response,
             Mock(json=lambda: {'results': []}),
-            RequestException("Network error"),  # Error in polling
+            RequestException('Network error'),  # Error in polling
             running_response,
             Mock(json=lambda: {'results': []}),
             finished_response,
-            Mock(json=lambda: {'results': []})
+            Mock(json=lambda: {'results': []}),
         ]
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller.start()
 
@@ -508,10 +590,10 @@ class TestStartJobOutputStreamingFunction:
     @patch('awx.services.job_events_poller.JobEventsPoller')
     def test_start_job_output_streaming_raises_on_error(self, mock_poller_class):
         """Test that errors are propagated"""
-        mock_poller_class.side_effect = Exception("Failed to create poller")
+        mock_poller_class.side_effect = Exception('Failed to create poller')
 
         fake_id = str(uuid.uuid4())
-        with pytest.raises(Exception, match="Failed to create poller"):
+        with pytest.raises(Exception, match='Failed to create poller'):
             start_job_output_streaming(fake_id)
 
 
@@ -525,9 +607,27 @@ class TestJobEventsPollerIntegration:
         """Test complete polling cycle from start to finish"""
         # Setup mock responses for a realistic scenario
         events = [
-            {'counter': 1, 'event': 'playbook_on_start', 'stdout': 'PLAY [Test]', 'stderr': '', 'created': '2026-01-02T00:00:00Z'},
-            {'counter': 2, 'event': 'runner_on_ok', 'stdout': 'TASK [Setup]', 'stderr': '', 'created': '2026-01-02T00:00:01Z'},
-            {'counter': 3, 'event': 'playbook_on_stats', 'stdout': 'PLAY RECAP', 'stderr': '', 'created': '2026-01-02T00:00:02Z'}
+            {
+                'counter': 1,
+                'event': 'playbook_on_start',
+                'stdout': 'PLAY [Test]',
+                'stderr': '',
+                'created': '2026-01-02T00:00:00Z',
+            },
+            {
+                'counter': 2,
+                'event': 'runner_on_ok',
+                'stdout': 'TASK [Setup]',
+                'stderr': '',
+                'created': '2026-01-02T00:00:01Z',
+            },
+            {
+                'counter': 3,
+                'event': 'playbook_on_stats',
+                'stdout': 'PLAY RECAP',
+                'stderr': '',
+                'created': '2026-01-02T00:00:02Z',
+            },
         ]
 
         call_sequence = [
@@ -536,14 +636,17 @@ class TestJobEventsPollerIntegration:
             Mock(json=lambda: {'status': 'running'}),  # Second status check
             Mock(json=lambda: {'results': [events[2]]}),  # Second fetch (1 new event)
             Mock(json=lambda: {'status': 'successful'}),  # Job finished
-            Mock(json=lambda: {'results': []})  # Final fetch (no new events)
+            Mock(json=lambda: {'results': []}),  # Final fetch (no new events)
         ]
 
         mock_awx_client.session.get.side_effect = call_sequence
 
-        with patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client), \
-             patch('awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher):
-
+        with (
+            patch('awx.services.job_events_poller.AWXClient', return_value=mock_awx_client),
+            patch(
+                'awx.services.job_events_poller.get_event_publisher', return_value=mock_publisher
+            ),
+        ):
             poller = JobEventsPoller(str(mock_execution.id))
             poller.start()
 

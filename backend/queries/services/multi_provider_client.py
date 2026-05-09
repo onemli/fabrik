@@ -50,7 +50,7 @@ class AIProviderClient(ABC):
         system: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-        json_mode: bool = True
+        json_mode: bool = True,
     ) -> Dict[str, Any]:
         """Call the provider and return {'response': <text>, ...}.
 
@@ -76,9 +76,9 @@ class OpenAIClient(AIProviderClient):
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.openai.com/v1",
-        model: str = "gpt-4o",
-        timeout: int = 60
+        base_url: str = 'https://api.openai.com/v1',
+        model: str = 'gpt-4o',
+        timeout: int = 60,
     ):
         self.api_key = api_key
         self.base_url = base_url.rstrip('/')
@@ -91,77 +91,74 @@ class OpenAIClient(AIProviderClient):
         system: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-        json_mode: bool = True
+        json_mode: bool = True,
     ) -> Dict[str, Any]:
         messages = []
 
         if system:
-            messages.append({"role": "system", "content": system})
+            messages.append({'role': 'system', 'content': system})
 
-        messages.append({"role": "user", "content": prompt})
+        messages.append({'role': 'user', 'content': prompt})
 
         payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
+            'model': self.model,
+            'messages': messages,
+            'temperature': temperature,
+            'max_tokens': max_tokens,
         }
 
         if json_mode:
-            payload["response_format"] = {"type": "json_object"}
+            payload['response_format'] = {'type': 'json_object'}
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {'Authorization': f'Bearer {self.api_key}', 'Content-Type': 'application/json'}
 
         try:
             response = requests.post(
-                f"{self.base_url}/chat/completions",
+                f'{self.base_url}/chat/completions',
                 json=payload,
                 headers=headers,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
             response.raise_for_status()
             data = response.json()
 
             # Check if response has expected structure
-            if "choices" not in data:
-                logger.error(f"[OpenAI API] Unexpected response structure: {data}")
-                error_msg = data.get("error", {}).get("message", str(data))
-                raise ValueError(f"API returned unexpected response: {error_msg}")
+            if 'choices' not in data:
+                logger.error(f'[OpenAI API] Unexpected response structure: {data}')
+                error_msg = data.get('error', {}).get('message', str(data))
+                raise ValueError(f'API returned unexpected response: {error_msg}')
 
             return {
-                "response": data["choices"][0]["message"]["content"],
-                "usage": data.get("usage", {}),
-                "model": data.get("model", self.model)
+                'response': data['choices'][0]['message']['content'],
+                'usage': data.get('usage', {}),
+                'model': data.get('model', self.model),
             }
 
         except requests.Timeout:
-            raise TimeoutError(f"Request timed out after {self.timeout}s")
+            raise TimeoutError(f'Request timed out after {self.timeout}s')
         except requests.HTTPError as e:
-            error_detail = ""
+            error_detail = ''
             try:
-                error_detail = e.response.json().get("error", {}).get("message", "")
+                error_detail = e.response.json().get('error', {}).get('message', '')
             except Exception:
                 pass
-            raise ValueError(f"API error: {e.response.status_code} - {error_detail or str(e)}")
+            raise ValueError(f'API error: {e.response.status_code} - {error_detail or str(e)}')
         except requests.RequestException as e:
-            raise ConnectionError(f"Connection error: {e}")
+            raise ConnectionError(f'Connection error: {e}')
 
     def test_connection(self) -> tuple:
         try:
             response = requests.get(
-                f"{self.base_url}/models",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                timeout=10
+                f'{self.base_url}/models',
+                headers={'Authorization': f'Bearer {self.api_key}'},
+                timeout=10,
             )
             if response.status_code == 200:
-                return True, "Connection successful"
+                return True, 'Connection successful'
             elif response.status_code == 401:
-                return False, "Invalid API key"
+                return False, 'Invalid API key'
             else:
-                return False, f"HTTP {response.status_code}"
+                return False, f'HTTP {response.status_code}'
         except Exception as e:
             return False, str(e)
 
@@ -183,8 +180,8 @@ class AzureOpenAIClient(AIProviderClient):
         api_key: str,
         base_url: str,
         deployment_name: str,
-        api_version: str = "2024-02-15-preview",
-        timeout: int = 60
+        api_version: str = '2024-02-15-preview',
+        timeout: int = 60,
     ):
         self.api_key = api_key
         self.base_url = base_url.rstrip('/')
@@ -198,74 +195,63 @@ class AzureOpenAIClient(AIProviderClient):
         system: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-        json_mode: bool = True
+        json_mode: bool = True,
     ) -> Dict[str, Any]:
         messages = []
 
         if system:
-            messages.append({"role": "system", "content": system})
+            messages.append({'role': 'system', 'content': system})
 
-        messages.append({"role": "user", "content": prompt})
+        messages.append({'role': 'user', 'content': prompt})
 
         payload = {
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
+            'messages': messages,
+            'temperature': temperature,
+            'max_tokens': max_tokens,
         }
 
         if json_mode:
-            payload["response_format"] = {"type": "json_object"}
+            payload['response_format'] = {'type': 'json_object'}
 
-        headers = {
-            "api-key": self.api_key,
-            "Content-Type": "application/json"
-        }
+        headers = {'api-key': self.api_key, 'Content-Type': 'application/json'}
 
-        url = f"{self.base_url}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
+        url = f'{self.base_url}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}'
 
         try:
-            response = requests.post(
-                url,
-                json=payload,
-                headers=headers,
-                timeout=self.timeout
-            )
+            response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
 
             return {
-                "response": data["choices"][0]["message"]["content"],
-                "usage": data.get("usage", {}),
-                "model": self.deployment_name
+                'response': data['choices'][0]['message']['content'],
+                'usage': data.get('usage', {}),
+                'model': self.deployment_name,
             }
 
         except requests.Timeout:
-            raise TimeoutError(f"Request timed out after {self.timeout}s")
+            raise TimeoutError(f'Request timed out after {self.timeout}s')
         except requests.HTTPError as e:
-            raise ValueError(f"Azure API error: {e.response.status_code} - {e}")
+            raise ValueError(f'Azure API error: {e.response.status_code} - {e}')
         except requests.RequestException as e:
-            raise ConnectionError(f"Connection error: {e}")
+            raise ConnectionError(f'Connection error: {e}')
 
     def test_connection(self) -> tuple:
         try:
             # Azure doesn't have a simple /models endpoint, try a minimal completion
-            headers = {
-                "api-key": self.api_key,
-                "Content-Type": "application/json"
-            }
-            url = f"{self.base_url}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
+            headers = {'api-key': self.api_key, 'Content-Type': 'application/json'}
+            url = f'{self.base_url}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}'
             response = requests.post(
                 url,
-                json={"messages": [{"role": "user", "content": "hi"}], "max_tokens": 1},
+                json={'messages': [{'role': 'user', 'content': 'hi'}], 'max_tokens': 1},
                 headers=headers,
-                timeout=10
+                timeout=10,
             )
             if response.status_code == 200:
-                return True, "Connection successful"
+                return True, 'Connection successful'
             elif response.status_code == 401:
-                return False, "Invalid API key"
+                return False, 'Invalid API key'
             else:
-                return False, f"HTTP {response.status_code}"
+                return False, f'HTTP {response.status_code}'
         except Exception as e:
             return False, str(e)
 
@@ -280,14 +266,9 @@ class AnthropicClient(AIProviderClient):
     lightweight endpoint for key validation.
     """
 
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "claude-3-5-sonnet-20241022",
-        timeout: int = 60
-    ):
+    def __init__(self, api_key: str, model: str = 'claude-3-5-sonnet-20241022', timeout: int = 60):
         self.api_key = api_key
-        self.base_url = "https://api.anthropic.com"
+        self.base_url = 'https://api.anthropic.com'
         self.model = model
         self.timeout = timeout
 
@@ -297,78 +278,77 @@ class AnthropicClient(AIProviderClient):
         system: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-        json_mode: bool = True
+        json_mode: bool = True,
     ) -> Dict[str, Any]:
         payload = {
-            "model": self.model,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
+            'model': self.model,
+            'max_tokens': max_tokens,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': temperature,
         }
 
         if system:
-            payload["system"] = system
+            payload['system'] = system
 
         headers = {
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-            "Content-Type": "application/json"
+            'x-api-key': self.api_key,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json',
         }
 
         try:
             response = requests.post(
-                f"{self.base_url}/v1/messages",
-                json=payload,
-                headers=headers,
-                timeout=self.timeout
+                f'{self.base_url}/v1/messages', json=payload, headers=headers, timeout=self.timeout
             )
             response.raise_for_status()
             data = response.json()
 
-            content = data["content"][0]["text"] if data.get("content") else ""
+            content = data['content'][0]['text'] if data.get('content') else ''
 
             return {
-                "response": content,
-                "usage": data.get("usage", {}),
-                "model": data.get("model", self.model)
+                'response': content,
+                'usage': data.get('usage', {}),
+                'model': data.get('model', self.model),
             }
 
         except requests.Timeout:
-            raise TimeoutError(f"Request timed out after {self.timeout}s")
+            raise TimeoutError(f'Request timed out after {self.timeout}s')
         except requests.HTTPError as e:
-            error_detail = ""
+            error_detail = ''
             try:
-                error_detail = e.response.json().get("error", {}).get("message", "")
+                error_detail = e.response.json().get('error', {}).get('message', '')
             except Exception:
                 pass
-            raise ValueError(f"Anthropic API error: {e.response.status_code} - {error_detail or str(e)}")
+            raise ValueError(
+                f'Anthropic API error: {e.response.status_code} - {error_detail or str(e)}'
+            )
         except requests.RequestException as e:
-            raise ConnectionError(f"Connection error: {e}")
+            raise ConnectionError(f'Connection error: {e}')
 
     def test_connection(self) -> tuple:
         try:
             # Anthropic doesn't have a models endpoint, make a minimal request
             headers = {
-                "x-api-key": self.api_key,
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json"
+                'x-api-key': self.api_key,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json',
             }
             response = requests.post(
-                f"{self.base_url}/v1/messages",
+                f'{self.base_url}/v1/messages',
                 json={
-                    "model": self.model,
-                    "max_tokens": 1,
-                    "messages": [{"role": "user", "content": "hi"}]
+                    'model': self.model,
+                    'max_tokens': 1,
+                    'messages': [{'role': 'user', 'content': 'hi'}],
                 },
                 headers=headers,
-                timeout=10
+                timeout=10,
             )
             if response.status_code == 200:
-                return True, "Connection successful"
+                return True, 'Connection successful'
             elif response.status_code == 401:
-                return False, "Invalid API key"
+                return False, 'Invalid API key'
             else:
-                return False, f"HTTP {response.status_code}"
+                return False, f'HTTP {response.status_code}'
         except Exception as e:
             return False, str(e)
 
@@ -383,14 +363,9 @@ class GoogleAIClient(AIProviderClient):
       - API key goes in the URL, not in a header
     """
 
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "gemini-2.5-flash",
-        timeout: int = 60
-    ):
+    def __init__(self, api_key: str, model: str = 'gemini-2.5-flash', timeout: int = 60):
         self.api_key = api_key
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+        self.base_url = 'https://generativelanguage.googleapis.com/v1beta'
         self.model = model
         self.timeout = timeout
 
@@ -400,68 +375,62 @@ class GoogleAIClient(AIProviderClient):
         system: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-        json_mode: bool = True
+        json_mode: bool = True,
     ) -> Dict[str, Any]:
         contents = []
 
         if system:
-            prompt = f"{system}\n\n{prompt}"
+            prompt = f'{system}\n\n{prompt}'
 
-        contents.append({
-            "parts": [{"text": prompt}]
-        })
+        contents.append({'parts': [{'text': prompt}]})
 
         payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens,
-            }
+            'contents': contents,
+            'generationConfig': {
+                'temperature': temperature,
+                'maxOutputTokens': max_tokens,
+            },
         }
 
         if json_mode:
-            payload["generationConfig"]["responseMimeType"] = "application/json"
+            payload['generationConfig']['responseMimeType'] = 'application/json'
 
-        url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
+        url = f'{self.base_url}/models/{self.model}:generateContent?key={self.api_key}'
 
         try:
-            response = requests.post(
-                url,
-                json=payload,
-                timeout=self.timeout
-            )
+            response = requests.post(url, json=payload, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
 
-            content = ""
-            if data.get("candidates"):
-                parts = data["candidates"][0].get("content", {}).get("parts", [])
+            content = ''
+            if data.get('candidates'):
+                parts = data['candidates'][0].get('content', {}).get('parts', [])
                 if parts:
-                    content = parts[0].get("text", "")
+                    content = parts[0].get('text', '')
 
             return {
-                "response": content,
-                "usage": data.get("usageMetadata", {}),
-                "model": self.model
+                'response': content,
+                'usage': data.get('usageMetadata', {}),
+                'model': self.model,
             }
 
         except requests.Timeout:
-            raise TimeoutError(f"Request timed out after {self.timeout}s")
+            raise TimeoutError(f'Request timed out after {self.timeout}s')
         except requests.HTTPError as e:
-            raise ValueError(f"Google AI API error: {e.response.status_code} - {e}")
+            raise ValueError(f'Google AI API error: {e.response.status_code} - {e}')
         except requests.RequestException as e:
-            raise ConnectionError(f"Connection error: {e}")
+            raise ConnectionError(f'Connection error: {e}')
 
     def test_connection(self) -> tuple:
         try:
-            url = f"{self.base_url}/models?key={self.api_key}"
+            url = f'{self.base_url}/models?key={self.api_key}'
             response = requests.get(url, timeout=10)
             if response.status_code == 200:
-                return True, "Connection successful"
+                return True, 'Connection successful'
             elif response.status_code == 401 or response.status_code == 403:
-                return False, "Invalid API key"
+                return False, 'Invalid API key'
             else:
-                return False, f"HTTP {response.status_code}"
+                return False, f'HTTP {response.status_code}'
         except Exception as e:
             return False, str(e)
 
@@ -476,10 +445,7 @@ class OllamaClient(AIProviderClient):
     """
 
     def __init__(
-        self,
-        base_url: str = "http://localhost:11434",
-        model: str = "phi3:mini",
-        timeout: int = 120
+        self, base_url: str = 'http://localhost:11434', model: str = 'phi3:mini', timeout: int = 120
     ):
         self.base_url = base_url.rstrip('/')
         self.model = model
@@ -491,57 +457,52 @@ class OllamaClient(AIProviderClient):
         system: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-        json_mode: bool = True
+        json_mode: bool = True,
     ) -> Dict[str, Any]:
         payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": max_tokens
-            }
+            'model': self.model,
+            'prompt': prompt,
+            'stream': False,
+            'options': {'temperature': temperature, 'num_predict': max_tokens},
         }
 
         if system:
-            payload["system"] = system
+            payload['system'] = system
 
         if json_mode:
-            payload["format"] = "json"
+            payload['format'] = 'json'
 
         try:
             response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
-                timeout=self.timeout
+                f'{self.base_url}/api/generate', json=payload, timeout=self.timeout
             )
             response.raise_for_status()
             data = response.json()
 
-            return {
-                "response": data.get("response", ""),
-                "model": data.get("model", self.model)
-            }
+            return {'response': data.get('response', ''), 'model': data.get('model', self.model)}
 
         except requests.Timeout:
-            raise TimeoutError(f"Request timed out after {self.timeout}s")
+            raise TimeoutError(f'Request timed out after {self.timeout}s')
         except requests.HTTPError as e:
-            raise ValueError(f"Ollama API error: {e.response.status_code} - {e}")
+            raise ValueError(f'Ollama API error: {e.response.status_code} - {e}')
         except requests.RequestException as e:
-            raise ConnectionError(f"Connection error: {e}")
+            raise ConnectionError(f'Connection error: {e}')
 
     def test_connection(self) -> tuple:
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
+            response = requests.get(f'{self.base_url}/api/tags', timeout=5)
             if response.status_code == 200:
-                models = response.json().get("models", [])
-                model_names = [m["name"] for m in models]
+                models = response.json().get('models', [])
+                model_names = [m['name'] for m in models]
                 if self.model in model_names:
                     return True, f"Connected. Model '{self.model}' available."
                 else:
-                    return True, f"Connected but model '{self.model}' not found. Available: {model_names}"
+                    return (
+                        True,
+                        f"Connected but model '{self.model}' not found. Available: {model_names}",
+                    )
             else:
-                return False, f"HTTP {response.status_code}"
+                return False, f'HTTP {response.status_code}'
         except Exception as e:
             return False, str(e)
 
@@ -557,57 +518,36 @@ def create_client_from_provider(provider_config) -> AIProviderClient:
     model = provider_config.get_default_model()
     base_url = provider_config.get_api_base_url()
 
-    logger.info(f"[MultiProvider] Creating client for provider: {provider}, model: {model}")
+    logger.info(f'[MultiProvider] Creating client for provider: {provider}, model: {model}')
 
     if provider == 'openai':
-        return OpenAIClient(
-            api_key=api_key,
-            base_url=base_url,
-            model=model
-        )
+        return OpenAIClient(api_key=api_key, base_url=base_url, model=model)
 
     elif provider == 'azure_openai':
         return AzureOpenAIClient(
             api_key=api_key,
             base_url=base_url,
             deployment_name=provider_config.azure_deployment_name,
-            api_version=provider_config.azure_api_version or "2024-02-15-preview"
+            api_version=provider_config.azure_api_version or '2024-02-15-preview',
         )
 
     elif provider == 'anthropic':
-        return AnthropicClient(
-            api_key=api_key,
-            model=model
-        )
+        return AnthropicClient(api_key=api_key, model=model)
 
     elif provider == 'groq':
-        return OpenAIClient(
-            api_key=api_key,
-            base_url="https://api.groq.com/openai/v1",
-            model=model
-        )
+        return OpenAIClient(api_key=api_key, base_url='https://api.groq.com/openai/v1', model=model)
 
     elif provider == 'openrouter':
-        return OpenAIClient(
-            api_key=api_key,
-            base_url="https://openrouter.ai/api/v1",
-            model=model
-        )
+        return OpenAIClient(api_key=api_key, base_url='https://openrouter.ai/api/v1', model=model)
 
     elif provider == 'google':
-        return GoogleAIClient(
-            api_key=api_key,
-            model=model
-        )
+        return GoogleAIClient(api_key=api_key, model=model)
 
     elif provider == 'ollama':
-        return OllamaClient(
-            base_url=base_url or "http://localhost:11434",
-            model=model
-        )
+        return OllamaClient(base_url=base_url or 'http://localhost:11434', model=model)
 
     else:
-        raise ValueError(f"Unknown provider: {provider}")
+        raise ValueError(f'Unknown provider: {provider}')
 
 
 def get_client_for_user(user) -> AIProviderClient:
@@ -625,9 +565,8 @@ def get_client_for_user(user) -> AIProviderClient:
         return create_client_from_provider(provider_config)
     except UserAIProvider.DoesNotExist:
         # Fallback to global Ollama settings
-        logger.info(f"[MultiProvider] No provider for user {user.username}, falling back to global settings")
-        settings = AIQueryBuilderSettings.get_settings()
-        return OllamaClient(
-            base_url=settings.ollama_url,
-            model=settings.query_builder_model
+        logger.info(
+            f'[MultiProvider] No provider for user {user.username}, falling back to global settings'
         )
+        settings = AIQueryBuilderSettings.get_settings()
+        return OllamaClient(base_url=settings.ollama_url, model=settings.query_builder_model)

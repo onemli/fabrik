@@ -12,6 +12,7 @@ from .template import AutomationTemplateDetailSerializer
 
 class AutomationRequestListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for request lists"""
+
     template_name = serializers.CharField(source='template.name', read_only=True)
     template_category = serializers.CharField(source='template.category', read_only=True)
     requested_by = UserSerializer(read_only=True)
@@ -25,26 +26,45 @@ class AutomationRequestListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationRequest
         fields = [
-            'id', 'title', 'description', 'status',
-            'template', 'template_name', 'template_category',
-            'awx_connection', 'awx_connection_name',
-            'target_apic', 'target_apic_name',
-            'awx_credential_id', 'awx_credential_name',
+            'id',
+            'title',
+            'description',
+            'status',
+            'template',
+            'template_name',
+            'template_category',
+            'awx_connection',
+            'awx_connection_name',
+            'target_apic',
+            'target_apic_name',
+            'awx_credential_id',
+            'awx_credential_name',
             'input_data',
-            'requested_by', 'requested_at',
-            'awx_job_id', 'launch_error',
-            'check_mode', 'scheduled_for',
-            'approved_by', 'approved_at', 'rejection_reason',
-            'created_at', 'updated_at',
+            'requested_by',
+            'requested_at',
+            'awx_job_id',
+            'launch_error',
+            'check_mode',
+            'scheduled_for',
+            'approved_by',
+            'approved_at',
+            'rejection_reason',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'requested_by', 'requested_at',
-            'awx_job_id', 'created_at', 'updated_at',
+            'id',
+            'requested_by',
+            'requested_at',
+            'awx_job_id',
+            'created_at',
+            'updated_at',
         ]
 
 
 class AutomationRequestDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer with full data"""
+
     template = AutomationTemplateDetailSerializer(read_only=True)
     awx_connection = AWXConnectionDetailSerializer(read_only=True)
     requested_by = UserSerializer(read_only=True)
@@ -60,23 +80,44 @@ class AutomationRequestDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationRequest
         fields = [
-            'id', 'title', 'description', 'status',
-            'template', 'awx_connection', 'target_apic',
-            'awx_credential_id', 'awx_credential_name',
-            'input_data', 'ansible_extra_vars',
-            'requested_by', 'requested_at',
-            'awx_job_id', 'launch_error',
-            'check_mode', 'scheduled_for',
+            'id',
+            'title',
+            'description',
+            'status',
+            'template',
+            'awx_connection',
+            'target_apic',
+            'awx_credential_id',
+            'awx_credential_name',
+            'input_data',
+            'ansible_extra_vars',
+            'requested_by',
+            'requested_at',
+            'awx_job_id',
+            'launch_error',
+            'check_mode',
+            'scheduled_for',
             'template_snapshot',
-            'approved_by', 'approved_at', 'rejection_reason',
-            'can_execute', 'can_cancel', 'can_approve',
-            'created_at', 'updated_at',
+            'approved_by',
+            'approved_at',
+            'rejection_reason',
+            'can_execute',
+            'can_cancel',
+            'can_approve',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'requested_by', 'requested_at',
-            'ansible_extra_vars', 'awx_job_id',
-            'template_snapshot', 'approved_by', 'approved_at',
-            'created_at', 'updated_at',
+            'id',
+            'requested_by',
+            'requested_at',
+            'ansible_extra_vars',
+            'awx_job_id',
+            'template_snapshot',
+            'approved_by',
+            'approved_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_can_execute(self, obj: AutomationRequest) -> bool:
@@ -129,10 +170,19 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationRequest
         fields = [
-            'id', 'title', 'description', 'template', 'awx_connection',
-            'target_apic', 'input_data', 'check_mode', 'status',
-            'awx_credential_id', 'awx_credential_name',
-            'idempotency_key', 'scheduled_for',
+            'id',
+            'title',
+            'description',
+            'template',
+            'awx_connection',
+            'target_apic',
+            'input_data',
+            'check_mode',
+            'status',
+            'awx_credential_id',
+            'awx_credential_name',
+            'idempotency_key',
+            'scheduled_for',
         ]
         read_only_fields = ['id', 'status']
 
@@ -145,9 +195,11 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
         if credential_id is None and self.instance:
             credential_id = self.instance.awx_credential_id
         if not credential_id:
-            raise serializers.ValidationError({
-                'awx_credential_id': 'AWX Credential is required. Select a "Cisco ACI" credential.'
-            })
+            raise serializers.ValidationError(
+                {
+                    'awx_credential_id': 'AWX Credential is required. Select a "Cisco ACI" credential.'
+                }
+            )
 
         if template and template.table_schemas:
             input_data = _normalize_input_data(input_data, template.table_schemas)
@@ -171,6 +223,7 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
         template = validated_data.get('template')
         if template:
             from django.utils import timezone
+
             validated_data['template_snapshot'] = {
                 'table_schemas': template.table_schemas,
                 'variable_mappings': template.variable_mappings,

@@ -268,9 +268,7 @@ class MFALoginFlowTest(TestCase):
 
     def test_normal_login_without_mfa(self):
         """User without MFA gets tokens directly (no 202)"""
-        User.objects.create_user(
-            username='nomfa', email='nomfa@test.com', password='pass123!'
-        )
+        User.objects.create_user(username='nomfa', email='nomfa@test.com', password='pass123!')
         response = self.client.post(
             '/api/auth/login/',
             {'username': 'nomfa', 'password': 'pass123!'},
@@ -286,8 +284,7 @@ class AdminMFABypassTest(TestCase):
     def setUp(self):
         self.admin_group = Group.objects.create(name='Admin')
         self.admin = User.objects.create_user(
-            username='mfaadmin', email='mfaadmin@test.com',
-            password='admin123!', is_superuser=True
+            username='mfaadmin', email='mfaadmin@test.com', password='admin123!', is_superuser=True
         )
         self.admin.groups.add(self.admin_group)
         self.target = User.objects.create_user(
@@ -302,18 +299,14 @@ class AdminMFABypassTest(TestCase):
         self.client.force_authenticate(user=self.admin)
 
     def test_admin_disables_mfa(self):
-        response = self.client.post(
-            f'/api/auth/management/{self.target.id}/disable_mfa/'
-        )
+        response = self.client.post(f'/api/auth/management/{self.target.id}/disable_mfa/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.target.profile.refresh_from_db()
         self.assertFalse(self.target.profile.totp_enabled)
 
     def test_admin_verifies_email(self):
-        response = self.client.post(
-            f'/api/auth/management/{self.target.id}/verify_email/'
-        )
+        response = self.client.post(f'/api/auth/management/{self.target.id}/verify_email/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.target.profile.refresh_from_db()
@@ -322,7 +315,5 @@ class AdminMFABypassTest(TestCase):
     def test_non_admin_cannot_disable_mfa(self):
         regular_client = APIClient()
         regular_client.force_authenticate(user=self.target)
-        response = regular_client.post(
-            f'/api/auth/management/{self.admin.id}/disable_mfa/'
-        )
+        response = regular_client.post(f'/api/auth/management/{self.admin.id}/disable_mfa/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

@@ -62,22 +62,18 @@ class JobMonitor:
                     else:
                         failed_count += 1
                 except Exception as e:
-                    logger.exception(f"Error syncing execution {execution.id}: {str(e)}")
+                    logger.exception(f'Error syncing execution {execution.id}: {str(e)}')
                     failed_count += 1
 
             logger.info(
-                f"Job sync completed: {synced_count} synced, {failed_count} failed, "
-                f"{executions.count()} total"
+                f'Job sync completed: {synced_count} synced, {failed_count} failed, '
+                f'{executions.count()} total'
             )
 
-            return {
-                'total': executions.count(),
-                'synced': synced_count,
-                'failed': failed_count
-            }
+            return {'total': executions.count(), 'synced': synced_count, 'failed': failed_count}
 
         except Exception as e:
-            logger.exception(f"Error in sync_running_jobs: {str(e)}")
+            logger.exception(f'Error in sync_running_jobs: {str(e)}')
             return {'total': 0, 'synced': 0, 'failed': 0, 'error': str(e)}
 
     def sync_job_status(self, execution_id) -> bool:
@@ -85,16 +81,16 @@ class JobMonitor:
         try:
             # Lock the execution row to prevent concurrent modification
             with transaction.atomic():
-                execution = AutomationExecution.objects.select_for_update(
-                    skip_locked=True
-                ).select_related(
-                    'awx_connection',
-                    'automation_request__template'
-                ).filter(id=execution_id).first()
+                execution = (
+                    AutomationExecution.objects.select_for_update(skip_locked=True)
+                    .select_related('awx_connection', 'automation_request__template')
+                    .filter(id=execution_id)
+                    .first()
+                )
 
                 if execution is None:
                     # Row is locked by another process or doesn't exist
-                    logger.debug(f"Execution {execution_id} skipped (locked or not found)")
+                    logger.debug(f'Execution {execution_id} skipped (locked or not found)')
                     return True
 
                 # Skip if already in terminal status
@@ -113,7 +109,7 @@ class JobMonitor:
             elif template.awx_type == AutomationTemplate.AWX_TYPE_WORKFLOW:
                 success = self._sync_workflow_status(execution)
             else:
-                logger.error(f"Unknown template type: {template.awx_type}")
+                logger.error(f'Unknown template type: {template.awx_type}')
                 return False
 
             if success:
@@ -123,10 +119,10 @@ class JobMonitor:
             return success
 
         except AutomationExecution.DoesNotExist:
-            logger.error(f"Execution {execution_id} not found")
+            logger.error(f'Execution {execution_id} not found')
             return False
         except Exception as e:
-            logger.exception(f"Error syncing job status for {execution_id}: {str(e)}")
+            logger.exception(f'Error syncing job status for {execution_id}: {str(e)}')
             return False
 
     def _sync_job_template_status(self, execution: AutomationExecution) -> bool:
@@ -137,7 +133,7 @@ class JobMonitor:
             success, job_data, error = self.awx_client.get_job_status(job_id)
 
             if not success:
-                logger.error(f"Failed to get job status for {job_id}: {error}")
+                logger.error(f'Failed to get job status for {job_id}: {error}')
                 return False
 
             # Extract status info
@@ -175,6 +171,7 @@ class JobMonitor:
 
                 # Atomically update request status
                 from awx.models import AutomationRequest
+
                 with transaction.atomic():
                     request = AutomationRequest.objects.select_for_update().get(
                         id=execution.automation_request_id
@@ -196,14 +193,14 @@ class JobMonitor:
             execution.save(update_fields=update_fields)
 
             logger.info(
-                f"Synced job {job_id}: status={fabrik_status}, "
-                f"progress={execution.progress_percentage}%"
+                f'Synced job {job_id}: status={fabrik_status}, '
+                f'progress={execution.progress_percentage}%'
             )
 
             return True
 
         except Exception as e:
-            logger.exception(f"Error syncing job template status: {str(e)}")
+            logger.exception(f'Error syncing job template status: {str(e)}')
             return False
 
     def _sync_workflow_status(self, execution: AutomationExecution) -> bool:
@@ -214,7 +211,7 @@ class JobMonitor:
             success, workflow_data, error = self.awx_client.get_workflow_job_status(workflow_job_id)
 
             if not success:
-                logger.error(f"Failed to get workflow status for {workflow_job_id}: {error}")
+                logger.error(f'Failed to get workflow status for {workflow_job_id}: {error}')
                 return False
 
             # Extract workflow status
@@ -222,7 +219,9 @@ class JobMonitor:
             fabrik_status = self.STATUS_MAPPING.get(awx_status, 'running')
 
             # Get workflow nodes
-            nodes_success, nodes_response, _ = self.awx_client.get_workflow_job_nodes(workflow_job_id)
+            nodes_success, nodes_response, _ = self.awx_client.get_workflow_job_nodes(
+                workflow_job_id
+            )
 
             # Extract nodes array from API response
             nodes_data = []
@@ -237,8 +236,7 @@ class JobMonitor:
             if nodes_data:
                 total_nodes = len(nodes_data)
                 completed_nodes = sum(
-                    1 for node in nodes_data
-                    if node.get('status') in self.TERMINAL_STATUSES
+                    1 for node in nodes_data if node.get('status') in self.TERMINAL_STATUSES
                 )
                 progress = int((completed_nodes / total_nodes) * 100) if total_nodes > 0 else 0
             else:
@@ -257,9 +255,11 @@ class JobMonitor:
                 active_nodes = [n for n in nodes_data if n.get('status') == 'running']
                 if active_nodes:
                     node_name = active_nodes[0].get('summary_fields', {}).get('job', {}).get('name')
-                    execution.current_task = f"Running: {node_name}"
+                    execution.current_task = f'Running: {node_name}'
                 elif awx_status == 'running':
-                    execution.current_task = f"Workflow running ({completed_nodes}/{total_nodes} nodes complete)"
+                    execution.current_task = (
+                        f'Workflow running ({completed_nodes}/{total_nodes} nodes complete)'
+                    )
                 update_fields.append('current_task')
 
                 # Merge node details into metadata (read-modify-write within atomic block)
@@ -272,19 +272,20 @@ class JobMonitor:
                     # For failed workflows, collect failed node details
                     if awx_status in ['failed', 'error']:
                         failed_nodes = [
-                            n for n in nodes_data
-                            if n.get('status') in ['failed', 'error']
+                            n for n in nodes_data if n.get('status') in ['failed', 'error']
                         ]
                         if failed_nodes:
                             failure_details = []
                             for node in failed_nodes:
                                 node_job = node.get('summary_fields', {}).get('job', {})
-                                failure_details.append({
-                                    'node_id': node.get('id'),
-                                    'job_name': node_job.get('name'),
-                                    'job_id': node_job.get('id'),
-                                    'status': node.get('status')
-                                })
+                                failure_details.append(
+                                    {
+                                        'node_id': node.get('id'),
+                                        'job_name': node_job.get('name'),
+                                        'job_id': node_job.get('id'),
+                                        'status': node.get('status'),
+                                    }
+                                )
                             metadata['failed_nodes'] = failure_details
 
                     fresh.execution_metadata = metadata
@@ -305,6 +306,7 @@ class JobMonitor:
 
                 # Atomically update request status
                 from awx.models import AutomationRequest
+
                 with transaction.atomic():
                     request = AutomationRequest.objects.select_for_update().get(
                         id=execution.automation_request_id
@@ -327,19 +329,20 @@ class JobMonitor:
                 # for this launch. No-op for executions without a clone.
                 if execution.clone_template_id:
                     from awx.tasks import delete_workflow_clone
+
                     delete_workflow_clone.delay(str(execution.id))
 
             execution.save(update_fields=update_fields)
 
             logger.info(
-                f"Synced workflow {workflow_job_id}: status={fabrik_status}, "
-                f"progress={execution.progress_percentage}%"
+                f'Synced workflow {workflow_job_id}: status={fabrik_status}, '
+                f'progress={execution.progress_percentage}%'
             )
 
             return True
 
         except Exception as e:
-            logger.exception(f"Error syncing workflow status: {str(e)}")
+            logger.exception(f'Error syncing workflow status: {str(e)}')
             return False
 
     def _calculate_progress(self, job_data: Dict) -> int:
@@ -351,19 +354,23 @@ class JobMonitor:
             # Calculate from playbook counts
             playbook_counts = job_data.get('playbook_counts', {})
             if playbook_counts:
-                total_tasks = sum([
-                    playbook_counts.get('ok', 0),
-                    playbook_counts.get('changed', 0),
-                    playbook_counts.get('failed', 0),
-                    playbook_counts.get('skipped', 0),
-                ])
-
-                if total_tasks > 0:
-                    completed_tasks = sum([
+                total_tasks = sum(
+                    [
                         playbook_counts.get('ok', 0),
                         playbook_counts.get('changed', 0),
                         playbook_counts.get('failed', 0),
-                    ])
+                        playbook_counts.get('skipped', 0),
+                    ]
+                )
+
+                if total_tasks > 0:
+                    completed_tasks = sum(
+                        [
+                            playbook_counts.get('ok', 0),
+                            playbook_counts.get('changed', 0),
+                            playbook_counts.get('failed', 0),
+                        ]
+                    )
                     return min(int((completed_tasks / total_tasks) * 100), 100)
 
             # Fallback based on status
@@ -378,7 +385,7 @@ class JobMonitor:
                 return 0
 
         except Exception as e:
-            logger.exception(f"Error calculating progress: {str(e)}")
+            logger.exception(f'Error calculating progress: {str(e)}')
             return 0
 
     def _extract_current_task(self, job_data: Dict) -> str:
@@ -390,9 +397,9 @@ class JobMonitor:
             elif status == 'running':
                 # Try to get current playbook/task
                 if 'current_play' in job_data:
-                    return f"Running: {job_data['current_play']}"
+                    return f'Running: {job_data["current_play"]}'
                 elif 'playbook' in job_data:
-                    return f"Running playbook: {job_data['playbook']}"
+                    return f'Running playbook: {job_data["playbook"]}'
                 else:
                     return 'Running...'
             elif status == 'successful':
@@ -405,7 +412,7 @@ class JobMonitor:
                 return status.capitalize()
 
         except Exception as e:
-            logger.exception(f"Error extracting current task: {str(e)}")
+            logger.exception(f'Error extracting current task: {str(e)}')
             return 'Unknown'
 
     def _notify_terminal_status(self, execution, request, fabrik_status):
@@ -422,7 +429,11 @@ class JobMonitor:
                     related_execution_id=request.id,
                 )
             elif fabrik_status in ('failed', 'error'):
-                tb = execution.result_traceback[:200] if execution.result_traceback else f'Job ended with status: {fabrik_status}'
+                tb = (
+                    execution.result_traceback[:200]
+                    if execution.result_traceback
+                    else f'Job ended with status: {fabrik_status}'
+                )
                 create_notification(
                     user=request.requested_by,
                     type='error',
@@ -458,19 +469,19 @@ class JobMonitor:
 
             AutomationTemplate.objects.filter(id=template.id).update(**update_kwargs)
 
-            logger.info(f"Updated template {template.id} stats: status={status}")
+            logger.info(f'Updated template {template.id} stats: status={status}')
 
         except Exception as e:
             # Don't fail job sync if stats update fails
-            logger.exception(f"Error updating template stats: {str(e)}")
+            logger.exception(f'Error updating template stats: {str(e)}')
 
     def _configure_awx_client(self, awx_connection: AWXConnection) -> None:
         try:
             self.awx_client = AWXClient.for_connection(awx_connection)
 
         except Exception as e:
-            logger.exception(f"Error configuring AWX client: {str(e)}")
-            raise JobMonitorError(f"AWX client configuration failed: {str(e)}")
+            logger.exception(f'Error configuring AWX client: {str(e)}')
+            raise JobMonitorError(f'AWX client configuration failed: {str(e)}')
 
     def _emit_websocket_update(self, execution: AutomationExecution) -> None:
         try:
@@ -483,35 +494,34 @@ class JobMonitor:
             serialized_data = AutomationExecutionSerializer(execution).data
 
             # Emit to request channel (for request detail page)
-            ws_service.emit_execution_update(
-                str(execution.automation_request_id),
-                serialized_data
-            )
+            ws_service.emit_execution_update(str(execution.automation_request_id), serialized_data)
 
             # Emit progress to execution channel (for execution detail view)
             ws_service.emit_progress_update(
                 str(execution.id),
                 execution.progress_percentage,
                 execution.current_task or 'Processing...',
-                execution.current_task
+                execution.current_task,
             )
 
             # Emit status to execution channel
             # Use result_traceback for error message (error_message field doesn't exist)
-            error_msg = execution.result_traceback if execution.status in ['failed', 'error'] else None
+            error_msg = (
+                execution.result_traceback if execution.status in ['failed', 'error'] else None
+            )
             ws_service.emit_execution_status(
                 str(execution.id),
                 execution.status,
                 execution.awx_job_id,
                 error_msg,
-                execution.finished_at.isoformat() if execution.finished_at else None
+                execution.finished_at.isoformat() if execution.finished_at else None,
             )
 
             logger.debug(
-                f"WebSocket update sent: execution={execution.id}, "
-                f"status={execution.status}, progress={execution.progress_percentage}%"
+                f'WebSocket update sent: execution={execution.id}, '
+                f'status={execution.status}, progress={execution.progress_percentage}%'
             )
 
         except Exception as e:
             # Don't fail job sync if WebSocket fails
-            logger.exception(f"Error emitting WebSocket update: {str(e)}")
+            logger.exception(f'Error emitting WebSocket update: {str(e)}')

@@ -1,6 +1,7 @@
 """
 Integration tests for Notification API endpoints
 """
+
 import pytest
 from rest_framework import status
 from notifications.models import Notification, NotificationPreference
@@ -16,16 +17,10 @@ class TestNotificationViewSet:
         """Test listing notifications"""
         # Create notifications for user
         Notification.objects.create(
-            user=user,
-            title='Test Notification 1',
-            message='Test message 1',
-            type='info'
+            user=user, title='Test Notification 1', message='Test message 1', type='info'
         )
         Notification.objects.create(
-            user=user,
-            title='Test Notification 2',
-            message='Test message 2',
-            type='success'
+            user=user, title='Test Notification 2', message='Test message 2', type='success'
         )
 
         response = authenticated_client.get('/api/notifications/notifications/')
@@ -37,11 +32,7 @@ class TestNotificationViewSet:
     def test_mark_notification_as_read(self, authenticated_client, user):
         """Test marking notification as read"""
         notification = Notification.objects.create(
-            user=user,
-            title='Test',
-            message='Test message',
-            type='info',
-            is_read=False
+            user=user, title='Test', message='Test message', type='info', is_read=False
         )
 
         response = authenticated_client.post(
@@ -56,18 +47,10 @@ class TestNotificationViewSet:
         """Test marking all notifications as read"""
         # Create unread notifications
         Notification.objects.create(
-            user=user,
-            title='Test 1',
-            message='Message 1',
-            type='info',
-            is_read=False
+            user=user, title='Test 1', message='Message 1', type='info', is_read=False
         )
         Notification.objects.create(
-            user=user,
-            title='Test 2',
-            message='Message 2',
-            type='warning',
-            is_read=False
+            user=user, title='Test 2', message='Message 2', type='warning', is_read=False
         )
 
         response = authenticated_client.post('/api/notifications/notifications/mark_all_read/')
@@ -78,13 +61,12 @@ class TestNotificationViewSet:
     def test_delete_notification(self, authenticated_client, user):
         """Test deleting notification"""
         notification = Notification.objects.create(
-            user=user,
-            title='Test',
-            message='Test message',
-            type='info'
+            user=user, title='Test', message='Test message', type='info'
         )
 
-        response = authenticated_client.delete(f'/api/notifications/notifications/{notification.id}/')
+        response = authenticated_client.delete(
+            f'/api/notifications/notifications/{notification.id}/'
+        )
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not Notification.objects.filter(id=notification.id).exists()
@@ -96,7 +78,7 @@ class TestNotificationViewSet:
             user=other_user,
             title='Other User Notification',
             message='Should not see this',
-            type='info'
+            type='info',
         )
 
         response = authenticated_client.get('/api/notifications/notifications/')
@@ -108,9 +90,15 @@ class TestNotificationViewSet:
 
     def test_delete_read_notifications(self, authenticated_client, user):
         """Test bulk deleting all read notifications"""
-        Notification.objects.create(user=user, title='Read 1', message='m', type='info', is_read=True)
-        Notification.objects.create(user=user, title='Read 2', message='m', type='info', is_read=True)
-        Notification.objects.create(user=user, title='Unread', message='m', type='info', is_read=False)
+        Notification.objects.create(
+            user=user, title='Read 1', message='m', type='info', is_read=True
+        )
+        Notification.objects.create(
+            user=user, title='Read 2', message='m', type='info', is_read=True
+        )
+        Notification.objects.create(
+            user=user, title='Unread', message='m', type='info', is_read=False
+        )
 
         response = authenticated_client.delete('/api/notifications/notifications/delete_read/')
 
@@ -120,8 +108,12 @@ class TestNotificationViewSet:
 
     def test_unread_count(self, authenticated_client, user):
         """Test getting unread notification count"""
-        Notification.objects.create(user=user, title='Unread 1', message='m', type='info', is_read=False)
-        Notification.objects.create(user=user, title='Unread 2', message='m', type='warning', is_read=False)
+        Notification.objects.create(
+            user=user, title='Unread 1', message='m', type='info', is_read=False
+        )
+        Notification.objects.create(
+            user=user, title='Unread 2', message='m', type='warning', is_read=False
+        )
         Notification.objects.create(user=user, title='Read', message='m', type='info', is_read=True)
 
         response = authenticated_client.get('/api/notifications/notifications/unread_count/')
@@ -152,7 +144,9 @@ class TestNotificationViewSet:
     def test_filter_by_is_read(self, authenticated_client, user):
         """Test filtering notifications by read status"""
         Notification.objects.create(user=user, title='Read', message='m', type='info', is_read=True)
-        Notification.objects.create(user=user, title='Unread', message='m', type='info', is_read=False)
+        Notification.objects.create(
+            user=user, title='Unread', message='m', type='info', is_read=False
+        )
 
         response = authenticated_client.get('/api/notifications/notifications/?is_read=false')
 

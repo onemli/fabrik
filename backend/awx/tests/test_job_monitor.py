@@ -11,8 +11,11 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from awx.models import (
-    AWXConnection, AutomationTemplate, AutomationRequest,
-    AutomationExecution, TemplateCategory
+    AWXConnection,
+    AutomationTemplate,
+    AutomationRequest,
+    AutomationExecution,
+    TemplateCategory,
 )
 from awx.services.job_monitor import JobMonitor
 
@@ -25,21 +28,18 @@ class JobMonitorSimpleTestCase(TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.user = User.objects.create_user(
-            username='monitoruser',
-            email='monitor@example.com',
-            password='testpass123'
+            username='monitoruser', email='monitor@example.com', password='testpass123'
         )
 
         self.category = TemplateCategory.objects.create(
-            name='Monitor Test Category',
-            created_by=self.user
+            name='Monitor Test Category', created_by=self.user
         )
 
         self.awx_connection = AWXConnection.objects.create(
             name='Monitor Test AWX',
             url='https://awx.example.com',
             auth_type=AWXConnection.AUTH_TYPE_TOKEN,
-            created_by=self.user
+            created_by=self.user,
         )
         self.awx_connection.set_token('monitor-test-token')
         self.awx_connection.save()
@@ -52,7 +52,7 @@ class JobMonitorSimpleTestCase(TestCase):
             awx_connection=self.awx_connection,
             category=self.category,
             execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.request = AutomationRequest.objects.create(
@@ -61,7 +61,7 @@ class JobMonitorSimpleTestCase(TestCase):
             awx_connection=self.awx_connection,
             requested_by=self.user,
             input_data={'data': []},
-            status=AutomationRequest.STATUS_RUNNING
+            status=AutomationRequest.STATUS_RUNNING,
         )
 
         self.monitor = JobMonitor()
@@ -74,7 +74,7 @@ class JobMonitorSimpleTestCase(TestCase):
             awx_job_id=1000,
             status='running',
             execution_mode='bulk',
-            started_at=timezone.now()
+            started_at=timezone.now(),
         )
 
         # Mock AWX client
@@ -85,9 +85,9 @@ class JobMonitorSimpleTestCase(TestCase):
                 'id': 1000,
                 'status': 'successful',
                 'playbook_counts': {'ok': 10, 'changed': 5},
-                'elapsed': 120.0
+                'elapsed': 120.0,
             },
-            None
+            None,
         )
         mock_client.configure = MagicMock()
         self.monitor.awx_client = mock_client

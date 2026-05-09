@@ -1,6 +1,7 @@
 """
 Integration tests for Category API endpoints
 """
+
 import pytest
 from rest_framework import status
 from queries.models import Category
@@ -39,7 +40,7 @@ class TestCategoryViewSet:
             'name': 'Network',
             'description': 'Network related queries',
             'color': '#FF5733',
-            'icon': 'network'
+            'icon': 'network',
         }
 
         response = authenticated_client.post('/api/queries/categories/', data, format='json')
@@ -55,9 +56,7 @@ class TestCategoryViewSet:
 
         data = {'name': 'New Name', 'description': 'Updated description'}
         response = authenticated_client.patch(
-            f'/api/queries/categories/{category.id}/',
-            data,
-            format='json'
+            f'/api/queries/categories/{category.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK

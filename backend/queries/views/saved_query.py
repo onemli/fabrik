@@ -37,6 +37,7 @@ from ..services.class_hierarchy import build_rn
 
 class SavedQueryViewSet(viewsets.ModelViewSet):
     """Full CRUD + rich action set for saved queries."""
+
     permission_classes = [FabrikModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'tags']
@@ -46,7 +47,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter queries based on ownership and sharing"""
         user = self.request.user
-        queryset = SavedQuery.objects.select_related('created_by', 'category').prefetch_related('shared_with')
+        queryset = SavedQuery.objects.select_related('created_by', 'category').prefetch_related(
+            'shared_with'
+        )
 
         # Annotate is_favorite so the serializer doesn't fire a query per row
         queryset = queryset.annotate(
@@ -113,6 +116,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         # Quota enforcement
         from users.quota_service import QuotaService
+
         allowed, reason = QuotaService.check_feature(user, 'can_create_queries')
         if not allowed:
             raise PermissionDenied(reason)
@@ -140,7 +144,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 'is_public': instance.is_public,
                 'is_template': instance.is_template,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer):
@@ -190,7 +194,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             resource_name=instance.name,
             description=f"Query '{instance.name}' updated",
             metadata={'changes': changes} if changes else {},
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance):
@@ -217,7 +221,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 'created_by': instance.created_by.username,
                 'is_public': instance.is_public,
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -246,7 +250,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             resource_id=query.id,
             resource_name=query.name,
             description=f"Query '{query.name}' {action_verb}",
-            request=request
+            request=request,
         )
 
         return Response({'is_favorite': is_favorite})
@@ -258,14 +262,14 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         # Create a copy
         new_query = SavedQuery.objects.create(
-            name=f"{source_query.name} (Copy)",
+            name=f'{source_query.name} (Copy)',
             description=source_query.description,
             flow_data=source_query.flow_data,
             generated_query=source_query.generated_query,
             category=source_query.category,
             tags=source_query.tags,
             created_by=request.user,
-            is_public=False
+            is_public=False,
         )
 
         # Audit log
@@ -282,7 +286,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 'source_query_name': source_query.name,
                 'new_query_id': new_query.id,
             },
-            request=request
+            request=request,
         )
 
         serializer = SavedQueryDetailSerializer(new_query, context={'request': request})
@@ -313,7 +317,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             execution_time_ms=log_data.get('execution_time_ms'),
             result_count=log_data.get('result_count'),
             success=success,
-            error_message=error_message
+            error_message=error_message,
         )
 
         # Audit logging
@@ -345,7 +349,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             content=str(response_content),
             success=success,
             error_message=error_message,
-            request=request
+            request=request,
         )
 
         return Response({'message': 'Execution logged'})
@@ -356,7 +360,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         try:
             limit = min(int(request.query_params.get('limit', 10)), 200)
         except (ValueError, TypeError):
-            return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+            )
         queryset = self.get_queryset()[:limit]
         serializer = SavedQueryListSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
@@ -367,7 +373,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         try:
             limit = min(int(request.query_params.get('limit', 10)), 200)
         except (ValueError, TypeError):
-            return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+            )
         queryset = self.get_queryset().order_by('-execution_count')[:limit]
         serializer = SavedQueryListSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
@@ -376,13 +384,15 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
     def stats(self, request):
         """Get query statistics"""
         queryset = self.get_queryset()
-        return Response({
-            'total_queries': queryset.count(),
-            'my_queries': queryset.filter(created_by=request.user).count(),
-            'shared_queries': queryset.filter(shared_with=request.user).count(),
-            'public_queries': queryset.filter(is_public=True).count(),
-            'favorite_queries': queryset.filter(favorited_by=request.user).count(),
-        })
+        return Response(
+            {
+                'total_queries': queryset.count(),
+                'my_queries': queryset.filter(created_by=request.user).count(),
+                'shared_queries': queryset.filter(shared_with=request.user).count(),
+                'public_queries': queryset.filter(is_public=True).count(),
+                'favorite_queries': queryset.filter(favorited_by=request.user).count(),
+            }
+        )
 
     @action(detail=False, methods=['post'])
     def export(self, request):
@@ -409,15 +419,17 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         # Check permissions: only export queries user has access to
         accessible_queries = []
         for query in queries:
-            if (query.created_by == request.user or
-                query.is_public or
-                request.user in query.shared_with.all()):
+            if (
+                query.created_by == request.user
+                or query.is_public
+                or request.user in query.shared_with.all()
+            ):
                 accessible_queries.append(query)
 
         if not accessible_queries:
             return Response(
                 {'error': 'No accessible queries found with the provided IDs'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         # Generate export JSON
@@ -425,8 +437,11 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         # Return as downloadable JSON file
         from django.http import JsonResponse
+
         response = JsonResponse(export_data, safe=False)
-        response['Content-Disposition'] = f'attachment; filename="fabrik_queries_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+        response['Content-Disposition'] = (
+            f'attachment; filename="fabrik_queries_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+        )
         return response
 
     @action(detail=False, methods=['post'])
@@ -456,9 +471,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                     'success_count': 0,
                     'error_count': 1,
                     'created_queries': [],
-                    'errors': serializer.errors
+                    'errors': serializer.errors,
                 },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Create queries
@@ -466,16 +481,20 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         # Return detailed result
         from ..serializers import SavedQueryListSerializer
-        return Response({
-            'success_count': result['success_count'],
-            'error_count': result['error_count'],
-            'created_queries': SavedQueryListSerializer(
-                result['created_queries'],
-                many=True,
-                context={'request': request}
-            ).data,
-            'errors': result['errors']
-        }, status=status.HTTP_201_CREATED if result['success_count'] > 0 else status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                'success_count': result['success_count'],
+                'error_count': result['error_count'],
+                'created_queries': SavedQueryListSerializer(
+                    result['created_queries'], many=True, context={'request': request}
+                ).data,
+                'errors': result['errors'],
+            },
+            status=status.HTTP_201_CREATED
+            if result['success_count'] > 0
+            else status.HTTP_400_BAD_REQUEST,
+        )
 
     @action(detail=False, methods=['post'], url_path='validate-connection')
     def validate_connection(self, request):
@@ -492,7 +511,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         if not parent_class or not child_class:
             return Response(
                 {'isValid': False, 'message': 'Both parentClass and childClass are required'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -505,17 +524,19 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 if is_valid
                 else f'{parent_class} cannot directly contain {child_class}'
             )
-            return Response({
-                'isValid': is_valid,
-                'message': message,
-                'parentClass': parent_class,
-                'childClass': child_class,
-            })
+            return Response(
+                {
+                    'isValid': is_valid,
+                    'message': message,
+                    'parentClass': parent_class,
+                    'childClass': child_class,
+                }
+            )
         except Exception:
-            logger.exception("[Validation] Connection validation error")
+            logger.exception('[Validation] Connection validation error')
             return Response(
                 {'isValid': False, 'message': 'Internal service error'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=['get'], url_path='child-classes')
@@ -531,8 +552,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         if not parent_class:
             return Response(
-                {'error': 'parent parameter required'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'parent parameter required'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -540,10 +560,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             children = mim.get_class_children(parent_class)
             return Response({'children': children})
         except Exception:
-            logger.exception("[Schema] get_child_classes error")
+            logger.exception('[Schema] get_child_classes error')
             return Response(
-                {'error': 'Internal service error'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'Internal service error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=False, methods=['post'], url_path='preview')
@@ -568,13 +587,12 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         if not flow_data or not preview_node_id:
             return Response(
                 {'error': 'flow_data and preview_node_id are required'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not connection_id:
             return Response(
-                {'error': 'connection_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'connection_id is required'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -591,7 +609,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 username=connection.username,
                 password=connection.get_password(),  # Decrypt password
                 verify_ssl=connection.verify_ssl,
-                timeout=connection.timeout
+                timeout=connection.timeout,
             )
 
             # Login
@@ -599,7 +617,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             if not login_success:
                 return Response(
                     {'success': False, 'error': f'APIC login failed: {login_error}'},
-                    status=status.HTTP_401_UNAUTHORIZED
+                    status=status.HTTP_401_UNAUTHORIZED,
                 )
 
             # Execute query
@@ -607,7 +625,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             if not success:
                 return Response(
                     {'success': False, 'error': f'Query failed: {error}'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
             # Flatten multi-class chains so the preview shows target objects
@@ -615,33 +633,32 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             # root envelope with nested children.
             if isinstance(result, dict):
                 from queries.services.response_flattener import maybe_flatten_response
+
                 result = maybe_flatten_response(result, query_path)
 
             # Extract results
             results = result.get('imdata', []) if isinstance(result, dict) else []
 
-            return Response({
-                'success': True,
-                'results': results[:50],  # Limit to 50 for preview
-                'count': len(results),
-                'query': query_path,
-                'is_preview': True
-            })
+            return Response(
+                {
+                    'success': True,
+                    'results': results[:50],  # Limit to 50 for preview
+                    'count': len(results),
+                    'query': query_path,
+                    'is_preview': True,
+                }
+            )
 
         except APICConnection.DoesNotExist:
             return Response(
                 {'error': f'APIC connection {connection_id} not found'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         except Exception as e:
-            logger.error(f"[Preview] Preview query error: {e}", exc_info=True)
+            logger.error(f'[Preview] Preview query error: {e}', exc_info=True)
             return Response(
-                {
-                    'success': False,
-                    'error': str(e)
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=False, methods=['post'], url_path='generate-query')
@@ -669,6 +686,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             }
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         try:
@@ -677,11 +695,8 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
             if not flow_data:
                 return Response(
-                    {
-                        'success': False,
-                        'error': 'flow_data is required'
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
+                    {'success': False, 'error': 'flow_data is required'},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Create QueryIntent
@@ -691,25 +706,23 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             executor = QueryExecutor()
             query_url, metadata = executor.execute(intent, force_strategy=force_strategy)
 
-            logger.info(f"[GenerateQuery] Strategy: {metadata['strategy']}, Query: {query_url}")
+            logger.info(f'[GenerateQuery] Strategy: {metadata["strategy"]}, Query: {query_url}')
 
-            return Response({
-                'success': True,
-                'preview_query': query_url,
-                'strategy': metadata['strategy'],
-                'estimated_cost': metadata.get('estimated_cost', 'medium'),
-                'suggestions': metadata.get('suggestions', []),
-                'metadata': metadata
-            })
-
-        except Exception as e:
-            logger.error(f"[GenerateQuery] Error generating query: {e}", exc_info=True)
             return Response(
                 {
-                    'success': False,
-                    'error': str(e)
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    'success': True,
+                    'preview_query': query_url,
+                    'strategy': metadata['strategy'],
+                    'estimated_cost': metadata.get('estimated_cost', 'medium'),
+                    'suggestions': metadata.get('suggestions', []),
+                    'metadata': metadata,
+                }
+            )
+
+        except Exception as e:
+            logger.error(f'[GenerateQuery] Error generating query: {e}', exc_info=True)
+            return Response(
+                {'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def _find_final_class_node(self, nodes, edges):
@@ -812,12 +825,11 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         # Build truncated flow
         truncated_nodes = [n for n in nodes if n['id'] in included_nodes]
-        truncated_edges = [e for e in edges if e['source'] in included_nodes and e['target'] in included_nodes]
+        truncated_edges = [
+            e for e in edges if e['source'] in included_nodes and e['target'] in included_nodes
+        ]
 
-        return {
-            'nodes': truncated_nodes,
-            'edges': truncated_edges
-        }
+        return {'nodes': truncated_nodes, 'edges': truncated_edges}
 
     def _build_dn_from_class(self, class_name, name_value):
         """
@@ -833,7 +845,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             return build_rn(class_name, {'name': name_value})
         except ValueError:
             # Fallback to old logic for unknown classes
-            return f"{class_name.lower()}-{name_value}"
+            return f'{class_name.lower()}-{name_value}'
 
     def _find_parent_class_node(self, node_id, nodes, edges):
         """
@@ -887,15 +899,19 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             query_url, metadata = executor.execute(intent)
 
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.info(f"[_generate_preview_query] Strategy: {metadata['strategy']}, URL: {query_url}")
+            logger.info(
+                f'[_generate_preview_query] Strategy: {metadata["strategy"]}, URL: {query_url}'
+            )
 
             return query_url
         except Exception as e:
             # Fallback to old logic if QueryExecutor fails
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.warning(f"[_generate_preview_query] QueryExecutor failed, using fallback: {e}")
+            logger.warning(f'[_generate_preview_query] QueryExecutor failed, using fallback: {e}')
             return self._generate_preview_query_fallback(flow_data, preview_node_id)
 
     def _generate_preview_query_fallback(self, flow_data, preview_node_id):
@@ -910,11 +926,11 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         # Find the preview node (should be a ClassNode)
         preview_node = next((n for n in nodes if n['id'] == preview_node_id), None)
         if not preview_node or preview_node['type'] != 'classNode':
-            raise ValueError("Preview node must be a ClassNode")
+            raise ValueError('Preview node must be a ClassNode')
 
         class_name = preview_node.get('data', {}).get('className')
         if not class_name:
-            raise ValueError("ClassNode must have a className configured")
+            raise ValueError('ClassNode must have a className configured')
 
         scope = preview_node.get('data', {}).get('scope', 'self')
 
@@ -948,11 +964,14 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                     dn_name_values.add(name_value)
 
         import logging
-        logger = logging.getLogger(__name__)
-        logger.debug("DN name values to exclude: %s", dn_name_values)
 
-        filter_expr = self._build_filter_expression(preview_node_id, class_name, nodes, edges, exclude_name_values=dn_name_values)
-        logger.debug("Final filter_expr: %s", filter_expr)
+        logger = logging.getLogger(__name__)
+        logger.debug('DN name values to exclude: %s', dn_name_values)
+
+        filter_expr = self._build_filter_expression(
+            preview_node_id, class_name, nodes, edges, exclude_name_values=dn_name_values
+        )
+        logger.debug('Final filter_expr: %s', filter_expr)
 
         if filter_expr:
             params['query-target-filter'] = filter_expr
@@ -1033,9 +1052,15 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
             # Check both directions
             if edge['target'] == node_id:
-                filter_node = next((n for n in nodes if n['id'] == edge['source'] and n['type'] == 'filterNode'), None)
+                filter_node = next(
+                    (n for n in nodes if n['id'] == edge['source'] and n['type'] == 'filterNode'),
+                    None,
+                )
             elif edge['source'] == node_id:
-                filter_node = next((n for n in nodes if n['id'] == edge['target'] and n['type'] == 'filterNode'), None)
+                filter_node = next(
+                    (n for n in nodes if n['id'] == edge['target'] and n['type'] == 'filterNode'),
+                    None,
+                )
 
             if filter_node:
                 filter_data = filter_node.get('data', {})
@@ -1094,8 +1119,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         if categories:
             result = ','.join(categories)
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.info(f"[_build_rsp_subtree_include_from_config] rsp-subtree-include: {result}")
+            logger.info(f'[_build_rsp_subtree_include_from_config] rsp-subtree-include: {result}')
             return result
 
         return None
@@ -1228,6 +1254,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         )
 
         from ..serializers import SavedQueryDetailSerializer
+
         return Response(SavedQueryDetailSerializer(query, context={'request': request}).data)
 
     @action(detail=False, methods=['post'], url_path='export-validation')
@@ -1249,26 +1276,30 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             qs = qs.filter(id__in=query_ids)
 
         if not qs.exists():
-            return Response({'error': 'No validation queries found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'No validation queries found'}, status=status.HTTP_404_NOT_FOUND
+            )
 
         export_items = []
         for q in qs:
             tags_list = [t.strip() for t in q.tags.split(',') if t.strip()] if q.tags else []
-            export_items.append({
-                'name': q.name,
-                'description': q.description,
-                'flow_data': q.flow_data,
-                'generated_query': q.generated_query,
-                'tags': tags_list,
-                'category_name': q.category.name if q.category else None,
-                'is_public': q.is_public,
-                'is_validation_query': True,
-                'validation_description': q.validation_description,
-                'validation_error_message': q.validation_error_message,
-                'validation_error_title': q.validation_error_title,
-                'exported_by': request.user.username,
-                'exported_at': timezone.now().isoformat(),
-            })
+            export_items.append(
+                {
+                    'name': q.name,
+                    'description': q.description,
+                    'flow_data': q.flow_data,
+                    'generated_query': q.generated_query,
+                    'tags': tags_list,
+                    'category_name': q.category.name if q.category else None,
+                    'is_public': q.is_public,
+                    'is_validation_query': True,
+                    'validation_description': q.validation_description,
+                    'validation_error_message': q.validation_error_message,
+                    'validation_error_title': q.validation_error_title,
+                    'exported_by': request.user.username,
+                    'exported_at': timezone.now().isoformat(),
+                }
+            )
 
         export_data = {
             'format': 'fabrik-validation-queries',
@@ -1278,7 +1309,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         }
 
         response = JsonResponse(export_data, safe=False)
-        filename = f"fabrik_validation_queries_{timezone.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f'fabrik_validation_queries_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json'
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
@@ -1302,17 +1333,23 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             }
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         data = request.data
         if not isinstance(data, dict) or 'queries' not in data:
-            return Response({'error': 'Invalid format. Expected {"queries": [...]}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Invalid format. Expected {"queries": [...]}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         queries_data = data.get('queries', [])
         on_duplicate = data.get('on_duplicate', 'skip')  # skip | overwrite | rename
 
         if not isinstance(queries_data, list):
-            return Response({'error': '"queries" must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': '"queries" must be a list'}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         results = {'imported': 0, 'skipped': 0, 'overwritten': 0, 'errors': [], 'queries': []}
 
@@ -1322,7 +1359,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             try:
                 name = item.get('name', '').strip()
                 if not name:
-                    results['errors'].append({'index': idx, 'name': '(unnamed)', 'error': 'name is required'})
+                    results['errors'].append(
+                        {'index': idx, 'name': '(unnamed)', 'error': 'name is required'}
+                    )
                     continue
 
                 # Resolve category
@@ -1330,8 +1369,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 category_name = item.get('category_name')
                 if category_name:
                     category, _ = Category.objects.get_or_create(
-                        name=category_name,
-                        defaults={'color': '#6366f1'}
+                        name=category_name, defaults={'color': '#6366f1'}
                     )
 
                 # Tags → comma-separated string
@@ -1366,7 +1404,7 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                         results['queries'].append(existing.id)
                         continue
                     else:  # rename
-                        name = f"{name} (imported)"
+                        name = f'{name} (imported)'
                         # fall through to create with new name
 
                 q = SavedQuery.objects.create(
@@ -1378,8 +1416,10 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 results['queries'].append(q.id)
 
             except Exception as exc:
-                logger.warning(f"[ImportValidation] index={idx} error: {exc}")
-                results['errors'].append({'index': idx, 'name': item.get('name', '?'), 'error': str(exc)})
+                logger.warning(f'[ImportValidation] index={idx} error: {exc}')
+                results['errors'].append(
+                    {'index': idx, 'name': item.get('name', '?'), 'error': str(exc)}
+                )
 
         return Response(results, status=status.HTTP_200_OK)
 

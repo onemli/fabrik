@@ -20,13 +20,11 @@ django_asgi_app = get_asgi_application()
 from fabrik.routing import websocket_urlpatterns
 from fabrik.ws_auth_middleware import JWTAuthMiddleware
 
-application = ProtocolTypeRouter({
-    "http": django_asgi_app,
-    "websocket": AllowedHostsOriginValidator(
-        JWTAuthMiddleware(
-            AuthMiddlewareStack(
-                URLRouter(websocket_urlpatterns)
-            )
-        )
-    ),
-})
+application = ProtocolTypeRouter(
+    {
+        'http': django_asgi_app,
+        'websocket': AllowedHostsOriginValidator(
+            JWTAuthMiddleware(AuthMiddlewareStack(URLRouter(websocket_urlpatterns)))
+        ),
+    }
+)

@@ -2,6 +2,7 @@
 Unit tests for Time Machine Models
 Tests QueryExecutionSnapshot and TimeMachineSettings model behaviour
 """
+
 import uuid
 import hashlib
 import json
@@ -13,6 +14,7 @@ from tests.factories import UserFactory, TimeMachineEnabledQueryFactory, APICCon
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def make_snapshot(user, query, connection, result_data=None, **kwargs):
     """Create a QueryExecutionSnapshot directly.
@@ -48,10 +50,10 @@ def make_snapshot(user, query, connection, result_data=None, **kwargs):
 
 # ── QueryExecutionSnapshot ────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestQueryExecutionSnapshotModel:
-
     def test_str_representation(self):
         user = UserFactory()
         query = TimeMachineEnabledQueryFactory(created_by=user)
@@ -72,16 +74,30 @@ class TestQueryExecutionSnapshotModel:
         # Create two snapshots with different executed_at values
         now = timezone.now()
         QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='aaa', executed_at=now - timedelta(hours=2),
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='aaa',
+            executed_at=now - timedelta(hours=2),
         )
         snap_new = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='bbb', executed_at=now,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='bbb',
+            executed_at=now,
         )
         qs = list(QueryExecutionSnapshot.objects.filter(saved_query=query))
         assert qs[0].id == snap_new.id  # newest first
@@ -99,17 +115,31 @@ class TestQueryExecutionSnapshotModel:
         conn = APICConnectionFactory(created_by=user)
         now = timezone.now()
         QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='hash_a', executed_at=now - timedelta(hours=1),
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='hash_a',
+            executed_at=now - timedelta(hours=1),
         )
         snap2 = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
             result_data={'imdata': [{'fvTenant': {'attributes': {'dn': 'x'}}}]},
-            result_count=1, result_size_bytes=50,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='hash_b', executed_at=now, has_changes=True,
+            result_count=1,
+            result_size_bytes=50,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='hash_b',
+            executed_at=now,
+            has_changes=True,
         )
         assert snap2.is_duplicate is False
 
@@ -119,16 +149,30 @@ class TestQueryExecutionSnapshotModel:
         conn = APICConnectionFactory(created_by=user)
         now = timezone.now()
         QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='same_hash', executed_at=now - timedelta(hours=1),
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='same_hash',
+            executed_at=now - timedelta(hours=1),
         )
         snap2 = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='same_hash', executed_at=now,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='same_hash',
+            executed_at=now,
         )
         assert snap2.is_duplicate is True
 
@@ -136,10 +180,17 @@ class TestQueryExecutionSnapshotModel:
         user = UserFactory()
         conn = APICConnectionFactory(created_by=user)
         snap = QueryExecutionSnapshot.objects.create(
-            saved_query=None, query_name='Ad-hoc', class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='hash_x', has_changes=True,
+            saved_query=None,
+            query_name='Ad-hoc',
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='hash_x',
+            has_changes=True,
         )
         assert snap.is_duplicate is False
 
@@ -187,10 +238,10 @@ class TestQueryExecutionSnapshotModel:
 
 # ── TimeMachineSettings ────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestTimeMachineSettingsModel:
-
     def test_db_table_name(self):
         assert TimeMachineSettings._meta.db_table == 'time_machine_settings'
 
@@ -249,15 +300,13 @@ class TestTimeMachineSettingsModel:
 
 # ── get_cleanup_preview ────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestGetCleanupPreview:
-
     def test_unlimited_returns_zero(self):
         user = UserFactory()
-        settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='unlimited'
-        )
+        settings = TimeMachineSettings.objects.create(user=user, retention_policy='unlimited')
         result = settings.get_cleanup_preview()
         assert result['count'] == 0
         assert result['snapshots'] == []
@@ -270,9 +319,15 @@ class TestGetCleanupPreview:
 
         # Create old snapshot — auto_now_add ignores passed value, so use update() after
         old_snap = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
             result_hash='hash_old',
         )
         QueryExecutionSnapshot.objects.filter(pk=old_snap.pk).update(
@@ -281,9 +336,15 @@ class TestGetCleanupPreview:
 
         # Create recent snapshot (auto_now_add → now, which is within retention)
         QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
             result_hash='hash_new',
         )
 
@@ -304,10 +365,17 @@ class TestGetCleanupPreview:
         # Create 5 snapshots
         for i in range(5):
             QueryExecutionSnapshot.objects.create(
-                saved_query=query, query_name=query.name, class_name='fvTenant',
-                result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-                executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-                result_hash=f'hash_{i}', executed_at=now - timedelta(hours=5 - i),
+                saved_query=query,
+                query_name=query.name,
+                class_name='fvTenant',
+                result_data={'imdata': []},
+                result_count=0,
+                result_size_bytes=10,
+                executed_by=user,
+                apic_connection_id=conn.id,
+                apic_connection_name=conn.name,
+                result_hash=f'hash_{i}',
+                executed_at=now - timedelta(hours=5 - i),
             )
 
         settings = TimeMachineSettings.objects.create(
@@ -323,9 +391,15 @@ class TestGetCleanupPreview:
         conn = APICConnectionFactory(created_by=user)
 
         snap = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name='Test', class_name='fvTenant',
-            result_data={'imdata': []}, result_count=5, result_size_bytes=100,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
+            saved_query=query,
+            query_name='Test',
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=5,
+            result_size_bytes=100,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
             result_hash='h',
         )
         # Move executed_at to 40 days ago (auto_now_add bypass via update)
@@ -348,19 +422,25 @@ class TestGetCleanupPreview:
 
 # ── execute_cleanup ────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestExecuteCleanup:
-
     def test_deletes_old_snapshots(self):
         user = UserFactory()
         query = TimeMachineEnabledQueryFactory(created_by=user)
         conn = APICConnectionFactory(created_by=user)
 
         old_snap = QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
             result_hash='old',
         )
         # Move executed_at to 50 days ago (auto_now_add bypass via update)
@@ -370,9 +450,15 @@ class TestExecuteCleanup:
 
         # Recent snapshot stays (auto_now_add = now, within retention)
         QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
             result_hash='new',
         )
 
@@ -390,15 +476,20 @@ class TestExecuteCleanup:
         conn = APICConnectionFactory(created_by=user)
 
         QueryExecutionSnapshot.objects.create(
-            saved_query=query, query_name=query.name, class_name='fvTenant',
-            result_data={'imdata': []}, result_count=0, result_size_bytes=10,
-            executed_by=user, apic_connection_id=conn.id, apic_connection_name=conn.name,
-            result_hash='h1', executed_at=timezone.now() - timedelta(days=365),
+            saved_query=query,
+            query_name=query.name,
+            class_name='fvTenant',
+            result_data={'imdata': []},
+            result_count=0,
+            result_size_bytes=10,
+            executed_by=user,
+            apic_connection_id=conn.id,
+            apic_connection_name=conn.name,
+            result_hash='h1',
+            executed_at=timezone.now() - timedelta(days=365),
         )
 
-        settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='unlimited'
-        )
+        settings = TimeMachineSettings.objects.create(user=user, retention_policy='unlimited')
         deleted = settings.execute_cleanup()
         assert deleted == 0
 
@@ -430,7 +521,9 @@ class TestCleanupSetBasedDelete:
             make_snapshot(user, query, conn, executed_at=now - timedelta(days=5 + i))
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='days', retention_days=30,
+            user=user,
+            retention_policy='days',
+            retention_days=30,
         )
         deleted = settings.execute_cleanup()
 
@@ -453,7 +546,9 @@ class TestCleanupSetBasedDelete:
             make_snapshot(user, q2, conn, executed_at=now - timedelta(seconds=i))
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='count', retention_count=5,
+            user=user,
+            retention_policy='count',
+            retention_count=5,
         )
 
         # Scope by query_id to avoid cross-test pollution in the shared test DB
@@ -462,8 +557,8 @@ class TestCleanupSetBasedDelete:
         deleted_q1 = settings.execute_cleanup(query_id=q1.id)
         deleted_q2 = settings.execute_cleanup(query_id=q2.id)
 
-        assert deleted_q1 == 5   # 10 - 5
-        assert deleted_q2 == 2   # 7 - 5
+        assert deleted_q1 == 5  # 10 - 5
+        assert deleted_q2 == 2  # 7 - 5
         assert QueryExecutionSnapshot.objects.filter(saved_query=q1).count() == 5
         assert QueryExecutionSnapshot.objects.filter(saved_query=q2).count() == 5
 
@@ -477,14 +572,19 @@ class TestCleanupSetBasedDelete:
         snapshots = []
         for i in range(8):
             snap = make_snapshot(
-                user, query, conn, executed_at=now - timedelta(seconds=i),
+                user,
+                query,
+                conn,
+                executed_at=now - timedelta(seconds=i),
             )
             snapshots.append(snap)
         # Newest 3 are snapshots[0..2]
         newest_ids = {snapshots[0].id, snapshots[1].id, snapshots[2].id}
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='count', retention_count=3,
+            user=user,
+            retention_policy='count',
+            retention_count=3,
         )
         settings.execute_cleanup()
 
@@ -507,7 +607,9 @@ class TestCleanupSetBasedDelete:
             make_snapshot(user, q2, conn, executed_at=now - timedelta(days=60))
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='days', retention_days=30,
+            user=user,
+            retention_policy='days',
+            retention_days=30,
         )
         deleted = settings.execute_cleanup(query_id=q1.id)
 
@@ -532,7 +634,9 @@ class TestCleanupPreviewPagination:
             make_snapshot(user, query, conn, executed_at=now - timedelta(days=60 + i))
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='days', retention_days=30,
+            user=user,
+            retention_policy='days',
+            retention_days=30,
         )
         preview = settings.get_cleanup_preview(limit=5)
 
@@ -550,7 +654,9 @@ class TestCleanupPreviewPagination:
             make_snapshot(user, query, conn, executed_at=now - timedelta(days=60 + i))
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='days', retention_days=30,
+            user=user,
+            retention_policy='days',
+            retention_days=30,
         )
         preview = settings.get_cleanup_preview(limit=500)
 
@@ -568,7 +674,9 @@ class TestCleanupPreviewPagination:
             make_snapshot(user, query, conn, executed_at=now - timedelta(seconds=i))
 
         settings = TimeMachineSettings.objects.create(
-            user=user, retention_policy='count', retention_count=3,
+            user=user,
+            retention_policy='count',
+            retention_count=3,
         )
         # Scope to this query to avoid cross-test pollution (see other
         # tests in this file that scope the same way).

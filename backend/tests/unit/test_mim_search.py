@@ -14,16 +14,18 @@ from mim.search.lucene import _strip_intent_suffix, _tokenize
 
 @pytest.mark.unit
 class TestEscapeLucene:
-
-    @pytest.mark.parametrize('term, expected', [
-        ('plain', 'plain'),
-        ('a:b', 'a\\:b'),
-        ('foo/bar', 'foo\\/bar'),
-        ('a+b-c', 'a\\+b\\-c'),
-        ('(grouped)', '\\(grouped\\)'),
-        ('quote"x', 'quote\\"x'),
-        ('back\\slash', 'back\\\\slash'),
-    ])
+    @pytest.mark.parametrize(
+        'term, expected',
+        [
+            ('plain', 'plain'),
+            ('a:b', 'a\\:b'),
+            ('foo/bar', 'foo\\/bar'),
+            ('a+b-c', 'a\\+b\\-c'),
+            ('(grouped)', '\\(grouped\\)'),
+            ('quote"x', 'quote\\"x'),
+            ('back\\slash', 'back\\\\slash'),
+        ],
+    )
     def test_special_chars_are_escaped(self, term, expected):
         assert escape_lucene(term) == expected
 
@@ -36,7 +38,6 @@ class TestEscapeLucene:
 
 @pytest.mark.unit
 class TestTokenize:
-
     def test_bare_words(self):
         assert _tokenize('foo bar') == [('word', 'foo'), ('word', 'bar')]
 
@@ -56,7 +57,6 @@ class TestTokenize:
 
 @pytest.mark.unit
 class TestStripIntentSuffix:
-
     def test_wildcard_suffix(self):
         assert _strip_intent_suffix('fv*') == ('fv', '*', '')
 
@@ -75,7 +75,6 @@ class TestStripIntentSuffix:
 
 @pytest.mark.unit
 class TestResolveAliases:
-
     def test_single_word_alias(self):
         assert resolve_aliases('vrf') == ['fvCtx']
 
@@ -113,7 +112,6 @@ class TestResolveAliases:
 
 @pytest.mark.unit
 class TestBuildSearchQuery:
-
     def test_blank_returns_empty(self):
         assert build_search_query('') == ''
         assert build_search_query('   ') == ''
@@ -179,6 +177,5 @@ class TestAliasInventory:
     def test_multi_word_aliases_sorted_longest_first(self):
         lengths = [len(phrase) for phrase, _ in MULTI_WORD_ALIASES]
         assert lengths == sorted(lengths, reverse=True), (
-            'MULTI_WORD_ALIASES must be longest-first to keep substring '
-            'matching greedy.'
+            'MULTI_WORD_ALIASES must be longest-first to keep substring matching greedy.'
         )

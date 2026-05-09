@@ -18,11 +18,14 @@ class LdapStatusEndpointTest(TestCase):
 
     def setUp(self):
         self.admin = User.objects.create_user(
-            username='ldap_admin', email='la@test.com',
-            password='pass123!', is_superuser=True,
+            username='ldap_admin',
+            email='la@test.com',
+            password='pass123!',
+            is_superuser=True,
         )
         self.regular = User.objects.create_user(
-            username='ldap_user', email='lu@test.com',
+            username='ldap_user',
+            email='lu@test.com',
             password='pass123!',
         )
         self.client = APIClient()
@@ -57,12 +60,15 @@ class LdapStatusEndpointTest(TestCase):
         AUTH_LDAP_MIRROR_GROUPS=True,
         AUTH_LDAP_ALWAYS_UPDATE_USER=True,
     )
-    @patch.dict('os.environ', {
-        'LDAP_SERVER_URI': 'ldap://test:389',
-        'LDAP_BIND_DN': 'cn=admin,dc=test,dc=local',
-        'LDAP_USER_DN': 'ou=users,dc=test,dc=local',
-        'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
-    })
+    @patch.dict(
+        'os.environ',
+        {
+            'LDAP_SERVER_URI': 'ldap://test:389',
+            'LDAP_BIND_DN': 'cn=admin,dc=test,dc=local',
+            'LDAP_USER_DN': 'ou=users,dc=test,dc=local',
+            'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
+        },
+    )
     def test_ldap_enabled_returns_config(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get('/api/auth/ldap/status/')
@@ -105,11 +111,14 @@ class LdapTestConnectionEndpointTest(TestCase):
 
     def setUp(self):
         self.admin = User.objects.create_user(
-            username='ldap_admin2', email='la2@test.com',
-            password='pass123!', is_superuser=True,
+            username='ldap_admin2',
+            email='la2@test.com',
+            password='pass123!',
+            is_superuser=True,
         )
         self.regular = User.objects.create_user(
-            username='ldap_user2', email='lu2@test.com',
+            username='ldap_user2',
+            email='lu2@test.com',
             password='pass123!',
         )
         self.client = APIClient()
@@ -136,10 +145,13 @@ class LdapTestConnectionEndpointTest(TestCase):
         AUTH_LDAP_BIND_DN='cn=admin,dc=test,dc=local',
         AUTH_LDAP_BIND_PASSWORD='secret',
     )
-    @patch.dict('os.environ', {
-        'LDAP_USER_DN': 'ou=users,dc=test,dc=local',
-        'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
-    })
+    @patch.dict(
+        'os.environ',
+        {
+            'LDAP_USER_DN': 'ou=users,dc=test,dc=local',
+            'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
+        },
+    )
     @patch('ldap.initialize')
     def test_successful_connection(self, mock_initialize):
         mock_conn = MagicMock()
@@ -184,15 +196,20 @@ class LdapUsersEndpointTest(TestCase):
 
     def setUp(self):
         self.admin = User.objects.create_user(
-            username='ldap_admin3', email='la3@test.com',
-            password='pass123!', is_superuser=True,
+            username='ldap_admin3',
+            email='la3@test.com',
+            password='pass123!',
+            is_superuser=True,
         )
         self.regular = User.objects.create_user(
-            username='ldap_user3', email='lu3@test.com',
+            username='ldap_user3',
+            email='lu3@test.com',
             password='pass123!',
         )
         self.synced_user = User.objects.create_user(
-            username='jdoe', email='jdoe@test.com', password='pass123!',
+            username='jdoe',
+            email='jdoe@test.com',
+            password='pass123!',
         )
         self.client = APIClient()
 
@@ -217,42 +234,54 @@ class LdapUsersEndpointTest(TestCase):
         AUTH_LDAP_BIND_DN='cn=admin,dc=test,dc=local',
         AUTH_LDAP_BIND_PASSWORD='secret',
     )
-    @patch.dict('os.environ', {
-        'LDAP_USER_DN': 'ou=users,dc=test,dc=local',
-        'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
-    })
+    @patch.dict(
+        'os.environ',
+        {
+            'LDAP_USER_DN': 'ou=users,dc=test,dc=local',
+            'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
+        },
+    )
     @patch('ldap.initialize')
     def test_lists_users_with_groups_and_sync_status(self, mock_initialize):
         mock_conn = MagicMock()
         mock_initialize.return_value = mock_conn
 
         user_results = [
-            ('uid=jdoe,ou=users,dc=test,dc=local', {
-                'uid': [b'jdoe'],
-                'cn': [b'John Doe'],
-                'givenName': [b'John'],
-                'sn': [b'Doe'],
-                'mail': [b'jdoe@test.com'],
-                'title': [b'Engineer'],
-                'departmentNumber': [b'IT'],
-                'employeeNumber': [b'EMP-001'],
-                'telephoneNumber': [b'+1234'],
-                'physicalDeliveryOfficeName': [b'HQ'],
-            }),
-            ('uid=nobody,ou=users,dc=test,dc=local', {
-                'uid': [b'nobody'],
-                'cn': [b'No Body'],
-                'givenName': [b'No'],
-                'sn': [b'Body'],
-                'mail': [b'nobody@test.com'],
-            }),
+            (
+                'uid=jdoe,ou=users,dc=test,dc=local',
+                {
+                    'uid': [b'jdoe'],
+                    'cn': [b'John Doe'],
+                    'givenName': [b'John'],
+                    'sn': [b'Doe'],
+                    'mail': [b'jdoe@test.com'],
+                    'title': [b'Engineer'],
+                    'departmentNumber': [b'IT'],
+                    'employeeNumber': [b'EMP-001'],
+                    'telephoneNumber': [b'+1234'],
+                    'physicalDeliveryOfficeName': [b'HQ'],
+                },
+            ),
+            (
+                'uid=nobody,ou=users,dc=test,dc=local',
+                {
+                    'uid': [b'nobody'],
+                    'cn': [b'No Body'],
+                    'givenName': [b'No'],
+                    'sn': [b'Body'],
+                    'mail': [b'nobody@test.com'],
+                },
+            ),
         ]
 
         group_results = [
-            ('cn=staff,ou=groups,dc=test,dc=local', {
-                'cn': [b'staff'],
-                'member': [b'uid=jdoe,ou=users,dc=test,dc=local'],
-            }),
+            (
+                'cn=staff,ou=groups,dc=test,dc=local',
+                {
+                    'cn': [b'staff'],
+                    'member': [b'uid=jdoe,ou=users,dc=test,dc=local'],
+                },
+            ),
         ]
 
         mock_conn.search_s.side_effect = [user_results, group_results]
@@ -282,11 +311,14 @@ class LdapGroupsEndpointTest(TestCase):
 
     def setUp(self):
         self.admin = User.objects.create_user(
-            username='ldap_admin4', email='la4@test.com',
-            password='pass123!', is_superuser=True,
+            username='ldap_admin4',
+            email='la4@test.com',
+            password='pass123!',
+            is_superuser=True,
         )
         self.regular = User.objects.create_user(
-            username='ldap_user4', email='lu4@test.com',
+            username='ldap_user4',
+            email='lu4@test.com',
             password='pass123!',
         )
         self.client = APIClient()
@@ -316,33 +348,45 @@ class LdapGroupsEndpointTest(TestCase):
             'is_superuser': 'cn=admins,ou=groups,dc=test,dc=local',
         },
     )
-    @patch.dict('os.environ', {
-        'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
-    })
+    @patch.dict(
+        'os.environ',
+        {
+            'LDAP_GROUP_DN': 'ou=groups,dc=test,dc=local',
+        },
+    )
     @patch('ldap.initialize')
     def test_lists_groups_with_django_flag_annotation(self, mock_initialize):
         mock_conn = MagicMock()
         mock_initialize.return_value = mock_conn
 
         group_results = [
-            ('cn=active,ou=groups,dc=test,dc=local', {
-                'cn': [b'active'],
-                'description': [b'Active users'],
-                'member': [
-                    b'uid=alice,ou=users,dc=test,dc=local',
-                    b'uid=bob,ou=users,dc=test,dc=local',
-                ],
-            }),
-            ('cn=admins,ou=groups,dc=test,dc=local', {
-                'cn': [b'admins'],
-                'description': [b'Admin users'],
-                'member': [b'uid=alice,ou=users,dc=test,dc=local'],
-            }),
-            ('cn=devops,ou=groups,dc=test,dc=local', {
-                'cn': [b'devops'],
-                'description': [b'DevOps team'],
-                'member': [b'uid=bob,ou=users,dc=test,dc=local'],
-            }),
+            (
+                'cn=active,ou=groups,dc=test,dc=local',
+                {
+                    'cn': [b'active'],
+                    'description': [b'Active users'],
+                    'member': [
+                        b'uid=alice,ou=users,dc=test,dc=local',
+                        b'uid=bob,ou=users,dc=test,dc=local',
+                    ],
+                },
+            ),
+            (
+                'cn=admins,ou=groups,dc=test,dc=local',
+                {
+                    'cn': [b'admins'],
+                    'description': [b'Admin users'],
+                    'member': [b'uid=alice,ou=users,dc=test,dc=local'],
+                },
+            ),
+            (
+                'cn=devops,ou=groups,dc=test,dc=local',
+                {
+                    'cn': [b'devops'],
+                    'description': [b'DevOps team'],
+                    'member': [b'uid=bob,ou=users,dc=test,dc=local'],
+                },
+            ),
         ]
 
         mock_conn.search_s.return_value = group_results

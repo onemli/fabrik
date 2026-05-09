@@ -16,14 +16,20 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Category, SavedQuery, QueryExecutionLog,
-    ScheduledTask, ScheduledTaskExecution, TaskManagementSettings,
-    AIQueryBuilderSettings, UserAIProvider,
+    Category,
+    SavedQuery,
+    QueryExecutionLog,
+    ScheduledTask,
+    ScheduledTaskExecution,
+    TaskManagementSettings,
+    AIQueryBuilderSettings,
+    UserAIProvider,
 )
 
 
 class UserSerializer(serializers.ModelSerializer):
     """Read-only user info embedded inside query/execution responses."""
+
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email']
@@ -33,11 +39,21 @@ class UserSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     """Category with annotated query_count. The annotation is applied in the
     ViewSet queryset so this field doesn't trigger a per-row subquery."""
+
     query_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'color', 'icon', 'query_count', 'created_at', 'updated_at']
+        fields = [
+            'id',
+            'name',
+            'description',
+            'color',
+            'icon',
+            'query_count',
+            'created_at',
+            'updated_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_query_count(self, obj):
@@ -47,6 +63,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class SavedQueryListSerializer(serializers.ModelSerializer):
     """Stripped-down serializer for the query list page. Omits flow_data to keep
     list responses fast — the full canvas JSON can be hundreds of KB per query."""
+
     created_by = UserSerializer(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     is_favorite = serializers.SerializerMethodField()
@@ -56,17 +73,42 @@ class SavedQueryListSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedQuery
         fields = [
-            'id', 'name', 'description', 'category', 'category_name',
-            'tags_list', 'created_by', 'is_public', 'is_template',
-            'execution_count', 'last_executed_at', 'created_at', 'updated_at', 'is_favorite',
-            'enable_time_machine', 'major_version', 'minor_version', 'version_string',
-            'is_validation_query', 'validation_value_field', 'validation_description',
-            'validation_error_message', 'validation_error_title',
-            'validation_usage_count', 'last_validated_at',
+            'id',
+            'name',
+            'description',
+            'category',
+            'category_name',
+            'tags_list',
+            'created_by',
+            'is_public',
+            'is_template',
+            'execution_count',
+            'last_executed_at',
+            'created_at',
+            'updated_at',
+            'is_favorite',
+            'enable_time_machine',
+            'major_version',
+            'minor_version',
+            'version_string',
+            'is_validation_query',
+            'validation_value_field',
+            'validation_description',
+            'validation_error_message',
+            'validation_error_title',
+            'validation_usage_count',
+            'last_validated_at',
         ]
         read_only_fields = [
-            'id', 'created_by', 'execution_count', 'last_executed_at',
-            'created_at', 'updated_at', 'major_version', 'minor_version', 'version_string'
+            'id',
+            'created_by',
+            'execution_count',
+            'last_executed_at',
+            'created_at',
+            'updated_at',
+            'major_version',
+            'minor_version',
+            'version_string',
         ]
 
     def get_is_favorite(self, obj):
@@ -88,6 +130,7 @@ class SavedQueryListSerializer(serializers.ModelSerializer):
 class SavedQueryDetailSerializer(serializers.ModelSerializer):
     """Full payload for the canvas editor view — includes flow_data, version
     history, and computed can_edit/can_delete permissions."""
+
     created_by = UserSerializer(read_only=True)
     shared_with = UserSerializer(many=True, read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -100,23 +143,55 @@ class SavedQueryDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedQuery
         fields = [
-            'id', 'name', 'description', 'flow_data', 'generated_query',
-            'category', 'category_name', 'tags', 'tags_list',
-            'created_by', 'shared_with', 'is_public', 'is_template',
-            'variables', 'execution_count', 'last_executed_at',
-            'created_at', 'updated_at', 'is_favorite',
-            'can_edit', 'can_delete',
-            'enable_time_machine', 'enable_pagination', 'page_size',
-            'major_version', 'minor_version',
-            'version_string', 'current_version_hash', 'version_history',
-            'is_validation_query', 'validation_value_field', 'validation_description',
-            'validation_error_message', 'validation_error_title',
-            'validation_usage_count', 'last_validated_at',
+            'id',
+            'name',
+            'description',
+            'flow_data',
+            'generated_query',
+            'category',
+            'category_name',
+            'tags',
+            'tags_list',
+            'created_by',
+            'shared_with',
+            'is_public',
+            'is_template',
+            'variables',
+            'execution_count',
+            'last_executed_at',
+            'created_at',
+            'updated_at',
+            'is_favorite',
+            'can_edit',
+            'can_delete',
+            'enable_time_machine',
+            'enable_pagination',
+            'page_size',
+            'major_version',
+            'minor_version',
+            'version_string',
+            'current_version_hash',
+            'version_history',
+            'is_validation_query',
+            'validation_value_field',
+            'validation_description',
+            'validation_error_message',
+            'validation_error_title',
+            'validation_usage_count',
+            'last_validated_at',
         ]
         read_only_fields = [
-            'id', 'created_by', 'execution_count', 'last_executed_at',
-            'created_at', 'updated_at', 'major_version', 'minor_version',
-            'version_string', 'current_version_hash', 'version_history'
+            'id',
+            'created_by',
+            'execution_count',
+            'last_executed_at',
+            'created_at',
+            'updated_at',
+            'major_version',
+            'minor_version',
+            'version_string',
+            'current_version_hash',
+            'version_history',
         ]
 
     def get_is_favorite(self, obj):
@@ -150,10 +225,9 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
     """Write serializer for create/update. Accepts tags_list (array) and converts
     it to the comma-separated tags string the model stores. Also auto-bumps the
     version number if flow_data changes."""
+
     tags_list = serializers.ListField(
-        child=serializers.CharField(max_length=50),
-        required=False,
-        write_only=True
+        child=serializers.CharField(max_length=50), required=False, write_only=True
     )
 
     # Make fields optional for PATCH requests
@@ -164,11 +238,25 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedQuery
         fields = [
-            'id', 'name', 'description', 'flow_data', 'generated_query',
-            'category', 'tags', 'tags_list', 'is_public', 'is_template',
-            'variables', 'enable_time_machine', 'enable_pagination', 'page_size',
-            'is_validation_query', 'validation_value_field', 'validation_description',
-            'validation_error_message', 'validation_error_title',
+            'id',
+            'name',
+            'description',
+            'flow_data',
+            'generated_query',
+            'category',
+            'tags',
+            'tags_list',
+            'is_public',
+            'is_template',
+            'variables',
+            'enable_time_machine',
+            'enable_pagination',
+            'page_size',
+            'is_validation_query',
+            'validation_value_field',
+            'validation_description',
+            'validation_error_message',
+            'validation_error_title',
         ]
         read_only_fields = ['id']
 
@@ -179,14 +267,11 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
 
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            qs = SavedQuery.objects.filter(
-                name=value,
-                created_by=request.user
-            )
+            qs = SavedQuery.objects.filter(name=value, created_by=request.user)
             if self.instance:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
-                raise serializers.ValidationError("You already have a query with this name.")
+                raise serializers.ValidationError('You already have a query with this name.')
         return value
 
     def validate_flow_data(self, value):
@@ -195,7 +280,7 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
             return value
 
         if not isinstance(value, dict):
-            raise serializers.ValidationError("flow_data must be a JSON object")
+            raise serializers.ValidationError('flow_data must be a JSON object')
         if 'nodes' not in value or 'edges' not in value:
             raise serializers.ValidationError("flow_data must contain 'nodes' and 'edges'")
         return value
@@ -203,9 +288,9 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
     def validate_page_size(self, value):
         """Validate page size is within acceptable range"""
         if value < 1:
-            raise serializers.ValidationError("Page size must be at least 1")
+            raise serializers.ValidationError('Page size must be at least 1')
         if value > 1000:
-            raise serializers.ValidationError("Page size cannot exceed 1000")
+            raise serializers.ValidationError('Page size cannot exceed 1000')
         return value
 
     def validate(self, data):
@@ -222,10 +307,12 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
 
         # Mutual exclusion check
         if enable_time_machine and enable_pagination:
-            raise serializers.ValidationError({
-                'enable_pagination': 'Pagination and Time Machine cannot be enabled simultaneously. '
-                                   'Time Machine requires full data for drift detection.'
-            })
+            raise serializers.ValidationError(
+                {
+                    'enable_pagination': 'Pagination and Time Machine cannot be enabled simultaneously. '
+                    'Time Machine requires full data for drift detection.'
+                }
+            )
 
         return data
 
@@ -244,7 +331,14 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
         flow_data = validated_data.get('flow_data', {})
         if flow_data:
             instance.update_version_if_changed(flow_data, user=request.user)
-            instance.save(update_fields=['current_version_hash', 'major_version', 'minor_version', 'version_history'])
+            instance.save(
+                update_fields=[
+                    'current_version_hash',
+                    'major_version',
+                    'minor_version',
+                    'version_history',
+                ]
+            )
 
         return instance
 
@@ -263,30 +357,47 @@ class SavedQueryCreateUpdateSerializer(serializers.ModelSerializer):
         # Auto-version if flow_data changed
         if new_flow_data:
             version_changed, change_type, changes = instance.update_version_if_changed(
-                new_flow_data,
-                user=request.user if request else None
+                new_flow_data, user=request.user if request else None
             )
 
             if version_changed:
-                instance.save(update_fields=['current_version_hash', 'major_version', 'minor_version', 'version_history'])
+                instance.save(
+                    update_fields=[
+                        'current_version_hash',
+                        'major_version',
+                        'minor_version',
+                        'version_history',
+                    ]
+                )
 
                 import logging
+
                 logger = logging.getLogger(__name__)
-                logger.debug("Query '%s' version updated: %s - %s", instance.name, change_type, changes)
+                logger.debug(
+                    "Query '%s' version updated: %s - %s", instance.name, change_type, changes
+                )
 
         return instance
 
 
 class QueryExecutionLogSerializer(serializers.ModelSerializer):
     """Read-only execution history record. Written by the task; read by the UI."""
+
     executed_by = UserSerializer(read_only=True)
     query_name = serializers.CharField(source='query.name', read_only=True)
 
     class Meta:
         model = QueryExecutionLog
         fields = [
-            'id', 'query', 'query_name', 'executed_by', 'executed_at',
-            'execution_time_ms', 'result_count', 'success', 'error_message'
+            'id',
+            'query',
+            'query_name',
+            'executed_by',
+            'executed_at',
+            'execution_time_ms',
+            'result_count',
+            'success',
+            'error_message',
         ]
         read_only_fields = ['id', 'executed_by', 'executed_at']
 
@@ -295,6 +406,7 @@ class ScheduledTaskSerializer(serializers.ModelSerializer):
     """Full serializer for ScheduledTask — covers both user-created query tasks
     and platform system tasks (cleanup, snapshots). System tasks have is_system=True
     and are read-mostly; users can't create or delete them."""
+
     created_by = UserSerializer(read_only=True)
     query_name = serializers.SerializerMethodField()
     schedule_description = serializers.ReadOnlyField()
@@ -303,25 +415,61 @@ class ScheduledTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScheduledTask
         fields = [
-            'id', 'name', 'description', 'priority', 'order', 'created_by',
+            'id',
+            'name',
+            'description',
+            'priority',
+            'order',
+            'created_by',
             # System task fields (NEW)
-            'task_type', 'category', 'is_system_task', 'system_task_handler',
+            'task_type',
+            'category',
+            'is_system_task',
+            'system_task_handler',
             # Query fields (null for system tasks)
-            'saved_query', 'query_name', 'apic_connection_ids', 'variable_values',
+            'saved_query',
+            'query_name',
+            'apic_connection_ids',
+            'variable_values',
             # Configuration
-            'retry_enabled', 'retry_count', 'retry_interval_minutes',
-            'email_on_success', 'email_on_failure', 'email_recipients',
-            'log_retention_days', 'frequency', 'minute_of_hour',
-            'time_of_day', 'day_of_week', 'day_of_month', 'scheduled_datetime',
-            'timezone', 'status', 'last_run_at', 'next_run_at', 'execution_count',
-            'success_count', 'failure_count', 'schedule_description', 'success_rate',
-            'created_at', 'updated_at'
+            'retry_enabled',
+            'retry_count',
+            'retry_interval_minutes',
+            'email_on_success',
+            'email_on_failure',
+            'email_recipients',
+            'log_retention_days',
+            'frequency',
+            'minute_of_hour',
+            'time_of_day',
+            'day_of_week',
+            'day_of_month',
+            'scheduled_datetime',
+            'timezone',
+            'status',
+            'last_run_at',
+            'next_run_at',
+            'execution_count',
+            'success_count',
+            'failure_count',
+            'schedule_description',
+            'success_rate',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'created_by', 'last_run_at', 'next_run_at', 'execution_count',
-            'success_count', 'failure_count', 'created_at', 'updated_at',
+            'id',
+            'created_by',
+            'last_run_at',
+            'next_run_at',
+            'execution_count',
+            'success_count',
+            'failure_count',
+            'created_at',
+            'updated_at',
             # System task fields are read-only (platform-managed)
-            'is_system_task', 'system_task_handler'
+            'is_system_task',
+            'system_task_handler',
         ]
 
     def get_query_name(self, obj):
@@ -330,34 +478,60 @@ class ScheduledTaskSerializer(serializers.ModelSerializer):
 
 class ScheduledTaskExecutionSerializer(serializers.ModelSerializer):
     """Serializer for scheduled task execution logs"""
+
     task_name = serializers.CharField(source='scheduled_task.name', read_only=True)
     duration_seconds = serializers.ReadOnlyField()
 
     class Meta:
         model = ScheduledTaskExecution
         fields = [
-            'id', 'scheduled_task', 'task_name', 'apic_connection_id',
-            'apic_connection_name', 'status', 'result', 'result_count',
-            'error_type', 'error_message', 'error_traceback', 'retry_attempt',
-            'is_retry', 'created_at', 'started_at', 'completed_at',
-            'execution_time_ms', 'duration_seconds', 'celery_task_id'
+            'id',
+            'scheduled_task',
+            'task_name',
+            'apic_connection_id',
+            'apic_connection_name',
+            'status',
+            'result',
+            'result_count',
+            'error_type',
+            'error_message',
+            'error_traceback',
+            'retry_attempt',
+            'is_retry',
+            'created_at',
+            'started_at',
+            'completed_at',
+            'execution_time_ms',
+            'duration_seconds',
+            'celery_task_id',
         ]
         read_only_fields = [
-            'id', 'task_name', 'duration_seconds', 'created_at',
-            'started_at', 'completed_at', 'execution_time_ms'
+            'id',
+            'task_name',
+            'duration_seconds',
+            'created_at',
+            'started_at',
+            'completed_at',
+            'execution_time_ms',
         ]
 
 
 class TaskManagementSettingsSerializer(serializers.ModelSerializer):
     """Serializer for task management settings"""
+
     updated_by = UserSerializer(read_only=True)
 
     class Meta:
         model = TaskManagementSettings
         fields = [
-            'id', 'default_retry_count', 'default_retry_interval_minutes',
-            'default_log_retention_days', 'email_enabled', 'email_from_address',
-            'updated_at', 'updated_by'
+            'id',
+            'default_retry_count',
+            'default_retry_interval_minutes',
+            'default_log_retention_days',
+            'email_enabled',
+            'email_from_address',
+            'updated_at',
+            'updated_by',
         ]
         read_only_fields = ['id', 'updated_at', 'updated_by']
 
@@ -369,21 +543,31 @@ class AIQueryBuilderSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = AIQueryBuilderSettings
         fields = [
-            'id', 'enabled', 'ollama_url', 'intent_model', 'query_builder_model',
-            'neo4j_url', 'neo4j_user', 'neo4j_password',
-            'log_all_queries', 'save_failed_attempts', 'created_at', 'updated_at',
-            'updated_by', 'is_available'
+            'id',
+            'enabled',
+            'ollama_url',
+            'intent_model',
+            'query_builder_model',
+            'neo4j_url',
+            'neo4j_user',
+            'neo4j_password',
+            'log_all_queries',
+            'save_failed_attempts',
+            'created_at',
+            'updated_at',
+            'updated_by',
+            'is_available',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'updated_by', 'is_available']
-        extra_kwargs = {
-            'neo4j_password': {'write_only': True}
-        }
+        extra_kwargs = {'neo4j_password': {'write_only': True}}
 
 
 class UserAIProviderSerializer(serializers.ModelSerializer):
     api_key = serializers.CharField(
-        write_only=True, required=False, allow_blank=True,
-        help_text='API key (write-only, will be encrypted)'
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='API key (write-only, will be encrypted)',
     )
     has_api_key = serializers.SerializerMethodField()
     provider_display = serializers.CharField(source='get_provider_display', read_only=True)
@@ -392,11 +576,21 @@ class UserAIProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAIProvider
         fields = [
-            'id', 'provider', 'provider_display', 'api_key', 'has_api_key',
-            'api_base_url', 'model_name', 'default_model',
-            'azure_deployment_name', 'azure_api_version',
-            'is_active', 'last_used_at', 'last_error',
-            'created_at', 'updated_at'
+            'id',
+            'provider',
+            'provider_display',
+            'api_key',
+            'has_api_key',
+            'api_base_url',
+            'model_name',
+            'default_model',
+            'azure_deployment_name',
+            'azure_api_version',
+            'is_active',
+            'last_used_at',
+            'last_error',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['id', 'last_used_at', 'last_error', 'created_at', 'updated_at']
 
@@ -409,9 +603,7 @@ class UserAIProviderSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         api_key = validated_data.pop('api_key', None)
         user = self.context['request'].user
-        instance, created = UserAIProvider.objects.get_or_create(
-            user=user, defaults=validated_data
-        )
+        instance, created = UserAIProvider.objects.get_or_create(user=user, defaults=validated_data)
         if not created:
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)

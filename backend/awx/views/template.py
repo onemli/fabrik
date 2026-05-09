@@ -53,6 +53,7 @@ class TemplateCategoryViewSet(viewsets.ModelViewSet):
     sidebar needs them all at once. System categories (is_system=True) can't
     be renamed; that's enforced in the serializer.
     """
+
     permission_classes = [IsAuthenticated]
     serializer_class = TemplateCategorySerializer
     pagination_class = None  # No pagination for categories
@@ -94,17 +95,15 @@ class TemplateCategoryViewSet(viewsets.ModelViewSet):
             resource_id=instance.id,
             resource_name=instance.name,
             description=f"Template category '{instance.name}' updated",
-            metadata={
-                'name': instance.name,
-                'display_order': instance.display_order
-            },
-            request=self.request
+            metadata={'name': instance.name, 'display_order': instance.display_order},
+            request=self.request,
         )
 
     def perform_destroy(self, instance: TemplateCategory) -> None:
         # Prevent deletion of system categories
         if instance.is_system:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied('System categories cannot be deleted')
 
         category_name = instance.name
@@ -120,7 +119,7 @@ class TemplateCategoryViewSet(viewsets.ModelViewSet):
             resource_id=category_id,
             resource_name=category_name,
             description=f"Template category '{category_name}' deleted",
-            request=self.request
+            request=self.request,
         )
 
 
@@ -128,6 +127,7 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Ansible automation templates
     """
+
     permission_classes = [FabrikModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'tags']
@@ -137,11 +137,11 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[AutomationTemplate]:
         """Filter templates based on ownership"""
         user = self.request.user
-        queryset = AutomationTemplate.objects.select_related(
-            'created_by', 'category', 'awx_connection'
-        ).filter(
-            Q(created_by=user) | Q(is_public=True)
-        ).distinct()
+        queryset = (
+            AutomationTemplate.objects.select_related('created_by', 'category', 'awx_connection')
+            .filter(Q(created_by=user) | Q(is_public=True))
+            .distinct()
+        )
 
         # Filter by category
         category = self.request.query_params.get('category')
@@ -183,7 +183,7 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
                 'awx_type': instance.awx_type,
                 'awx_template_id': instance.awx_template_id,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer: BaseSerializer) -> None:
@@ -200,7 +200,7 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
             resource_id=updated_instance.id,
             resource_name=updated_instance.name,
             description=f"Ansible template '{old_name}' updated",
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance: AutomationTemplate) -> None:
@@ -215,7 +215,7 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
             metadata={
                 'execution_count': instance.execution_count,
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -232,10 +232,7 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
 
         is_valid, errors = template.validate_input_data(input_data)
 
-        return Response({
-            'valid': is_valid,
-            'errors': errors
-        })
+        return Response({'valid': is_valid, 'errors': errors})
 
     @action(detail=True, methods=['post'], url_path='validate-input')
     def validate_input(self, request: Request, pk: Any = None) -> Response:
@@ -257,21 +254,22 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
         try:
             # Start async validation task
             task = validate_template_input_async.delay(
-                template_id=str(template.id),
-                input_data=input_data,
-                connection_id=connection_id
+                template_id=str(template.id), input_data=input_data, connection_id=connection_id
             )
 
             # Store task ownership for authorization check in validation_status
             from django.core.cache import cache
+
             try:
                 cache.set(
-                    f"validation_task_owner:{task.id}",
+                    f'validation_task_owner:{task.id}',
                     request.user.id,
-                    timeout=3600  # 1 hour TTL
+                    timeout=3600,  # 1 hour TTL
                 )
             except Exception:
-                logger.warning(f"Failed to cache task ownership for {task.id}, IDOR check will be skipped")
+                logger.warning(
+                    f'Failed to cache task ownership for {task.id}, IDOR check will be skipped'
+                )
 
             # Audit log - task started
             AuditService.log(
@@ -285,23 +283,26 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
                 metadata={
                     'task_id': task.id,
                     'connection_id': connection_id,
-                    'row_count': len(input_data) if isinstance(input_data, list) else 0
+                    'row_count': len(input_data) if isinstance(input_data, list) else 0,
                 },
                 success=True,
-                request=self.request
+                request=self.request,
             )
 
-            return Response({
-                'task_id': task.id,
-                'status': 'PENDING',
-                'polling_interval': settings.AWX_VALIDATION_POLLING_INTERVAL
-            }, status=status.HTTP_202_ACCEPTED)
+            return Response(
+                {
+                    'task_id': task.id,
+                    'status': 'PENDING',
+                    'polling_interval': settings.AWX_VALIDATION_POLLING_INTERVAL,
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         except Exception as e:
-            return Response({
-                'valid': False,
-                'errors': [f"Failed to start validation: {str(e)}"]
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'valid': False, 'errors': [f'Failed to start validation: {str(e)}']},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=['get'], url_path='validation-status/(?P<task_id>[^/.]+)')
     def validation_status(self, request: Request, task_id: Any = None) -> Response:
@@ -321,20 +322,14 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
         from django.core.cache import cache
 
         # Verify task ownership - prevent IDOR
-        owner_id = cache.get(f"validation_task_owner:{task_id}")
+        owner_id = cache.get(f'validation_task_owner:{task_id}')
         if owner_id is not None and owner_id != request.user.id:
-            return Response(
-                {'error': 'Permission denied'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         try:
             task = AsyncResult(task_id)
 
-            response_data = {
-                'state': task.state,
-                'task_id': task_id
-            }
+            response_data = {'state': task.state, 'task_id': task_id}
 
             if task.state == 'PENDING':
                 response_data['status'] = 'Validation task pending...'
@@ -360,10 +355,7 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
                 response_data['progress'] = 0
                 response_data['error'] = str(task.info)
                 response_data['completed'] = True  # Signal to stop polling
-                response_data['result'] = {
-                    'valid': False,
-                    'errors': [str(task.info)]
-                }
+                response_data['result'] = {'valid': False, 'errors': [str(task.info)]}
 
             else:
                 response_data['status'] = f'Unknown state: {task.state}'
@@ -372,13 +364,16 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
             return Response(response_data)
 
         except Exception:
-            logger.exception(f"Error checking validation task status: {task_id}")
-            return Response({
-                'state': 'ERROR',
-                'status': 'Failed to get task status',
-                'error': 'Internal error checking task status',
-                'completed': True  # Stop polling on error
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f'Error checking validation task status: {task_id}')
+            return Response(
+                {
+                    'state': 'ERROR',
+                    'status': 'Failed to get task status',
+                    'error': 'Internal error checking task status',
+                    'completed': True,  # Stop polling on error
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['post'], url_path='validate-sheets')
     def validate_sheets(self, request: Request, pk: Any = None) -> Response:
@@ -404,19 +399,21 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
         connection_id = request.data.get('connection_id')
 
         if not sheets_data:
-            return Response({
-                'is_valid': True,
-                'sheets': {},
-                'total_errors': 0,
-                'validation_time_ms': 0,
-            })
+            return Response(
+                {
+                    'is_valid': True,
+                    'sheets': {},
+                    'total_errors': 0,
+                    'validation_time_ms': 0,
+                }
+            )
 
         start = time.monotonic()
 
         # Build a mapping from sheet_name -> awx_variable_name
         # so we can translate frontend sheet names to what the model expects
         sheet_to_var = {}
-        for schema in (template.table_schemas or []):
+        for schema in template.table_schemas or []:
             var_name = schema.get('awx_variable_name', '')
             sheet_name = schema.get('sheet_name', schema.get('name', var_name))
             sheet_to_var[sheet_name] = var_name
@@ -434,14 +431,15 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
 
         # Group errors by schema/sheet for per-sheet results
         sheet_results = {}
-        for schema in (template.table_schemas or []):
+        for schema in template.table_schemas or []:
             var_name = schema.get('awx_variable_name', '')
             sheet_name = schema.get('sheet_name', schema.get('name', var_name))
             if var_name in mapped_data:
                 sheet_errors = [
-                    e for e in errors
-                    if e.get('schema_index') is not None and
-                    (template.table_schemas or []).index(schema) == e.get('schema_index')
+                    e
+                    for e in errors
+                    if e.get('schema_index') is not None
+                    and (template.table_schemas or []).index(schema) == e.get('schema_index')
                 ]
                 sheet_results[sheet_name] = {
                     'is_valid': len(sheet_errors) == 0,
@@ -467,12 +465,14 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
                 'validation_time_ms': elapsed,
             },
             success=is_valid,
-            request=self.request
+            request=self.request,
         )
 
-        return Response({
-            'is_valid': is_valid,
-            'sheets': sheet_results,
-            'total_errors': len(errors),
-            'validation_time_ms': elapsed,
-        })
+        return Response(
+            {
+                'is_valid': is_valid,
+                'sheets': sheet_results,
+                'total_errors': len(errors),
+                'validation_time_ms': elapsed,
+            }
+        )

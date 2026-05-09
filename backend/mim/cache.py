@@ -25,12 +25,11 @@ class MIMCache:
     def _make_key(prefix: str, *args, **kwargs) -> str:
         """Generate cache key from function arguments"""
         # Create deterministic key from arguments
-        key_data = {
-            'args': args,
-            'kwargs': sorted(kwargs.items())
-        }
-        key_hash = hashlib.md5(json.dumps(key_data, sort_keys=True).encode(), usedforsecurity=False).hexdigest()
-        return f"mim:{prefix}:{key_hash}"
+        key_data = {'args': args, 'kwargs': sorted(kwargs.items())}
+        key_hash = hashlib.md5(
+            json.dumps(key_data, sort_keys=True).encode(), usedforsecurity=False
+        ).hexdigest()
+        return f'mim:{prefix}:{key_hash}'
 
     @staticmethod
     def cached(prefix: str, ttl: int = TTL_MEDIUM):
@@ -43,11 +42,14 @@ class MIMCache:
                 # expensive query...
                 return result
         """
+
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
                 # Skip caching if DEBUG mode
-                if getattr(settings, 'DEBUG', False) and not getattr(settings, 'CACHE_IN_DEBUG', False):
+                if getattr(settings, 'DEBUG', False) and not getattr(
+                    settings, 'CACHE_IN_DEBUG', False
+                ):
                     return func(*args, **kwargs)
 
                 # Generate cache key
@@ -66,7 +68,9 @@ class MIMCache:
                     cache.set(cache_key, result, ttl)
 
                 return result
+
             return wrapper
+
         return decorator
 
     @staticmethod
@@ -82,7 +86,7 @@ class MIMCache:
         Note: Requires Redis backend with delete_pattern support
         """
         try:
-            cache.delete_pattern(f"mim:{pattern}:*")
+            cache.delete_pattern(f'mim:{pattern}:*')
         except AttributeError:
             # Fallback: clear entire cache if delete_pattern not available
             cache.clear()

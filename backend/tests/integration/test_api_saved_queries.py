@@ -2,14 +2,11 @@
 Integration tests for Saved Queries API endpoints
 Tests CRUD operations, permissions, and Time Machine integration
 """
+
 import pytest
 from rest_framework import status
 from queries.models import SavedQuery
-from tests.factories import (
-    UserFactory,
-    SavedQueryFactory,
-    CategoryFactory
-)
+from tests.factories import UserFactory, SavedQueryFactory, CategoryFactory
 
 
 @pytest.mark.integration
@@ -41,21 +38,21 @@ class TestSavedQueriesListCreate:
             'name': 'Test Query',
             'description': 'Test Description',
             'flow_data': {
-                'nodes': [
-                    {'id': '1', 'type': 'class', 'data': {'className': 'fvTenant'}}
-                ],
-                'edges': []
+                'nodes': [{'id': '1', 'type': 'class', 'data': {'className': 'fvTenant'}}],
+                'edges': [],
             },
             'generated_query': '/api/class/fvTenant.json',
             'category': category.id,
             'tags': 'test,tenant',
             'is_public': False,
-            'enable_time_machine': False
+            'enable_time_machine': False,
         }
 
         response = authenticated_client.post('/api/queries/saved-queries/', data, format='json')
 
-        assert response.status_code == status.HTTP_201_CREATED, f"Expected 201, got {response.status_code}: {response.data}"
+        assert response.status_code == status.HTTP_201_CREATED, (
+            f'Expected 201, got {response.status_code}: {response.data}'
+        )
         assert response.data['name'] == 'Test Query'
         assert response.data['enable_time_machine'] is False
 
@@ -70,17 +67,11 @@ class TestSavedQueriesListCreate:
             'name': 'TM Enabled Query',
             'description': 'With Time Machine',
             'flow_data': {
-                'nodes': [
-                    {
-                        'id': '1',
-                        'type': 'output',
-                        'data': {'enableTimeMachine': True}
-                    }
-                ],
-                'edges': []
+                'nodes': [{'id': '1', 'type': 'output', 'data': {'enableTimeMachine': True}}],
+                'edges': [],
             },
             'generated_query': '/api/class/fvTenant.json',
-            'enable_time_machine': True
+            'enable_time_machine': True,
         }
 
         response = authenticated_client.post('/api/queries/saved-queries/', data, format='json')
@@ -120,15 +111,10 @@ class TestSavedQueriesRetrieveUpdateDelete:
         """Test updating a query"""
         query = SavedQueryFactory(created_by=user, enable_time_machine=False)
 
-        data = {
-            'name': 'Updated Query Name',
-            'enable_time_machine': True
-        }
+        data = {'name': 'Updated Query Name', 'enable_time_machine': True}
 
         response = authenticated_client.patch(
-            f'/api/queries/saved/{query.id}/',
-            data,
-            format='json'
+            f'/api/queries/saved/{query.id}/', data, format='json'
         )
 
         if response.status_code == status.HTTP_200_OK:
@@ -175,11 +161,7 @@ class TestSavedQueriesPermissions:
         """Test that shared users can access queries shared with them"""
         creator = UserFactory()
         shared_user = UserFactory()
-        query = SavedQueryFactory(
-            created_by=creator,
-            is_public=False,
-            shared_with=[shared_user]
-        )
+        query = SavedQueryFactory(created_by=creator, is_public=False, shared_with=[shared_user])
 
         from rest_framework.test import APIClient
         from rest_framework_simplejwt.tokens import RefreshToken
@@ -217,9 +199,7 @@ class TestSavedQueriesFiltering:
         SavedQueryFactory(created_by=user, category=category1)
         SavedQueryFactory(created_by=user, category=category2)
 
-        response = authenticated_client.get(
-            f'/api/queries/saved/?category={category1.id}'
-        )
+        response = authenticated_client.get(f'/api/queries/saved/?category={category1.id}')
 
         if response.status_code == status.HTTP_200_OK:
             # All results should be from category1
@@ -250,7 +230,9 @@ class TestSavedQueriesFiltering:
         if response.status_code == status.HTTP_200_OK:
             results = response.data.get('results', response.data)
             if results:
-                assert any('Tenant' in str(q.get('name', '')) for q in results if isinstance(q, dict))
+                assert any(
+                    'Tenant' in str(q.get('name', '')) for q in results if isinstance(q, dict)
+                )
 
 
 @pytest.mark.integration

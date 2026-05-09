@@ -19,7 +19,7 @@ from .serializers import (
     APICConnectionListSerializer,
     APICConnectionDetailSerializer,
     APICConnectionCreateUpdateSerializer,
-    APICQueryExecutionSerializer
+    APICQueryExecutionSerializer,
 )
 from .apic_client import APICClient
 from audit.services import AuditService
@@ -27,6 +27,7 @@ from audit.services import AuditService
 
 class APICConnectionViewSet(viewsets.ModelViewSet):
     """ViewSet for managing APIC connections"""
+
     permission_classes = [IsAuthenticated, FabrikModelPermissions]
     pagination_class = None  # Disable pagination for APIC connections
 
@@ -57,7 +58,7 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
         is_admin = user.is_superuser or user.groups.filter(name='Admin').exists()
 
         if not is_admin:
-            raise PermissionDenied("Only administrators can create APIC connections")
+            raise PermissionDenied('Only administrators can create APIC connections')
 
         instance = serializer.save(created_by=user)
 
@@ -75,7 +76,7 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 'username': instance.username,
                 'is_public': instance.is_public,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer):
@@ -121,7 +122,7 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
             resource_name=updated_instance.name,
             description=f"APIC connection '{updated_instance.name}' updated",
             metadata={'changes': changes} if changes else {},
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance):
@@ -147,7 +148,7 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 'username': instance.username,
                 'created_by': instance.created_by.username,
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -171,11 +172,11 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 metadata={'url': connection.url},
                 success=False,
                 error_message='Permission denied',
-                request=request
+                request=request,
             )
             return Response(
                 {'error': 'You do not have permission to test this connection'},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         # Get password safely with error handling
@@ -200,13 +201,12 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 metadata={'url': connection.url},
                 success=False,
                 error_message=error_msg,
-                request=request
+                request=request,
             )
 
-            return Response({
-                'success': False,
-                'message': error_msg
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'success': False, 'message': error_msg}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Create APIC client and test connection
         client = APICClient(
@@ -214,7 +214,7 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
             username=connection.username,
             password=password,
             verify_ssl=connection.verify_ssl,
-            timeout=connection.timeout
+            timeout=connection.timeout,
         )
 
         success, error = client.test_connection()
@@ -242,19 +242,15 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
             },
             success=success,
             error_message=error if not success else '',
-            request=request
+            request=request,
         )
 
         if success:
-            return Response({
-                'success': True,
-                'message': 'Connection successful'
-            })
+            return Response({'success': True, 'message': 'Connection successful'})
         else:
-            return Response({
-                'success': False,
-                'message': error
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'success': False, 'message': error}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=False, methods=['post'])
     def execute_query(self, request):
@@ -269,11 +265,11 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 action='apic_query_validation_failed',
                 category='apic_management',
                 resource_type='APICConnection',
-                description="APIC query execution failed: Invalid request data",
+                description='APIC query execution failed: Invalid request data',
                 metadata={'errors': serializer.errors},
                 success=False,
                 error_message=str(serializer.errors),
-                request=request
+                request=request,
             )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -293,19 +289,16 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 action='apic_query_connection_not_found',
                 category='apic_management',
                 resource_type='APICConnection',
-                description="APIC query execution failed: Connection not found",
+                description='APIC query execution failed: Connection not found',
                 metadata={
                     'connection_id': str(connection_id),
                     'query_path': query_path,
                 },
                 success=False,
                 error_message='Connection not found',
-                request=request
+                request=request,
             )
-            return Response(
-                {'error': 'Connection not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({'error': 'Connection not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # Check if connection is active
         if not connection.is_active:
@@ -324,11 +317,10 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 },
                 success=False,
                 error_message='Connection is not active',
-                request=request
+                request=request,
             )
             return Response(
-                {'error': 'Connection is not active'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'Connection is not active'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Get password safely with error handling
@@ -351,12 +343,11 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 },
                 success=False,
                 error_message=error_msg,
-                request=request
+                request=request,
             )
-            return Response({
-                'success': False,
-                'error': error_msg
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'success': False, 'error': error_msg}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Create APIC client and execute query
         client = APICClient(
@@ -364,7 +355,7 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
             username=connection.username,
             password=password,
             verify_ssl=connection.verify_ssl,
-            timeout=connection.timeout
+            timeout=connection.timeout,
         )
 
         success, response_data, error = client.execute_query(query_path, method, data)
@@ -378,10 +369,15 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
         # unchanged.
         if success and isinstance(response_data, dict):
             from queries.services.response_flattener import maybe_flatten_response
+
             response_data = maybe_flatten_response(response_data, query_path)
 
         # Audit log
-        result_count = len(response_data.get('imdata', [])) if success and isinstance(response_data, dict) else 0
+        result_count = (
+            len(response_data.get('imdata', []))
+            if success and isinstance(response_data, dict)
+            else 0
+        )
         AuditService.log(
             user=request.user,
             action='apic_query_executed',
@@ -398,26 +394,31 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
             },
             success=success,
             error_message=error if not success else '',
-            request=request
+            request=request,
         )
 
         if success:
-            return Response({
-                'success': True,
-                'data': response_data,
-                'connection': {
-                    'id': connection.id,
-                    'name': connection.name,
-                    'url': connection.url
+            return Response(
+                {
+                    'success': True,
+                    'data': response_data,
+                    'connection': {
+                        'id': connection.id,
+                        'name': connection.name,
+                        'url': connection.url,
+                    },
                 }
-            })
+            )
         else:
-            return Response({
-                'success': False,
-                'error': error,
-                'connection': {
-                    'id': connection.id,
-                    'name': connection.name,
-                    'url': connection.url
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'success': False,
+                    'error': error,
+                    'connection': {
+                        'id': connection.id,
+                        'name': connection.name,
+                        'url': connection.url,
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )

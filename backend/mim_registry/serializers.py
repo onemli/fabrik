@@ -12,7 +12,9 @@ from mim_registry.models import (
 
 class MIMVersionSerializer(serializers.ModelSerializer):
     imported_by_username = serializers.CharField(
-        source='imported_by.username', read_only=True, default=None,
+        source='imported_by.username',
+        read_only=True,
+        default=None,
     )
 
     class Meta:
@@ -53,27 +55,47 @@ class MIMImportJobSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = MIMImportJob
         fields = [
-            'id', 'class_pkg', 'class_name', 'qualified_name', 'is_hot',
-            'state', 'source_version', 'attempted_versions',
-            'http_status_last', 'last_error', 'retry_count', 'updated_at',
+            'id',
+            'class_pkg',
+            'class_name',
+            'qualified_name',
+            'is_hot',
+            'state',
+            'source_version',
+            'attempted_versions',
+            'http_status_last',
+            'last_error',
+            'retry_count',
+            'updated_at',
         ]
         read_only_fields = fields
 
 
 class MIMImportRunSerializer(serializers.ModelSerializer):
     started_by_username = serializers.CharField(
-        source='started_by.username', read_only=True, default=None,
+        source='started_by.username',
+        read_only=True,
+        default=None,
     )
 
     class Meta:
         model = MIMImportRun
         fields = [
-            'id', 'version_key', 'state', 'phase',
-            'total_classes', 'completed_count',
-            'fallback_count', 'not_found_count', 'failed_count',
+            'id',
+            'version_key',
+            'state',
+            'phase',
+            'total_classes',
+            'completed_count',
+            'fallback_count',
+            'not_found_count',
+            'failed_count',
             'concurrency',
             'started_by_username',
-            'started_at', 'finished_at', 'core_ready_at',
-            'error_summary', 'cancel_requested',
+            'started_at',
+            'finished_at',
+            'core_ready_at',
+            'error_summary',
+            'cancel_requested',
         ]
         read_only_fields = fields

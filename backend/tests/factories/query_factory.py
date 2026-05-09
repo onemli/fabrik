@@ -1,4 +1,5 @@
 """Query model factories"""
+
 import factory
 from factory.django import DjangoModelFactory
 from datetime import time
@@ -29,25 +30,25 @@ class SavedQueryFactory(DjangoModelFactory):
     name = factory.Sequence(lambda n: f'Test Query {n}')
     description = factory.Faker('sentence')
 
-    flow_data = factory.LazyFunction(lambda: {
-        'nodes': [
-            {
-                'id': '1',
-                'type': 'class',
-                'position': {'x': 100, 'y': 100},
-                'data': {'className': 'fvTenant', 'label': 'Tenant'}
-            },
-            {
-                'id': '2',
-                'type': 'output',
-                'position': {'x': 300, 'y': 100},
-                'data': {'enableTimeMachine': False}
-            }
-        ],
-        'edges': [
-            {'id': 'e1-2', 'source': '1', 'target': '2'}
-        ]
-    })
+    flow_data = factory.LazyFunction(
+        lambda: {
+            'nodes': [
+                {
+                    'id': '1',
+                    'type': 'class',
+                    'position': {'x': 100, 'y': 100},
+                    'data': {'className': 'fvTenant', 'label': 'Tenant'},
+                },
+                {
+                    'id': '2',
+                    'type': 'output',
+                    'position': {'x': 300, 'y': 100},
+                    'data': {'enableTimeMachine': False},
+                },
+            ],
+            'edges': [{'id': 'e1-2', 'source': '1', 'target': '2'}],
+        }
+    )
 
     generated_query = '/api/class/fvTenant.json'
 
@@ -90,25 +91,25 @@ class TimeMachineEnabledQueryFactory(SavedQueryFactory):
 
     enable_time_machine = True
 
-    flow_data = factory.LazyFunction(lambda: {
-        'nodes': [
-            {
-                'id': '1',
-                'type': 'class',
-                'position': {'x': 100, 'y': 100},
-                'data': {'className': 'fvTenant', 'label': 'Tenant'}
-            },
-            {
-                'id': '2',
-                'type': 'output',
-                'position': {'x': 300, 'y': 100},
-                'data': {'enableTimeMachine': True}
-            }
-        ],
-        'edges': [
-            {'id': 'e1-2', 'source': '1', 'target': '2'}
-        ]
-    })
+    flow_data = factory.LazyFunction(
+        lambda: {
+            'nodes': [
+                {
+                    'id': '1',
+                    'type': 'class',
+                    'position': {'x': 100, 'y': 100},
+                    'data': {'className': 'fvTenant', 'label': 'Tenant'},
+                },
+                {
+                    'id': '2',
+                    'type': 'output',
+                    'position': {'x': 300, 'y': 100},
+                    'data': {'enableTimeMachine': True},
+                },
+            ],
+            'edges': [{'id': 'e1-2', 'source': '1', 'target': '2'}],
+        }
+    )
 
 
 class TemplateQueryFactory(SavedQueryFactory):
@@ -116,14 +117,16 @@ class TemplateQueryFactory(SavedQueryFactory):
 
     is_template = True
 
-    variables = factory.LazyFunction(lambda: [
-        {
-            'id': 'var1',
-            'label': 'Tenant Name',
-            'type': 'text',
-            'binding': {'nodeId': '1', 'field': 'filter.name'}
-        }
-    ])
+    variables = factory.LazyFunction(
+        lambda: [
+            {
+                'id': 'var1',
+                'label': 'Tenant Name',
+                'type': 'text',
+                'binding': {'nodeId': '1', 'field': 'filter.name'},
+            }
+        ]
+    )
 
 
 class ScheduledTaskFactory(DjangoModelFactory):

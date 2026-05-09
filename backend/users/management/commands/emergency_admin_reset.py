@@ -22,12 +22,12 @@ class Command(BaseCommand):
         except User.DoesNotExist:
             raise CommandError(f'User "{username}" does not exist.')
 
-        self.stdout.write(self.style.WARNING(
-            f'\n  This will reset the password and disable MFA for user: {username}'
-        ))
-        self.stdout.write(self.style.WARNING(
-            '  An audit log entry will be created.\n'
-        ))
+        self.stdout.write(
+            self.style.WARNING(
+                f'\n  This will reset the password and disable MFA for user: {username}'
+            )
+        )
+        self.stdout.write(self.style.WARNING('  An audit log entry will be created.\n'))
 
         confirmation = input("  Type 'CONFIRM' to proceed: ")
         if confirmation.strip() != 'CONFIRM':
@@ -51,6 +51,7 @@ class Command(BaseCommand):
         # Create audit log entry
         try:
             from audit.services import AuditService
+
             AuditService.log(
                 user=user,
                 action='emergency_admin_reset',
@@ -65,6 +66,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'\n  Password reset for user: {username}'))
         self.stdout.write(self.style.SUCCESS(f'  New password: {new_password}'))
-        self.stdout.write(self.style.WARNING(
-            '\n  The user should change this password immediately after login.\n'
-        ))
+        self.stdout.write(
+            self.style.WARNING(
+                '\n  The user should change this password immediately after login.\n'
+            )
+        )

@@ -2,6 +2,7 @@
 Integration tests for Validation Query endpoints
 Tests the is_validation_query filtering and CRUD for validation-specific fields
 """
+
 import pytest
 from rest_framework import status
 from queries.models import SavedQuery
@@ -70,10 +71,8 @@ class TestValidationQueryCreate:
             'name': 'EP Validator',
             'description': 'Checks for EPs',
             'flow_data': {
-                'nodes': [
-                    {'id': '1', 'type': 'class', 'data': {'className': 'fvCEp'}}
-                ],
-                'edges': []
+                'nodes': [{'id': '1', 'type': 'class', 'data': {'className': 'fvCEp'}}],
+                'edges': [],
             },
             'generated_query': '/api/class/fvCEp.json',
             'is_validation_query': True,

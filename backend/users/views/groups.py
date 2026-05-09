@@ -30,8 +30,10 @@ class GroupViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             from ..serializers import GroupCreateUpdateSerializer
+
             return GroupCreateUpdateSerializer
         from ..serializers import GroupDetailSerializer
+
         return GroupDetailSerializer
 
     def get_queryset(self):
@@ -133,35 +135,56 @@ class GroupViewSet(viewsets.ModelViewSet):
                 'icon': 'shield-check',
                 'color': 'red',
                 'quota_preset': {
-                    'max_saved_queries': 0, 'max_scheduled_tasks': 0,
-                    'max_apic_connections': 0, 'max_awx_requests_daily': 0,
-                    'max_awx_concurrent': 10, 'max_query_results': 0,
-                    'max_export_rows': 0, 'query_execution_daily': 0,
-                    'can_create_queries': True, 'can_execute_queries': True,
-                    'can_create_scheduled': True, 'can_use_awx': True,
-                    'can_use_time_machine': True, 'can_export_data': True,
-                    'can_share_resources': True, 'can_use_ai_builder': True,
+                    'max_saved_queries': 0,
+                    'max_scheduled_tasks': 0,
+                    'max_apic_connections': 0,
+                    'max_awx_requests_daily': 0,
+                    'max_awx_concurrent': 10,
+                    'max_query_results': 0,
+                    'max_export_rows': 0,
+                    'query_execution_daily': 0,
+                    'can_create_queries': True,
+                    'can_execute_queries': True,
+                    'can_create_scheduled': True,
+                    'can_use_awx': True,
+                    'can_use_time_machine': True,
+                    'can_export_data': True,
+                    'can_share_resources': True,
+                    'can_use_ai_builder': True,
                 },
             },
             'operator': {
                 'name': 'Operator',
                 'description': 'Can execute queries, manage connections, and run background tasks',
-                'permission_ids': get_perm_ids([
-                    'view_', 'add_savedquery', 'change_savedquery',
-                    'add_scheduledtask', 'change_scheduledtask',
-                    'view_queryexecutionsnapshot',
-                ]),
+                'permission_ids': get_perm_ids(
+                    [
+                        'view_',
+                        'add_savedquery',
+                        'change_savedquery',
+                        'add_scheduledtask',
+                        'change_scheduledtask',
+                        'view_queryexecutionsnapshot',
+                    ]
+                ),
                 'icon': 'play-circle',
                 'color': 'blue',
                 'quota_preset': {
-                    'max_saved_queries': 100, 'max_scheduled_tasks': 20,
-                    'max_apic_connections': 10, 'max_awx_requests_daily': 50,
-                    'max_awx_concurrent': 5, 'max_query_results': 10000,
-                    'max_export_rows': 50000, 'query_execution_daily': 200,
-                    'can_create_queries': True, 'can_execute_queries': True,
-                    'can_create_scheduled': True, 'can_use_awx': True,
-                    'can_use_time_machine': True, 'can_export_data': True,
-                    'can_share_resources': True, 'can_use_ai_builder': True,
+                    'max_saved_queries': 100,
+                    'max_scheduled_tasks': 20,
+                    'max_apic_connections': 10,
+                    'max_awx_requests_daily': 50,
+                    'max_awx_concurrent': 5,
+                    'max_query_results': 10000,
+                    'max_export_rows': 50000,
+                    'query_execution_daily': 200,
+                    'can_create_queries': True,
+                    'can_execute_queries': True,
+                    'can_create_scheduled': True,
+                    'can_use_awx': True,
+                    'can_use_time_machine': True,
+                    'can_export_data': True,
+                    'can_share_resources': True,
+                    'can_use_ai_builder': True,
                 },
             },
             'viewer': {
@@ -171,34 +194,55 @@ class GroupViewSet(viewsets.ModelViewSet):
                 'icon': 'eye',
                 'color': 'green',
                 'quota_preset': {
-                    'max_saved_queries': 10, 'max_scheduled_tasks': 0,
-                    'max_apic_connections': 2, 'max_awx_requests_daily': 0,
-                    'max_awx_concurrent': 0, 'max_query_results': 1000,
-                    'max_export_rows': 5000, 'query_execution_daily': 50,
-                    'can_create_queries': False, 'can_execute_queries': True,
-                    'can_create_scheduled': False, 'can_use_awx': False,
-                    'can_use_time_machine': True, 'can_export_data': True,
-                    'can_share_resources': False, 'can_use_ai_builder': False,
+                    'max_saved_queries': 10,
+                    'max_scheduled_tasks': 0,
+                    'max_apic_connections': 2,
+                    'max_awx_requests_daily': 0,
+                    'max_awx_concurrent': 0,
+                    'max_query_results': 1000,
+                    'max_export_rows': 5000,
+                    'query_execution_daily': 50,
+                    'can_create_queries': False,
+                    'can_execute_queries': True,
+                    'can_create_scheduled': False,
+                    'can_use_awx': False,
+                    'can_use_time_machine': True,
+                    'can_export_data': True,
+                    'can_share_resources': False,
+                    'can_use_ai_builder': False,
                 },
             },
             'editor': {
                 'name': 'Editor',
                 'description': 'Can create and edit queries, but not delete or manage users',
-                'permission_ids': get_perm_ids([
-                    'view_', 'add_savedquery', 'change_savedquery',
-                    'add_category', 'change_category',
-                ]),
+                'permission_ids': get_perm_ids(
+                    [
+                        'view_',
+                        'add_savedquery',
+                        'change_savedquery',
+                        'add_category',
+                        'change_category',
+                    ]
+                ),
                 'icon': 'edit',
                 'color': 'yellow',
                 'quota_preset': {
-                    'max_saved_queries': 50, 'max_scheduled_tasks': 10,
-                    'max_apic_connections': 5, 'max_awx_requests_daily': 20,
-                    'max_awx_concurrent': 3, 'max_query_results': 5000,
-                    'max_export_rows': 25000, 'query_execution_daily': 100,
-                    'can_create_queries': True, 'can_execute_queries': True,
-                    'can_create_scheduled': True, 'can_use_awx': False,
-                    'can_use_time_machine': True, 'can_export_data': True,
-                    'can_share_resources': True, 'can_use_ai_builder': True,
+                    'max_saved_queries': 50,
+                    'max_scheduled_tasks': 10,
+                    'max_apic_connections': 5,
+                    'max_awx_requests_daily': 20,
+                    'max_awx_concurrent': 3,
+                    'max_query_results': 5000,
+                    'max_export_rows': 25000,
+                    'query_execution_daily': 100,
+                    'can_create_queries': True,
+                    'can_execute_queries': True,
+                    'can_create_scheduled': True,
+                    'can_use_awx': False,
+                    'can_use_time_machine': True,
+                    'can_export_data': True,
+                    'can_share_resources': True,
+                    'can_use_ai_builder': True,
                 },
             },
         }
@@ -300,9 +344,6 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
 
         search = self.request.query_params.get('search')
         if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) |
-                Q(codename__icontains=search)
-            )
+            queryset = queryset.filter(Q(name__icontains=search) | Q(codename__icontains=search))
 
         return queryset.order_by('content_type__app_label', 'codename')

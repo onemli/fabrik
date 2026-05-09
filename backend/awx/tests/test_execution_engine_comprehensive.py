@@ -15,15 +15,13 @@ import uuid
 from unittest.mock import Mock, patch
 from django.contrib.auth import get_user_model
 
-from awx.services.execution_engine import (
-    ExecutionEngine
-)
+from awx.services.execution_engine import ExecutionEngine
 from awx.models import (
     AWXConnection,
     AutomationTemplate,
     AutomationRequest,
     AutomationExecution,
-    TemplateCategory
+    TemplateCategory,
 )
 
 User = get_user_model()
@@ -38,17 +36,14 @@ def test_user(db):
         email=f'test_{unique_id}@example.com',
         password='testpass123',
         first_name='Test',
-        last_name='User'
+        last_name='User',
     )
 
 
 @pytest.fixture
 def template_category(db, test_user):
     """Create a template category"""
-    return TemplateCategory.objects.create(
-        name='Test Category',
-        created_by=test_user
-    )
+    return TemplateCategory.objects.create(name='Test Category', created_by=test_user)
 
 
 @pytest.fixture
@@ -60,7 +55,7 @@ def awx_connection(db, test_user):
         auth_type=AWXConnection.AUTH_TYPE_TOKEN,
         verify_ssl=False,
         timeout=30,
-        created_by=test_user
+        created_by=test_user,
     )
     conn.set_token('test-token-12345')
     conn.save()
@@ -78,15 +73,17 @@ def bulk_csv_template(db, test_user, awx_connection, template_category):
         awx_connection=awx_connection,
         category=template_category,
         execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
-        table_schemas=[{
-            'sheet_name': 'Tenants',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True},
-                {'name': 'description', 'type': 'text', 'required': False}
-            ]
-        }],
+        table_schemas=[
+            {
+                'sheet_name': 'Tenants',
+                'columns': [
+                    {'name': 'tenant_name', 'type': 'text', 'required': True},
+                    {'name': 'description', 'type': 'text', 'required': False},
+                ],
+            }
+        ],
         variable_mappings={'custom_var': 'custom_value'},
-        created_by=test_user
+        created_by=test_user,
     )
 
 
@@ -101,13 +98,13 @@ def per_row_template(db, test_user, awx_connection, template_category):
         awx_connection=awx_connection,
         category=template_category,
         execution_mode=AutomationTemplate.EXECUTION_MODE_PER_ROW,
-        table_schemas=[{
-            'sheet_name': 'Data',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True}
-            ]
-        }],
-        created_by=test_user
+        table_schemas=[
+            {
+                'sheet_name': 'Data',
+                'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
+            }
+        ],
+        created_by=test_user,
     )
 
 
@@ -123,13 +120,13 @@ def hybrid_template(db, test_user, awx_connection, template_category):
         category=template_category,
         execution_mode=AutomationTemplate.EXECUTION_MODE_HYBRID,
         batch_size=5,  # Batch size for hybrid mode
-        table_schemas=[{
-            'sheet_name': 'Data',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True}
-            ]
-        }],
-        created_by=test_user
+        table_schemas=[
+            {
+                'sheet_name': 'Data',
+                'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
+            }
+        ],
+        created_by=test_user,
     )
 
 
@@ -144,13 +141,13 @@ def workflow_template(db, test_user, awx_connection, template_category):
         awx_connection=awx_connection,
         category=template_category,
         execution_mode=AutomationTemplate.EXECUTION_MODE_BULK,
-        table_schemas=[{
-            'sheet_name': 'Data',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True}
-            ]
-        }],
-        created_by=test_user
+        table_schemas=[
+            {
+                'sheet_name': 'Data',
+                'columns': [{'name': 'tenant_name', 'type': 'text', 'required': True}],
+            }
+        ],
+        created_by=test_user,
     )
 
 
@@ -185,17 +182,22 @@ class TestBulkCSVExecution:
     def test_bulk_csv_success(self, mock_thread, test_user, bulk_csv_template, mock_awx_client):
         """Test successful bulk CSV execution"""
         # Mock AWX job launch - returns tuple (success, job_data, error)
-        mock_awx_client.launch_job = Mock(return_value=(
-            True,
-            {'id': 12345, 'url': 'https://awx.example.com/#/jobs/playbook/12345', 'status': 'pending'},
-            None
-        ))
+        mock_awx_client.launch_job = Mock(
+            return_value=(
+                True,
+                {
+                    'id': 12345,
+                    'url': 'https://awx.example.com/#/jobs/playbook/12345',
+                    'status': 'pending',
+                },
+                None,
+            )
+        )
 
         # Create request with 10 rows
         input_data = {
             'data': [
-                {'tenant_name': f'Tenant-{i}', 'description': f'Description {i}'}
-                for i in range(10)
+                {'tenant_name': f'Tenant-{i}', 'description': f'Description {i}'} for i in range(10)
             ]
         }
 
@@ -205,7 +207,7 @@ class TestBulkCSVExecution:
             awx_connection=bulk_csv_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -233,7 +235,9 @@ class TestBulkCSVExecution:
         assert call_args.kwargs['job_template_id'] == 100
         assert 'tenants' in call_args.kwargs['extra_vars']
 
-    @pytest.mark.xfail(reason="ExecutionEngine bug: uses apic.hostname instead of apic.url - needs fixing in production code")
+    @pytest.mark.xfail(
+        reason='ExecutionEngine bug: uses apic.hostname instead of apic.url - needs fixing in production code'
+    )
     def test_bulk_csv_with_apic_credentials(self, test_user, bulk_csv_template, mock_awx_client):
         """Test bulk execution with APIC credentials injection"""
         from apic_connections.models import APICConnection
@@ -244,17 +248,23 @@ class TestBulkCSVExecution:
             url='https://apic.example.com',
             username='admin',
             verify_ssl=False,
-            created_by=test_user
+            created_by=test_user,
         )
         apic_conn.set_password('apic-password')
         apic_conn.save()
 
         # Mock AWX job launch - returns tuple (success, job_data, error)
-        mock_awx_client.launch_job = Mock(return_value=(
-            True,
-            {'id': 12346, 'url': 'https://awx.example.com/#/jobs/playbook/12346', 'status': 'pending'},
-            None
-        ))
+        mock_awx_client.launch_job = Mock(
+            return_value=(
+                True,
+                {
+                    'id': 12346,
+                    'url': 'https://awx.example.com/#/jobs/playbook/12346',
+                    'status': 'pending',
+                },
+                None,
+            )
+        )
 
         input_data = {'data': [{'tenant_name': 'Tenant-1', 'description': 'Test'}]}
 
@@ -265,7 +275,7 @@ class TestBulkCSVExecution:
             requested_by=test_user,
             input_data=input_data,
             target_apic=apic_conn,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -282,14 +292,12 @@ class TestBulkCSVExecution:
         assert extra_vars['apic_validate_certs'] is False
 
     @patch('threading.Thread')
-    def test_bulk_csv_awx_launch_failure(self, mock_thread, test_user, bulk_csv_template, mock_awx_client):
+    def test_bulk_csv_awx_launch_failure(
+        self, mock_thread, test_user, bulk_csv_template, mock_awx_client
+    ):
         """Test bulk execution when AWX job launch fails"""
         # Mock AWX job launch failure - returns tuple (False, None, error)
-        mock_awx_client.launch_job = Mock(return_value=(
-            False,
-            None,
-            "AWX API error"
-        ))
+        mock_awx_client.launch_job = Mock(return_value=(False, None, 'AWX API error'))
 
         input_data = {'data': [{'tenant_name': 'Tenant-1', 'description': 'Test'}]}
 
@@ -299,7 +307,7 @@ class TestBulkCSVExecution:
             awx_connection=bulk_csv_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -320,7 +328,7 @@ class TestBulkCSVExecution:
             awx_connection=bulk_csv_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -348,17 +356,43 @@ class TestPerRowExecution:
     def test_per_row_success(self, mock_thread, test_user, per_row_template, mock_awx_client):
         """Test successful per-row execution"""
         # Mock AWX job launches (one per row) - returns tuples (success, job_data, error)
-        mock_awx_client.launch_job = Mock(side_effect=[
-            (True, {'id': 12345, 'url': 'https://awx.example.com/#/jobs/playbook/12345', 'status': 'pending'}, None),
-            (True, {'id': 12346, 'url': 'https://awx.example.com/#/jobs/playbook/12346', 'status': 'pending'}, None),
-            (True, {'id': 12347, 'url': 'https://awx.example.com/#/jobs/playbook/12347', 'status': 'pending'}, None)
-        ])
+        mock_awx_client.launch_job = Mock(
+            side_effect=[
+                (
+                    True,
+                    {
+                        'id': 12345,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12345',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+                (
+                    True,
+                    {
+                        'id': 12346,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12346',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+                (
+                    True,
+                    {
+                        'id': 12347,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12347',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+            ]
+        )
 
         input_data = {
             'data': [
                 {'tenant_name': 'Tenant-1'},
                 {'tenant_name': 'Tenant-2'},
-                {'tenant_name': 'Tenant-3'}
+                {'tenant_name': 'Tenant-3'},
             ]
         }
 
@@ -368,7 +402,7 @@ class TestPerRowExecution:
             awx_connection=per_row_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -397,20 +431,40 @@ class TestPerRowExecution:
         assert mock_awx_client.launch_job.call_count == 3
 
     @patch('threading.Thread')
-    def test_per_row_partial_failure(self, mock_thread, test_user, per_row_template, mock_awx_client):
+    def test_per_row_partial_failure(
+        self, mock_thread, test_user, per_row_template, mock_awx_client
+    ):
         """Test per-row execution with partial failure (2nd row fails)"""
         # First row succeeds, second fails, third succeeds
-        mock_awx_client.launch_job = Mock(side_effect=[
-            (True, {'id': 12345, 'url': 'https://awx.example.com/#/jobs/playbook/12345', 'status': 'pending'}, None),
-            (False, None, "AWX API error on row 2"),
-            (True, {'id': 12347, 'url': 'https://awx.example.com/#/jobs/playbook/12347', 'status': 'pending'}, None)
-        ])
+        mock_awx_client.launch_job = Mock(
+            side_effect=[
+                (
+                    True,
+                    {
+                        'id': 12345,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12345',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+                (False, None, 'AWX API error on row 2'),
+                (
+                    True,
+                    {
+                        'id': 12347,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12347',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+            ]
+        )
 
         input_data = {
             'data': [
                 {'tenant_name': 'Tenant-1'},
                 {'tenant_name': 'Tenant-2'},
-                {'tenant_name': 'Tenant-3'}
+                {'tenant_name': 'Tenant-3'},
             ]
         }
 
@@ -420,7 +474,7 @@ class TestPerRowExecution:
             awx_connection=per_row_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -457,14 +511,30 @@ class TestHybridExecution:
     def test_hybrid_success(self, mock_thread, test_user, hybrid_template, mock_awx_client):
         """Test successful hybrid execution (batched)"""
         # Mock AWX job launches (2 batches for 8 rows with batch_size=5)
-        mock_awx_client.launch_job = Mock(side_effect=[
-            (True, {'id': 12345, 'url': 'https://awx.example.com/#/jobs/playbook/12345', 'status': 'pending'}, None),
-            (True, {'id': 12346, 'url': 'https://awx.example.com/#/jobs/playbook/12346', 'status': 'pending'}, None)
-        ])
+        mock_awx_client.launch_job = Mock(
+            side_effect=[
+                (
+                    True,
+                    {
+                        'id': 12345,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12345',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+                (
+                    True,
+                    {
+                        'id': 12346,
+                        'url': 'https://awx.example.com/#/jobs/playbook/12346',
+                        'status': 'pending',
+                    },
+                    None,
+                ),
+            ]
+        )
 
-        input_data = {
-            'data': [{'tenant_name': f'Tenant-{i}'} for i in range(8)]
-        }
+        input_data = {'data': [{'tenant_name': f'Tenant-{i}'} for i in range(8)]}
 
         request = AutomationRequest.objects.create(
             title='Hybrid Test',
@@ -472,7 +542,7 @@ class TestHybridExecution:
             awx_connection=hybrid_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -505,12 +575,15 @@ class TestWorkflowExecution:
     """Test workflow execution"""
 
     @patch('threading.Thread')
-    def test_workflow_launch_success(self, mock_thread, test_user, workflow_template, mock_awx_client):
+    def test_workflow_launch_success(
+        self, mock_thread, test_user, workflow_template, mock_awx_client
+    ):
         """Workflow launch goes through the clone path and persists clone_template_id."""
         # The shared mock_awx_client fixture only patches the AWXClient class
         # constructor — but the engine acquires its client via for_connection().
         # Wire that up to return our mock too.
         from awx.services import execution_engine as engine_module
+
         engine_module.AWXClient.for_connection.return_value = mock_awx_client
 
         # Engine pre-flights the connection before launching anything.
@@ -524,11 +597,17 @@ class TestWorkflowExecution:
             return_value=(True, {'id': 88888, 'name': 'cloned'}, None),
         )
         mock_awx_client.list_workflow_nodes = Mock(return_value=(True, [], None))
-        mock_awx_client.launch_workflow = Mock(return_value=(
-            True,
-            {'id': 50001, 'url': 'https://awx.example.com/#/workflows/50001', 'status': 'pending'},
-            None,
-        ))
+        mock_awx_client.launch_workflow = Mock(
+            return_value=(
+                True,
+                {
+                    'id': 50001,
+                    'url': 'https://awx.example.com/#/workflows/50001',
+                    'status': 'pending',
+                },
+                None,
+            )
+        )
 
         input_data = {'data': [{'tenant_name': 'Tenant-1'}]}
 
@@ -571,15 +650,10 @@ class TestDataTransformation:
         engine = ExecutionEngine()
 
         input_data = {
-            'data': [
-                {'col1': 'value1', 'col2': 'value2'},
-                {'col1': 'value3', 'col2': 'value4'}
-            ]
+            'data': [{'col1': 'value1', 'col2': 'value2'}, {'col1': 'value3', 'col2': 'value4'}]
         }
 
-        table_schemas = [{
-            'columns': [{'name': 'col1'}, {'name': 'col2'}]
-        }]
+        table_schemas = [{'columns': [{'name': 'col1'}, {'name': 'col2'}]}]
 
         csv_output = engine.transform_data_to_csv(input_data, table_schemas, include_headers=True)
 
@@ -591,15 +665,9 @@ class TestDataTransformation:
         """Test CSV transformation without headers"""
         engine = ExecutionEngine()
 
-        input_data = {
-            'data': [
-                {'col1': 'value1', 'col2': 'value2'}
-            ]
-        }
+        input_data = {'data': [{'col1': 'value1', 'col2': 'value2'}]}
 
-        table_schemas = [{
-            'columns': [{'name': 'col1'}, {'name': 'col2'}]
-        }]
+        table_schemas = [{'columns': [{'name': 'col1'}, {'name': 'col2'}]}]
 
         csv_output = engine.transform_data_to_csv(input_data, table_schemas, include_headers=False)
 
@@ -650,7 +718,7 @@ class TestErrorHandling:
             awx_connection=bulk_csv_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()
@@ -666,15 +734,25 @@ class TestExecutionEngineIntegration:
     """Full integration tests with real database transactions"""
 
     @patch('threading.Thread')
-    def test_full_bulk_csv_lifecycle(self, mock_thread, test_user, bulk_csv_template, mock_awx_client):
+    def test_full_bulk_csv_lifecycle(
+        self, mock_thread, test_user, bulk_csv_template, mock_awx_client
+    ):
         """Test complete lifecycle: request → execution → status updates"""
-        mock_awx_client.launch_job = Mock(return_value=(
-            True,
-            {'id': 99999, 'url': 'https://awx.example.com/#/jobs/playbook/99999', 'status': 'pending'},
-            None
-        ))
+        mock_awx_client.launch_job = Mock(
+            return_value=(
+                True,
+                {
+                    'id': 99999,
+                    'url': 'https://awx.example.com/#/jobs/playbook/99999',
+                    'status': 'pending',
+                },
+                None,
+            )
+        )
 
-        input_data = {'data': [{'tenant_name': f'Tenant-{i}', 'description': f'Desc {i}'} for i in range(50)]}
+        input_data = {
+            'data': [{'tenant_name': f'Tenant-{i}', 'description': f'Desc {i}'} for i in range(50)]
+        }
 
         request = AutomationRequest.objects.create(
             title='Full Lifecycle Test',
@@ -682,7 +760,7 @@ class TestExecutionEngineIntegration:
             awx_connection=bulk_csv_template.awx_connection,
             requested_by=test_user,
             input_data=input_data,
-            status=AutomationRequest.STATUS_APPROVED
+            status=AutomationRequest.STATUS_APPROVED,
         )
 
         engine = ExecutionEngine()

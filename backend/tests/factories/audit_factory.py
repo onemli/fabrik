@@ -1,4 +1,5 @@
 """Audit model factories for testing"""
+
 import factory
 from factory.django import DjangoModelFactory
 from audit.models import AuditLog, LoginAttempt
@@ -38,5 +39,6 @@ class LoginAttemptFactory(DjangoModelFactory):
 
 class FailedLoginAttemptFactory(LoginAttemptFactory):
     """Factory for failed login attempts"""
+
     success = False
     failure_reason = 'Invalid credentials'

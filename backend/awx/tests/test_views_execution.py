@@ -12,14 +12,19 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
 
 from awx.models import (
-    AWXConnection, TemplateCategory, AutomationTemplate,
-    AutomationRequest, AutomationExecution, JobOutputChunk,
+    AWXConnection,
+    TemplateCategory,
+    AutomationTemplate,
+    AutomationRequest,
+    AutomationExecution,
+    JobOutputChunk,
 )
 
 User = get_user_model()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def auth_client(user):
     token = RefreshToken.for_user(user).access_token
@@ -29,46 +34,70 @@ def auth_client(user):
 
 
 def make_user(username):
-    return User.objects.create_user(
-        username=username, email=f'{username}@t.com', password='pass'
-    )
+    return User.objects.create_user(username=username, email=f'{username}@t.com', password='pass')
 
 
 def make_full_stack(user):
     conn = AWXConnection.objects.create(
-        name='AWX', url='https://awx.test',
-        auth_type='token', created_by=user,
+        name='AWX',
+        url='https://awx.test',
+        auth_type='token',
+        created_by=user,
     )
-    conn.set_token('t'); conn.save()
+    conn.set_token('t')
+    conn.save()
     cat = TemplateCategory.objects.create(name='C', created_by=user)
     tmpl = AutomationTemplate.objects.create(
-        name='T', awx_type='job_template', awx_template_id=1,
-        awx_template_name='JT', awx_connection=conn, category=cat,
+        name='T',
+        awx_type='job_template',
+        awx_template_id=1,
+        awx_template_name='JT',
+        awx_connection=conn,
+        category=cat,
         execution_mode='bulk',
-        table_schemas=[{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'x', 'type': 'text', 'required': False}],
-        }],
-        variable_mappings={}, created_by=user,
+        table_schemas=[
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'x', 'type': 'text', 'required': False}],
+            }
+        ],
+        variable_mappings={},
+        created_by=user,
     )
     req = AutomationRequest.objects.create(
-        title='Req', template=tmpl, awx_connection=conn,
-        requested_by=user, input_data={'data': []},
+        title='Req',
+        template=tmpl,
+        awx_connection=conn,
+        requested_by=user,
+        input_data={'data': []},
     )
     ex = AutomationExecution.objects.create(
-        automation_request=req, awx_connection=conn,
-        status='running', awx_job_id=99,
+        automation_request=req,
+        awx_connection=conn,
+        status='running',
+        awx_job_id=99,
     )
     return conn, tmpl, req, ex
 
 
 LIST_URL = '/api/awx/executions/'
-def detail_url(pk): return f'/api/awx/executions/{pk}/'
-def cancel_url(pk): return f'/api/awx/executions/{pk}/cancel/'
-def output_url(pk): return f'/api/awx/executions/{pk}/output/'
+
+
+def detail_url(pk):
+    return f'/api/awx/executions/{pk}/'
+
+
+def cancel_url(pk):
+    return f'/api/awx/executions/{pk}/cancel/'
+
+
+def output_url(pk):
+    return f'/api/awx/executions/{pk}/output/'
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
+
 
 class ExecutionAuthTests(APITestCase):
     def test_list_requires_auth(self):
@@ -80,8 +109,8 @@ class ExecutionAuthTests(APITestCase):
 
 # ── Read Access ───────────────────────────────────────────────────────────────
 
-class ExecutionReadTests(APITestCase):
 
+class ExecutionReadTests(APITestCase):
     def setUp(self):
         self.user = make_user('reader')
         self.client = auth_client(self.user)
@@ -122,7 +151,8 @@ class ExecutionReadTests(APITestCase):
 
     def test_filter_by_status(self):
         AutomationExecution.objects.create(
-            automation_request=self.req, awx_connection=self.conn,
+            automation_request=self.req,
+            awx_connection=self.conn,
             status='successful',
         )
         resp = self.client.get(LIST_URL + '?status=running')
@@ -132,8 +162,8 @@ class ExecutionReadTests(APITestCase):
 
 # ── Cancel Action ─────────────────────────────────────────────────────────────
 
-class ExecutionCancelTests(APITestCase):
 
+class ExecutionCancelTests(APITestCase):
     def setUp(self):
         self.user = make_user('canceler')
         self.client = auth_client(self.user)
@@ -150,9 +180,7 @@ class ExecutionCancelTests(APITestCase):
 
     @patch('awx.views.execution.AWXClient')
     def test_cancel_awx_failure_returns_error(self, MockClient):
-        MockClient.for_connection.return_value.cancel_job.return_value = (
-            False, 'AWX error'
-        )
+        MockClient.for_connection.return_value.cancel_job.return_value = (False, 'AWX error')
         resp = self.client.post(cancel_url(self.ex.id))
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -171,8 +199,8 @@ class ExecutionCancelTests(APITestCase):
 
 # ── Output Action ─────────────────────────────────────────────────────────────
 
-class ExecutionOutputTests(APITestCase):
 
+class ExecutionOutputTests(APITestCase):
     def setUp(self):
         self.user = make_user('output_user')
         self.client = auth_client(self.user)
@@ -187,9 +215,12 @@ class ExecutionOutputTests(APITestCase):
         now = timezone.now()
         for i, text in enumerate(['PLAY [all]', 'TASK [debug]', 'ok: [host1]'], start=1):
             JobOutputChunk.objects.create(
-                execution=self.ex, awx_job_id=99,
-                counter=i, event_type='runner_on_ok',
-                stdout=text, awx_created=now,
+                execution=self.ex,
+                awx_job_id=99,
+                counter=i,
+                event_type='runner_on_ok',
+                stdout=text,
+                awx_created=now,
             )
 
         resp = self.client.get(output_url(self.ex.id))
@@ -202,9 +233,7 @@ class ExecutionOutputTests(APITestCase):
         other = make_user('other_output')
         _, _, _, other_ex = make_full_stack(other)
         resp = self.client.get(output_url(other_ex.id))
-        self.assertIn(resp.status_code, [
-            status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND
-        ])
+        self.assertIn(resp.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
 
     def test_output_contains_execution_metadata(self):
         resp = self.client.get(output_url(self.ex.id))

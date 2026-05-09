@@ -2,6 +2,7 @@
 Unit tests for rsp-subtree-include parameter generation
 Tests Phase 2 Feature 1: Supplemental Data (Monitoring)
 """
+
 from queries.query_optimizer import MOQueryStrategy, ClassQueryStrategy, QueryIntent
 
 
@@ -23,11 +24,11 @@ class TestRspSubtreeInclude:
                             'health': True,
                             'faults': True,
                             'stats': True,
-                        }
-                    }
+                        },
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')
@@ -53,11 +54,11 @@ class TestRspSubtreeInclude:
                         'supplementalData': {
                             'auditLogs': True,
                             'auditLogsTimeRange': '1month',
-                        }
-                    }
+                        },
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')
@@ -85,11 +86,11 @@ class TestRspSubtreeInclude:
                             'auditLogsTimeRange': '24h',
                             'eventLogs': True,
                             'eventLogsTimeRange': '1week',
-                        }
-                    }
+                        },
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')
@@ -116,11 +117,11 @@ class TestRspSubtreeInclude:
                         'scope': 'self',
                         'supplementalData': {
                             'deploymentRecords': True,
-                        }
-                    }
+                        },
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')
@@ -141,10 +142,10 @@ class TestRspSubtreeInclude:
                     'data': {
                         'className': 'fvTenant',
                         'scope': 'self',
-                    }
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')
@@ -174,11 +175,11 @@ class TestRspSubtreeInclude:
                             'countOnly': True,
                             'noScoped': True,
                             'required': True,
-                        }
-                    }
+                        },
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')
@@ -211,11 +212,11 @@ class TestRspSubtreeInclude:
                         'supplementalData': {
                             'auditLogs': True,
                             # No auditLogsTimeRange specified
-                        }
-                    }
+                        },
+                    },
                 }
             ],
-            'edges': []
+            'edges': [],
         }
 
         intent = QueryIntent(flow_data, target_node_id='node1')

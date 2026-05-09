@@ -25,9 +25,7 @@ def auth_client(user):
 
 
 def make_user(username):
-    return User.objects.create_user(
-        username=username, email=f'{username}@t.com', password='p'
-    )
+    return User.objects.create_user(username=username, email=f'{username}@t.com', password='p')
 
 
 def make_vlist(user, name='List', values=None, is_public=False):
@@ -51,14 +49,20 @@ VLIST_CREATE_PAYLOAD = {
 
 
 LIST_URL = '/api/awx/validation-lists/'
-def detail_url(pk): return f'/api/awx/validation-lists/{pk}/'
-def usages_url(pk): return f'/api/awx/validation-lists/{pk}/usages/'
+
+
+def detail_url(pk):
+    return f'/api/awx/validation-lists/{pk}/'
+
+
+def usages_url(pk):
+    return f'/api/awx/validation-lists/{pk}/usages/'
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
 
-class ValidationListAuthTests(APITestCase):
 
+class ValidationListAuthTests(APITestCase):
     def test_list_requires_auth(self):
         resp = self.client.get(LIST_URL)
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -70,8 +74,8 @@ class ValidationListAuthTests(APITestCase):
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
-class ValidationListCRUDTests(APITestCase):
 
+class ValidationListCRUDTests(APITestCase):
     def setUp(self):
         self.user = make_user('vl_user')
         self.other = make_user('vl_other')
@@ -118,11 +122,7 @@ class ValidationListCRUDTests(APITestCase):
 
     def test_update_own_list(self):
         vl = make_vlist(self.user)
-        resp = self.client.patch(
-            detail_url(vl.pk),
-            {'values': ['x', 'y', 'z']},
-            format='json'
-        )
+        resp = self.client.patch(detail_url(vl.pk), {'values': ['x', 'y', 'z']}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         vl.refresh_from_db()
         self.assertEqual(vl.values, ['x', 'y', 'z'])
@@ -160,8 +160,8 @@ class ValidationListCRUDTests(APITestCase):
 
 # ── usages action ─────────────────────────────────────────────────────────────
 
-class ValidationListUsagesTests(APITestCase):
 
+class ValidationListUsagesTests(APITestCase):
     def setUp(self):
         self.user = make_user('usage_user')
         self.other = make_user('usage_other')

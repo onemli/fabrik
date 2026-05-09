@@ -17,6 +17,7 @@ class TaskManagementSettingsViewSet(viewsets.ViewSet):
     Update is restricted to admins — regular users can read the defaults
     but can't change them platform-wide.
     """
+
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
@@ -33,7 +34,7 @@ class TaskManagementSettingsViewSet(viewsets.ViewSet):
         if not is_admin:
             return Response(
                 {'error': 'Only administrators can update settings'},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         settings = TaskManagementSettings.get_settings()
@@ -45,11 +46,7 @@ class TaskManagementSettingsViewSet(viewsets.ViewSet):
             'email_enabled': settings.email_enabled,
         }
 
-        serializer = TaskManagementSettingsSerializer(
-            settings,
-            data=request.data,
-            partial=True
-        )
+        serializer = TaskManagementSettingsSerializer(settings, data=request.data, partial=True)
 
         if serializer.is_valid():
             updated_settings = serializer.save(updated_by=request.user)
@@ -72,9 +69,9 @@ class TaskManagementSettingsViewSet(viewsets.ViewSet):
                 action='task_management_settings_updated',
                 category='system_settings',
                 resource_type='TaskManagementSettings',
-                description="Task management settings updated",
+                description='Task management settings updated',
                 metadata={'changes': changes} if changes else {},
-                request=request
+                request=request,
             )
 
             return Response(serializer.data)

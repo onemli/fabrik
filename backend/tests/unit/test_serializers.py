@@ -1,12 +1,10 @@
 """
 Unit tests for serializers
 """
+
 import pytest
 from rest_framework.test import APIRequestFactory
-from queries.serializers import (
-    SavedQueryCreateUpdateSerializer,
-    SavedQueryListSerializer
-)
+from queries.serializers import SavedQueryCreateUpdateSerializer, SavedQueryListSerializer
 from tests.factories import UserFactory, SavedQueryFactory
 
 
@@ -30,7 +28,7 @@ class TestSavedQueryCreateUpdateSerializer:
                 'flow_data': {'nodes': [], 'edges': []},
                 'generated_query': '/api/test',
             },
-            context={'request': request}
+            context={'request': request},
         )
 
         assert not serializer.is_valid()
@@ -51,7 +49,7 @@ class TestSavedQueryCreateUpdateSerializer:
                 'flow_data': 'invalid',  # Not a dict
                 'generated_query': '/api/test',
             },
-            context={'request': request}
+            context={'request': request},
         )
 
         assert not serializer.is_valid()
@@ -71,12 +69,14 @@ class TestSavedQueryCreateUpdateSerializer:
                 'flow_data': {'invalid': 'structure'},  # Missing nodes/edges
                 'generated_query': '/api/test',
             },
-            context={'request': request}
+            context={'request': request},
         )
 
         assert not serializer.is_valid()
         assert 'flow_data' in serializer.errors
-        assert 'nodes' in str(serializer.errors['flow_data'][0]) or 'edges' in str(serializer.errors['flow_data'][0])
+        assert 'nodes' in str(serializer.errors['flow_data'][0]) or 'edges' in str(
+            serializer.errors['flow_data'][0]
+        )
 
     def test_patch_with_empty_name_skips_validation(self):
         """Test that PATCH with no name doesn't trigger validation"""
@@ -91,7 +91,7 @@ class TestSavedQueryCreateUpdateSerializer:
             instance=query,
             data={'description': 'Updated'},
             partial=True,
-            context={'request': request}
+            context={'request': request},
         )
 
         # Should be valid even though name is not provided
@@ -110,9 +110,9 @@ class TestSavedQueryCreateUpdateSerializer:
                 'description': 'Test',
                 'flow_data': {'nodes': [], 'edges': []},
                 'generated_query': '/api/test',
-                'tags_list': ['tag1', 'tag2', 'tag3']
+                'tags_list': ['tag1', 'tag2', 'tag3'],
             },
-            context={'request': request}
+            context={'request': request},
         )
 
         assert serializer.is_valid(), serializer.errors

@@ -37,11 +37,18 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     # read-only custom actions like effective_permissions) falls back to the
     # default `user: 300/minute` throttle so admin browsing isn't blocked.
     _SENSITIVE_ACTIONS = {
-        'create', 'update', 'partial_update', 'destroy',
-        'reset_password', 'generate_reset_code',
-        'verify_email', 'disable_mfa',
-        'activate', 'deactivate',
-        'add_permissions', 'remove_permissions',
+        'create',
+        'update',
+        'partial_update',
+        'destroy',
+        'reset_password',
+        'generate_reset_code',
+        'verify_email',
+        'disable_mfa',
+        'activate',
+        'deactivate',
+        'add_permissions',
+        'remove_permissions',
     }
 
     def get_throttles(self):
@@ -70,17 +77,16 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         permission_id = self.request.query_params.get('permission_id')
         if permission_id:
             queryset = queryset.filter(
-                Q(user_permissions__id=permission_id) |
-                Q(groups__permissions__id=permission_id)
+                Q(user_permissions__id=permission_id) | Q(groups__permissions__id=permission_id)
             ).distinct()
 
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(
-                Q(username__icontains=search) |
-                Q(email__icontains=search) |
-                Q(first_name__icontains=search) |
-                Q(last_name__icontains=search)
+                Q(username__icontains=search)
+                | Q(email__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
             )
 
         return queryset.order_by('-date_joined')
@@ -110,14 +116,12 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
         if user.id == request.user.id:
             return Response(
-                {'error': 'You cannot delete your own account'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'You cannot delete your own account'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if self._is_last_admin(user):
             return Response(
-                {'error': 'Cannot delete the last admin user'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'Cannot delete the last admin user'}, status=status.HTTP_400_BAD_REQUEST
             )
 
         return super().destroy(request, *args, **kwargs)
@@ -163,11 +167,13 @@ class UserManagementViewSet(viewsets.ModelViewSet):
             request=request,
         )
 
-        return Response({
-            'code': plain_code,
-            'expires_at': reset_code.expires_at.isoformat(),
-            'message': f'Give this code to {user.username}. It expires in 30 minutes.',
-        })
+        return Response(
+            {
+                'code': plain_code,
+                'expires_at': reset_code.expires_at.isoformat(),
+                'message': f'Give this code to {user.username}. It expires in 30 minutes.',
+            }
+        )
 
     @action(detail=True, methods=['post'])
     def verify_email(self, request, pk=None):
@@ -188,7 +194,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
             description=f"Email manually verified for '{user.username}' by admin",
             request=request,
         )
-        return Response({'message': f"Email verified for {user.username}."})
+        return Response({'message': f'Email verified for {user.username}.'})
 
     @action(detail=True, methods=['post'])
     def disable_mfa(self, request, pk=None):
@@ -207,7 +213,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
                 description=f"MFA disabled for '{user.username}' by admin (recovery)",
                 request=request,
             )
-            return Response({'message': f"MFA disabled for {user.username}."})
+            return Response({'message': f'MFA disabled for {user.username}.'})
         return Response({'message': 'MFA was not enabled for this user.'})
 
     @action(detail=True, methods=['post'])
@@ -235,13 +241,13 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         if user.id == request.user.id:
             return Response(
                 {'error': 'You cannot deactivate your own account'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if self._is_last_admin(user):
             return Response(
                 {'error': 'Cannot deactivate the last admin user'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user.is_active = False
@@ -333,10 +339,11 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     def _is_last_admin(self, user):
         if not (user.groups.filter(name='Admin').exists() or user.is_superuser):
             return False
-        admin_count = User.objects.filter(
-            Q(groups__name='Admin') | Q(is_superuser=True),
-            is_active=True
-        ).distinct().count()
+        admin_count = (
+            User.objects.filter(Q(groups__name='Admin') | Q(is_superuser=True), is_active=True)
+            .distinct()
+            .count()
+        )
         return admin_count <= 1
 
     def _would_remove_last_admin(self, user, payload):
@@ -348,11 +355,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
         # Look up the Admin group id once; absence means the group was renamed
         # or deleted, in which case nobody currently holds admin via groups.
-        admin_group_id = (
-            Group.objects.filter(name='Admin')
-            .values_list('id', flat=True)
-            .first()
-        )
+        admin_group_id = Group.objects.filter(name='Admin').values_list('id', flat=True).first()
 
         # Group-based removal: payload provides group_ids that no longer
         # include Admin, AND the user isn't a standalone superuser.
@@ -370,9 +373,8 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         if 'is_superuser' in payload and user.is_superuser:
             new_value = payload.get('is_superuser')
             if new_value in (False, 'false', 'False', 0, '0'):
-                still_admin_via_group = (
-                    admin_group_id is not None
-                    and admin_group_id in (payload.get('group_ids') or [])
+                still_admin_via_group = admin_group_id is not None and admin_group_id in (
+                    payload.get('group_ids') or []
                 )
                 if not still_admin_via_group and not user.groups.filter(name='Admin').exists():
                     return 'Cannot revoke superuser status from the last admin.'

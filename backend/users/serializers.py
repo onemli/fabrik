@@ -40,14 +40,12 @@ def _ensure_admin_assignment_allowed(request, group_ids: list) -> None:
         return
 
     admin_group_id = (
-        Group.objects.filter(name=SYSTEM_ADMIN_GROUP_NAME)
-        .values_list('id', flat=True)
-        .first()
+        Group.objects.filter(name=SYSTEM_ADMIN_GROUP_NAME).values_list('id', flat=True).first()
     )
     if admin_group_id is not None and admin_group_id in group_ids:
-        raise serializers.ValidationError({
-            'group_ids': 'Only superusers can assign users to the Admin group.'
-        })
+        raise serializers.ValidationError(
+            {'group_ids': 'Only superusers can assign users to the Admin group.'}
+        )
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -68,6 +66,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class GroupSerializer(serializers.ModelSerializer):
     """Enhanced serializer for user groups with additional metadata"""
+
     permission_count = serializers.SerializerMethodField()
     user_count = serializers.SerializerMethodField()
     recent_users = serializers.SerializerMethodField()
@@ -98,33 +97,28 @@ class GroupSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """User registration serializer"""
+
     email = serializers.EmailField(
-        required=True,
-        validators=[UniqueValidator(queryset=User.objects.all())]
+        required=True, validators=[UniqueValidator(queryset=User.objects.all())]
     )
     password = serializers.CharField(
         write_only=True,
         required=True,
         validators=[validate_password],
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
     )
     password_confirm = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={'input_type': 'password'}
     )
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name']
-        extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True}
-        }
+        extra_kwargs = {'first_name': {'required': True}, 'last_name': {'required': True}}
 
     def validate(self, attrs: dict) -> dict:
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
+            raise serializers.ValidationError({'password': "Password fields didn't match."})
         return attrs
 
     def create(self, validated_data: dict) -> User:
@@ -135,6 +129,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """User profile serializer with preferences, quota info, and email status."""
+
     query_count = serializers.SerializerMethodField()
     favorite_count = serializers.SerializerMethodField()
     profile = UserProfileSerializer(read_only=False)
@@ -150,14 +145,37 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name',
-            'date_joined', 'last_login', 'is_staff', 'is_superuser', 'is_active',
-            'query_count', 'favorite_count', 'profile',
-            'groups', 'group_names', 'is_admin',
-            'email_service_available', 'effective_features',
-            'email_verified', 'mfa_enabled', 'auth_source',
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'date_joined',
+            'last_login',
+            'is_staff',
+            'is_superuser',
+            'is_active',
+            'query_count',
+            'favorite_count',
+            'profile',
+            'groups',
+            'group_names',
+            'is_admin',
+            'email_service_available',
+            'effective_features',
+            'email_verified',
+            'mfa_enabled',
+            'auth_source',
         ]
-        read_only_fields = ['id', 'username', 'date_joined', 'last_login', 'is_staff', 'is_superuser', 'is_active']
+        read_only_fields = [
+            'id',
+            'username',
+            'date_joined',
+            'last_login',
+            'is_staff',
+            'is_superuser',
+            'is_active',
+        ]
 
     def get_query_count(self, obj: User) -> int:
         return obj.created_queries.count()
@@ -173,10 +191,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_email_service_available(self, obj: User) -> bool:
         from .email_service import EmailService
+
         return EmailService.is_email_available()
 
     def get_effective_features(self, obj: User) -> dict:
         from .quota_service import QuotaService
+
         quota = QuotaService.get_effective_quota(obj)
         return {k: v for k, v in quota.items() if isinstance(v, bool)}
 
@@ -210,19 +230,22 @@ class UserSerializer(serializers.ModelSerializer):
 
 class PasswordChangeSerializer(serializers.Serializer):
     """Password change serializer"""
+
     old_password = serializers.CharField(required=True, write_only=True)
-    new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
+    new_password = serializers.CharField(
+        required=True, write_only=True, validators=[validate_password]
+    )
     new_password_confirm = serializers.CharField(required=True, write_only=True)
 
     def validate_old_password(self, value: str) -> str:
         user = self.context['request'].user
         if not user.check_password(value):
-            raise serializers.ValidationError("Old password is incorrect")
+            raise serializers.ValidationError('Old password is incorrect')
         return value
 
     def validate(self, attrs: dict) -> dict:
         if attrs['new_password'] != attrs['new_password_confirm']:
-            raise serializers.ValidationError({"new_password": "Password fields didn't match."})
+            raise serializers.ValidationError({'new_password': "Password fields didn't match."})
         return attrs
 
     def save(self) -> User:
@@ -236,8 +259,10 @@ class PasswordChangeSerializer(serializers.Serializer):
 # ADMIN-ONLY USER MANAGEMENT SERIALIZERS
 # ============================================================
 
+
 class UserManagementListSerializer(serializers.ModelSerializer):
     """Serializer for user list (admin view)"""
+
     groups = GroupSerializer(many=True, read_only=True)
     group_names = serializers.SerializerMethodField()
     is_admin = serializers.SerializerMethodField()
@@ -246,9 +271,20 @@ class UserManagementListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name',
-            'is_active', 'is_staff', 'is_superuser', 'last_login',
-            'date_joined', 'groups', 'group_names', 'is_admin', 'query_count'
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_active',
+            'is_staff',
+            'is_superuser',
+            'last_login',
+            'date_joined',
+            'groups',
+            'group_names',
+            'is_admin',
+            'query_count',
         ]
 
     def get_group_names(self, obj: User) -> list[str]:
@@ -263,28 +299,31 @@ class UserManagementListSerializer(serializers.ModelSerializer):
 
 class UserManagementCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new users (admin only)"""
+
     password = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={'input_type': 'password'}
     )
     password_confirm = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={'input_type': 'password'}
     )
     group_ids = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
         default=list,
-        help_text='List of group IDs to assign to user'
+        help_text='List of group IDs to assign to user',
     )
 
     class Meta:
         model = User
         fields = [
-            'username', 'email', 'password', 'password_confirm',
-            'first_name', 'last_name', 'is_active', 'group_ids'
+            'username',
+            'email',
+            'password',
+            'password_confirm',
+            'first_name',
+            'last_name',
+            'is_active',
+            'group_ids',
         ]
 
     def validate_email(self, value: str) -> str:
@@ -329,23 +368,29 @@ class UserManagementCreateSerializer(serializers.ModelSerializer):
 
 class UserManagementUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating users (admin only)"""
+
     group_ids = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
-        help_text='List of group IDs to assign to user'
+        help_text='List of group IDs to assign to user',
     )
     permission_ids = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
-        help_text='Direct permission IDs to assign to user'
+        help_text='Direct permission IDs to assign to user',
     )
 
     class Meta:
         model = User
         fields = [
-            'email', 'first_name', 'last_name', 'is_active',
-            'is_staff', 'is_superuser',
-            'group_ids', 'permission_ids'
+            'email',
+            'first_name',
+            'last_name',
+            'is_active',
+            'is_staff',
+            'is_superuser',
+            'group_ids',
+            'permission_ids',
         ]
 
     def validate_is_superuser(self, value: bool) -> bool:
@@ -389,15 +434,12 @@ class UserManagementUpdateSerializer(serializers.ModelSerializer):
 
 class AdminPasswordResetSerializer(serializers.Serializer):
     """Serializer for password reset by admin"""
+
     new_password = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={'input_type': 'password'}
     )
     new_password_confirm = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={'input_type': 'password'}
     )
 
     def validate(self, attrs: dict) -> dict:
@@ -416,8 +458,10 @@ class AdminPasswordResetSerializer(serializers.Serializer):
 # PERMISSION SERIALIZERS
 # ============================================================
 
+
 class ContentTypeSerializer(serializers.ModelSerializer):
     """Serializer for ContentType"""
+
     class Meta:
         model = ContentType
         fields = ['id', 'app_label', 'model']
@@ -425,6 +469,7 @@ class ContentTypeSerializer(serializers.ModelSerializer):
 
 class PermissionSerializer(serializers.ModelSerializer):
     """Serializer for permissions with categorization"""
+
     content_type = ContentTypeSerializer(read_only=True)
     category = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
@@ -432,7 +477,15 @@ class PermissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Permission
-        fields = ['id', 'name', 'codename', 'content_type', 'category', 'description', 'is_dangerous']
+        fields = [
+            'id',
+            'name',
+            'codename',
+            'content_type',
+            'category',
+            'description',
+            'is_dangerous',
+        ]
 
     def get_category(self, obj: Permission) -> str:
         """Group permissions by resource type for better UX"""
@@ -443,17 +496,13 @@ class PermissionSerializer(serializers.ModelSerializer):
             'savedquery': 'Queries',
             'category': 'Query Categories',
             'postprocessor': 'Queries',
-
             # APIC Management
             'apicconnection': 'APIC Connections',
-
             # Task Management
             'backgroundqueryexecution': 'Background Tasks',
             'scheduledtask': 'Scheduled Tasks',
-
             # Time Machine
             'timemachinesnapshot': 'Time Machine',
-
             # AWX / Automation
             'awxconnection': 'AWX Connections',
             'automationtemplate': 'AWX Templates',
@@ -461,15 +510,12 @@ class PermissionSerializer(serializers.ModelSerializer):
             'automationexecution': 'AWX Executions',
             'tableschema': 'AWX Schemas',
             'columntemplate': 'AWX Column Templates',
-
             # MIM
             'mimclass': 'MIM Classes',
             'mimproperty': 'MIM Properties',
-
             # Notifications
             'notification': 'Notifications',
             'notificationsetting': 'Notifications',
-
             # User & Access Management
             'customuser': 'User Management',
             'userprofile': 'User Management',
@@ -478,12 +524,10 @@ class PermissionSerializer(serializers.ModelSerializer):
             'groupquota': 'Group Quotas',
             'permission': 'Permissions',
             'passwordresetcode': 'User Management',
-
             # Audit & Settings
             'auditlog': 'Audit Logs',
             'auditlogsettings': 'Audit Settings',
             'loginattempt': 'Login Attempts',
-
             # System
             'contenttype': 'System',
             'session': 'System',
@@ -533,6 +577,7 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 class GroupDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for groups with permissions and users"""
+
     permissions = PermissionSerializer(many=True, read_only=True)
     user_count = serializers.SerializerMethodField()
     users = serializers.SerializerMethodField()
@@ -553,7 +598,7 @@ class GroupDetailSerializer(serializers.ModelSerializer):
                 'username': user.username,
                 'email': user.email,
                 'is_active': user.is_active,
-                'last_login': user.last_login
+                'last_login': user.last_login,
             }
             for user in obj.user_set.all().order_by('-last_login')[:50]  # Limit to 50 users
         ]
@@ -576,11 +621,12 @@ class GroupDetailSerializer(serializers.ModelSerializer):
 
 class GroupCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating groups"""
+
     permission_ids = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
         default=list,
-        help_text='List of permission IDs to assign to group'
+        help_text='List of permission IDs to assign to group',
     )
 
     class Meta:
@@ -614,13 +660,16 @@ class GroupCreateUpdateSerializer(serializers.ModelSerializer):
 # PASSWORD RESET SERIALIZERS
 # ============================================================
 
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     """For requesting a password reset (email flow)."""
+
     username = serializers.CharField(required=True)
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """Confirm password reset — supports both email token and admin code flows."""
+
     method = serializers.ChoiceField(choices=['token', 'code'], default='token')
     new_password = serializers.CharField(
         required=True, write_only=True, validators=[validate_password]
@@ -643,7 +692,9 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({'token': 'Token is required for email reset.'})
         if method == 'code':
             if not attrs.get('username'):
-                raise serializers.ValidationError({'username': 'Username is required for code reset.'})
+                raise serializers.ValidationError(
+                    {'username': 'Username is required for code reset.'}
+                )
             if not attrs.get('code'):
                 raise serializers.ValidationError({'code': 'Code is required for code reset.'})
 
@@ -654,20 +705,24 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 # MFA SERIALIZERS
 # ============================================================
 
+
 class TOTPSetupSerializer(serializers.Serializer):
     """Response serializer for TOTP setup — contains secret and QR URI."""
+
     secret = serializers.CharField(read_only=True)
     otpauth_uri = serializers.CharField(read_only=True)
-    qr_code = serializers.CharField(read_only=True, help_text="Base64-encoded PNG QR code")
+    qr_code = serializers.CharField(read_only=True, help_text='Base64-encoded PNG QR code')
 
 
 class TOTPVerifySerializer(serializers.Serializer):
     """Verify a TOTP code to complete setup or during login."""
+
     code = serializers.CharField(required=True, min_length=6, max_length=6)
 
 
 class TOTPDisableSerializer(serializers.Serializer):
     """Disable MFA — requires current password for safety."""
+
     password = serializers.CharField(required=True, write_only=True)
 
     def validate_password(self, value: str) -> str:
@@ -679,6 +734,7 @@ class TOTPDisableSerializer(serializers.Serializer):
 
 class MFALoginSerializer(serializers.Serializer):
     """Second step of MFA login — TOTP code or backup code."""
+
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
     totp_code = serializers.CharField(required=False, allow_blank=True)
@@ -694,20 +750,33 @@ class MFALoginSerializer(serializers.Serializer):
 # GROUP QUOTA SERIALIZER
 # ============================================================
 
+
 class GroupQuotaSerializer(serializers.ModelSerializer):
     """Serializer for group quotas — resource limits and feature toggles."""
+
     group_name = serializers.CharField(source='group.name', read_only=True)
 
     class Meta:
         model = GroupQuota
         fields = [
             'group_name',
-            'max_saved_queries', 'max_scheduled_tasks', 'max_apic_connections',
-            'max_awx_requests_daily', 'max_awx_concurrent', 'max_query_results',
-            'max_export_rows', 'query_execution_daily', 'ai_analysis_daily',
-            'can_create_queries', 'can_execute_queries', 'can_create_scheduled',
-            'can_use_awx', 'can_use_time_machine', 'can_export_data',
-            'can_share_resources', 'can_use_ai_builder',
+            'max_saved_queries',
+            'max_scheduled_tasks',
+            'max_apic_connections',
+            'max_awx_requests_daily',
+            'max_awx_concurrent',
+            'max_query_results',
+            'max_export_rows',
+            'query_execution_daily',
+            'ai_analysis_daily',
+            'can_create_queries',
+            'can_execute_queries',
+            'can_create_scheduled',
+            'can_use_awx',
+            'can_use_time_machine',
+            'can_export_data',
+            'can_share_resources',
+            'can_use_ai_builder',
         ]
 
     def create(self, validated_data: dict) -> GroupQuota:

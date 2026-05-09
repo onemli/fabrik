@@ -27,10 +27,14 @@ class PipelineExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return ChainExecutionJob.objects.filter(
-            user=self.request.user,
-            execution_mode='pipeline',
-        ).prefetch_related('iterations').order_by('-created_at')
+        return (
+            ChainExecutionJob.objects.filter(
+                user=self.request.user,
+                execution_mode='pipeline',
+            )
+            .prefetch_related('iterations')
+            .order_by('-created_at')
+        )
 
     def _serialize_job(self, job):
         return {
@@ -95,31 +99,40 @@ class PipelineExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         if not flow_data:
             return Response({'error': 'flow_data is required'}, status=status.HTTP_400_BAD_REQUEST)
         if not connection_id:
-            return Response({'error': 'apic_connection_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'apic_connection_id is required'}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Validate that pipeline edges exist
         edges = flow_data.get('edges', [])
         pipeline_edges = [e for e in edges if e.get('data', {}).get('edgeType') == 'pipeline']
         if not pipeline_edges:
             return Response(
-                {'error': 'No pipeline edges found. Use regular execution for single-stage queries.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    'error': 'No pipeline edges found. Use regular execution for single-stage queries.'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Verify APIC connection access
         from apic_connections.models import APICConnection
+
         try:
             connection = APICConnection.objects.get(id=connection_id)
             if not connection.can_be_accessed_by(request.user):
-                return Response({'error': 'Access denied to APIC connection'},
-                                status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {'error': 'Access denied to APIC connection'}, status=status.HTTP_403_FORBIDDEN
+                )
         except APICConnection.DoesNotExist:
-            return Response({'error': 'APIC connection not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'APIC connection not found'}, status=status.HTTP_404_NOT_FOUND
+            )
 
         # Find or reference SavedQuery
         query_ref = None
         if saved_query_id:
             from queries.models import SavedQuery
+
             try:
                 query_ref = SavedQuery.objects.get(id=saved_query_id)
             except SavedQuery.DoesNotExist:
@@ -129,11 +142,12 @@ class PipelineExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         # or create the job without a query reference
         if not query_ref:
             from queries.models import SavedQuery
+
             query_ref = SavedQuery.objects.filter(created_by=request.user).first()
             if not query_ref:
                 return Response(
                     {'error': 'Save the query first before running a pipeline'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         job = ChainExecutionJob.objects.create(
@@ -209,12 +223,14 @@ class PipelineExecutionViewSet(viewsets.ReadOnlyModelViewSet):
             resource_type='ChainExecutionJob',
             resource_id=job.id,
             resource_name=job.chain_config.get('query_name', ''),
-            description="Pipeline cancelled",
+            description='Pipeline cancelled',
             request=request,
         )
 
-        return Response({
-            'message': 'Pipeline cancelled',
-            'id': str(job.id),
-            'status': job.status,
-        })
+        return Response(
+            {
+                'message': 'Pipeline cancelled',
+                'id': str(job.id),
+                'status': job.status,
+            }
+        )

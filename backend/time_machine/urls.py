@@ -17,7 +17,6 @@ urlpatterns = [
     path('heatmap/', views.get_heatmap_data),
     path('timeline/', views.attribute_timeline),
     path('saved-queries/<int:saved_query_id>/dns/', views.dns_in_query),
-
     path('settings/', views.time_machine_settings),
     path('cleanup/preview/', views.cleanup_preview),
     path('cleanup/execute/', views.execute_cleanup),

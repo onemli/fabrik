@@ -10,6 +10,7 @@ Tests cover:
   - check_can_create enforcement
   - check_feature enforcement
 """
+
 from django.test import TestCase
 from django.contrib.auth.models import User, Group
 

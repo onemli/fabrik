@@ -45,9 +45,18 @@ class TableTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableTemplate
         fields = [
-            'id', 'class_name', 'template_name', 'description',
-            'columns', 'preferences', 'default_filters', 'default_sorting',
-            'is_default', 'created_at', 'updated_at', 'last_used'
+            'id',
+            'class_name',
+            'template_name',
+            'description',
+            'columns',
+            'preferences',
+            'default_filters',
+            'default_sorting',
+            'is_default',
+            'created_at',
+            'updated_at',
+            'last_used',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -62,6 +71,7 @@ class TableTemplateSerializer(serializers.ModelSerializer):
     def update(self, instance: TableTemplate, validated_data: dict) -> TableTemplate:
         # Update last_used timestamp
         from django.utils import timezone
+
         instance.last_used = timezone.now()
         return super().update(instance, validated_data)
 
@@ -73,10 +83,17 @@ class UserTablePreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserTablePreference
         fields = [
-            'id', 'class_name', 'visible_columns', 'column_order',
-            'hidden_columns', 'always_visible', 'auto_hide_empty',
-            'nested_display', 'max_inline_children',
-            'created_at', 'updated_at'
+            'id',
+            'class_name',
+            'visible_columns',
+            'column_order',
+            'hidden_columns',
+            'always_visible',
+            'auto_hide_empty',
+            'nested_display',
+            'max_inline_children',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

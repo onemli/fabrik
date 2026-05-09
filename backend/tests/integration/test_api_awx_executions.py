@@ -1,17 +1,23 @@
 """
 Integration tests for AutomationExecution ViewSet
 """
+
 import pytest
 from rest_framework import status
 from awx.models import AutomationExecution
 from tests.factories import (
-    UserFactory, AutomationExecutionFactory,
-    RunningExecutionFactory, SuccessfulExecutionFactory,
-    FailedExecutionFactory, AutomationRequestFactory
+    UserFactory,
+    AutomationExecutionFactory,
+    RunningExecutionFactory,
+    SuccessfulExecutionFactory,
+    FailedExecutionFactory,
+    AutomationRequestFactory,
 )
 
 # Skip reason for serializer issues
-SKIP_SERIALIZER_BUG = pytest.mark.skip(reason="Backend serializer 'tasks' field issue - needs backend fix")
+SKIP_SERIALIZER_BUG = pytest.mark.skip(
+    reason="Backend serializer 'tasks' field issue - needs backend fix"
+)
 
 
 @pytest.mark.integration
@@ -41,10 +47,7 @@ class TestAutomationExecutionViewSet:
     def test_retrieve_execution(self, authenticated_client, user):
         """Test retrieving single execution"""
         request_obj = AutomationRequestFactory(requested_by=user)
-        execution = AutomationExecutionFactory(
-            automation_request=request_obj,
-            awx_job_id=12345
-        )
+        execution = AutomationExecutionFactory(automation_request=request_obj, awx_job_id=12345)
 
         response = authenticated_client.get(f'/api/awx/executions/{execution.id}/')
 
@@ -58,7 +61,7 @@ class TestAutomationExecutionViewSet:
         data = {
             'automation_request': str(request_obj.id),
             'awx_job_id': 99999,
-            'status': AutomationExecution.STATUS_PENDING
+            'status': AutomationExecution.STATUS_PENDING,
         }
 
         response = authenticated_client.post('/api/awx/executions/', data, format='json')
@@ -75,9 +78,7 @@ class TestAutomationExecutionViewSet:
         data = {'status': AutomationExecution.STATUS_SUCCESS}
 
         response = authenticated_client.patch(
-            f'/api/awx/executions/{execution.id}/',
-            data,
-            format='json'
+            f'/api/awx/executions/{execution.id}/', data, format='json'
         )
 
         # Should return 405 Method Not Allowed (ReadOnlyModelViewSet)
@@ -116,10 +117,7 @@ class TestAutomationExecutionViewSet:
     def test_cancel_running_execution(self, authenticated_client, user, mocker):
         """Test cancelling a running execution"""
         request_obj = AutomationRequestFactory(requested_by=user)
-        execution = RunningExecutionFactory(
-            automation_request=request_obj,
-            awx_job_id=12345
-        )
+        execution = RunningExecutionFactory(automation_request=request_obj, awx_job_id=12345)
 
         # Mock AWX client
         mock_awx_client = mocker.patch('awx.views.awx_client')
@@ -144,17 +142,14 @@ class TestAutomationExecutionViewSet:
     def test_get_execution_stdout(self, authenticated_client, user, mocker):
         """Test getting execution stdout/output"""
         request_obj = AutomationRequestFactory(requested_by=user)
-        execution = RunningExecutionFactory(
-            automation_request=request_obj,
-            awx_job_id=12345
-        )
+        execution = RunningExecutionFactory(automation_request=request_obj, awx_job_id=12345)
 
         # Mock AWX client
         mock_awx_client = mocker.patch('awx.views.awx_client')
         mock_awx_client.get_job_stdout.return_value = (
             True,
             {'stdout': 'PLAY [Test] *****\nTASK [Debug] *****\nok: [localhost]'},
-            None
+            None,
         )
 
         response = authenticated_client.get(f'/api/awx/executions/{execution.id}/stdout/')
@@ -166,17 +161,14 @@ class TestAutomationExecutionViewSet:
     def test_get_execution_output(self, authenticated_client, user, mocker):
         """Test getting execution output"""
         request_obj = AutomationRequestFactory(requested_by=user)
-        execution = SuccessfulExecutionFactory(
-            automation_request=request_obj,
-            awx_job_id=12345
-        )
+        execution = SuccessfulExecutionFactory(automation_request=request_obj, awx_job_id=12345)
 
         # Mock AWX client
         mock_awx_client = mocker.patch('awx.views.awx_client')
         mock_awx_client.get_job_output.return_value = (
             True,
             {'results': [{'host': 'localhost', 'status': 'ok'}]},
-            None
+            None,
         )
 
         response = authenticated_client.get(f'/api/awx/executions/{execution.id}/output/')
@@ -189,9 +181,7 @@ class TestAutomationExecutionViewSet:
         """Test getting workflow execution nodes"""
         request_obj = AutomationRequestFactory(requested_by=user)
         execution = AutomationExecutionFactory(
-            automation_request=request_obj,
-            awx_job_id=12345,
-            execution_mode='workflow'
+            automation_request=request_obj, awx_job_id=12345, execution_mode='workflow'
         )
 
         # Mock AWX client
@@ -199,7 +189,7 @@ class TestAutomationExecutionViewSet:
         mock_awx_client.get_workflow_job_nodes.return_value = (
             True,
             {'results': [{'id': 1, 'job': 100, 'status': 'successful'}]},
-            None
+            None,
         )
 
         response = authenticated_client.get(f'/api/awx/executions/{execution.id}/workflow-nodes/')

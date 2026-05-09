@@ -4,6 +4,7 @@ multi-class chain responses (nested children) into a flat list of
 target-class objects so PostProcessor pipelines and table renderers
 see a uniform shape.
 """
+
 import pytest
 
 from queries.services.response_flattener import (
@@ -17,6 +18,7 @@ from queries.services.response_flattener import (
 # Fixtures — the response shapes APIC actually returns for chains
 # ======================================================================
 
+
 def _two_level_response():
     """fvTenant → fvBD: one tenant with two BDs as direct children."""
     return {
@@ -26,14 +28,22 @@ def _two_level_response():
                 'fvTenant': {
                     'attributes': {'name': 'PROD_WEB', 'dn': 'uni/tn-PROD_WEB'},
                     'children': [
-                        {'fvBD': {'attributes': {
-                            'name': 'BD_WEB_FRONTEND',
-                            'dn': 'uni/tn-PROD_WEB/BD-BD_WEB_FRONTEND',
-                        }}},
-                        {'fvBD': {'attributes': {
-                            'name': 'BD_WEB_BACKEND',
-                            'dn': 'uni/tn-PROD_WEB/BD-BD_WEB_BACKEND',
-                        }}},
+                        {
+                            'fvBD': {
+                                'attributes': {
+                                    'name': 'BD_WEB_FRONTEND',
+                                    'dn': 'uni/tn-PROD_WEB/BD-BD_WEB_FRONTEND',
+                                }
+                            }
+                        },
+                        {
+                            'fvBD': {
+                                'attributes': {
+                                    'name': 'BD_WEB_BACKEND',
+                                    'dn': 'uni/tn-PROD_WEB/BD-BD_WEB_BACKEND',
+                                }
+                            }
+                        },
                     ],
                 }
             }
@@ -54,10 +64,14 @@ def _three_level_response():
                             'fvBD': {
                                 'attributes': {'name': 'BD_WEB_FRONTEND'},
                                 'children': [
-                                    {'fvSubnet': {'attributes': {
-                                        'ip': '10.1.10.1/24',
-                                        'scope': 'public',
-                                    }}},
+                                    {
+                                        'fvSubnet': {
+                                            'attributes': {
+                                                'ip': '10.1.10.1/24',
+                                                'scope': 'public',
+                                            }
+                                        }
+                                    },
                                 ],
                             }
                         },
@@ -65,10 +79,14 @@ def _three_level_response():
                             'fvBD': {
                                 'attributes': {'name': 'BD_WEB_BACKEND'},
                                 'children': [
-                                    {'fvSubnet': {'attributes': {
-                                        'ip': '10.1.20.1/24',
-                                        'scope': 'private',
-                                    }}},
+                                    {
+                                        'fvSubnet': {
+                                            'attributes': {
+                                                'ip': '10.1.20.1/24',
+                                                'scope': 'private',
+                                            }
+                                        }
+                                    },
                                 ],
                             }
                         },
@@ -83,8 +101,8 @@ def _three_level_response():
 # flatten_to_target_class
 # ======================================================================
 
-class TestFlattenToTargetClass:
 
+class TestFlattenToTargetClass:
     def test_two_level_chain_returns_direct_children(self):
         result = flatten_to_target_class(_two_level_response(), 'fvBD')
         assert result['totalCount'] == '2'
@@ -119,10 +137,12 @@ class TestFlattenToTargetClass:
         """Once we reach the target, deeper data is irrelevant."""
         response = {
             'imdata': [
-                {'fvBD': {
-                    'attributes': {'name': 'BD1'},
-                    'children': [{'fvSubnet': {'attributes': {'ip': 'x'}}}],
-                }}
+                {
+                    'fvBD': {
+                        'attributes': {'name': 'BD1'},
+                        'children': [{'fvSubnet': {'attributes': {'ip': 'x'}}}],
+                    }
+                }
             ]
         }
         result = flatten_to_target_class(response, 'fvBD')
@@ -149,18 +169,22 @@ class TestFlattenToTargetClass:
         as a sibling of intermediate classes, every occurrence is kept."""
         response = {
             'imdata': [
-                {'fvTenant': {
-                    'attributes': {'name': 'T1'},
-                    'children': [
-                        {'fvBD': {'attributes': {'name': 'BD-direct'}}},
-                        {'fvAp': {
-                            'attributes': {'name': 'AP1'},
-                            'children': [
-                                {'fvBD': {'attributes': {'name': 'BD-nested'}}},
-                            ],
-                        }},
-                    ],
-                }}
+                {
+                    'fvTenant': {
+                        'attributes': {'name': 'T1'},
+                        'children': [
+                            {'fvBD': {'attributes': {'name': 'BD-direct'}}},
+                            {
+                                'fvAp': {
+                                    'attributes': {'name': 'AP1'},
+                                    'children': [
+                                        {'fvBD': {'attributes': {'name': 'BD-nested'}}},
+                                    ],
+                                }
+                            },
+                        ],
+                    }
+                }
             ]
         }
         result = flatten_to_target_class(response, 'fvBD')
@@ -172,8 +196,8 @@ class TestFlattenToTargetClass:
 # detect_target_class_from_url
 # ======================================================================
 
-class TestDetectTargetClassFromUrl:
 
+class TestDetectTargetClassFromUrl:
     def test_class_query_with_chain_returns_last_subtree_class(self):
         url = (
             '/api/class/fvTenant.json'
@@ -218,8 +242,8 @@ class TestDetectTargetClassFromUrl:
 # maybe_flatten_response
 # ======================================================================
 
-class TestMaybeFlattenResponse:
 
+class TestMaybeFlattenResponse:
     def test_flattens_when_chain_detected(self):
         url = '/api/class/fvTenant.json?rsp-subtree=full&rsp-subtree-class=fvBD,fvSubnet'
         result = maybe_flatten_response(_three_level_response(), url)

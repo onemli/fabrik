@@ -19,7 +19,6 @@ EMAIL_HEALTH_CACHE_TTL = 60  # seconds
 
 
 class EmailService:
-
     @staticmethod
     def is_email_enabled() -> bool:
         """Check if email is configured at all (not just healthy)."""
@@ -94,7 +93,7 @@ class EmailService:
     @staticmethod
     def send_password_reset_email(user, token: str, site_url: str) -> dict:
         """Send password reset link via email."""
-        reset_url = f"{site_url}/reset-password?token={token}"
+        reset_url = f'{site_url}/reset-password?token={token}'
         context = {
             'user': user,
             'reset_url': reset_url,
@@ -111,7 +110,7 @@ class EmailService:
     @staticmethod
     def send_verification_email(user, token: str, site_url: str) -> dict:
         """Send email verification link."""
-        verify_url = f"{site_url}/verify-email?token={token}"
+        verify_url = f'{site_url}/verify-email?token={token}'
         context = {
             'user': user,
             'verify_url': verify_url,

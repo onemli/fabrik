@@ -14,6 +14,7 @@ class AutomationExecution(models.Model):
     row_number and batch_number fields are kept for backward compatibility
     with historical per_row/hybrid executions but are no longer populated.
     """
+
     STATUS_PENDING = 'pending'
     STATUS_WAITING = 'waiting'
     STATUS_RUNNING = 'running'
@@ -35,24 +36,19 @@ class AutomationExecution(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     automation_request = models.ForeignKey(
-        'AutomationRequest',
-        on_delete=models.CASCADE,
-        related_name='executions'
+        'AutomationRequest', on_delete=models.CASCADE, related_name='executions'
     )
     awx_connection = models.ForeignKey('AWXConnection', on_delete=models.CASCADE)
 
     # AWX Job/Workflow Details
     awx_job_id = models.IntegerField(
-        help_text="AWX job ID or workflow job ID",
-        null=True,
-        blank=True
+        help_text='AWX job ID or workflow job ID', null=True, blank=True
     )
     awx_job_url = models.URLField(max_length=500, blank=True, null=True)
 
     # Full AWX JSON (for detailed analysis)
     awx_job_data = models.JSONField(
-        default=dict,
-        help_text="Complete AWX job/workflow JSON response"
+        default=dict, help_text='Complete AWX job/workflow JSON response'
     )
 
     # Execution State
@@ -74,44 +70,38 @@ class AutomationExecution(models.Model):
 
     # Execution Tracking (Phase 1: Execution Engine)
     execution_mode = models.CharField(
-        max_length=20,
-        blank=True,
-        help_text="Execution mode used (always bulk for new executions)"
+        max_length=20, blank=True, help_text='Execution mode used (always bulk for new executions)'
     )
     row_number = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text="Row number for per-row mode (1-indexed)"
+        null=True, blank=True, help_text='Row number for per-row mode (1-indexed)'
     )
     batch_number = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text="Batch number (legacy, no longer populated)"
+        null=True, blank=True, help_text='Batch number (legacy, no longer populated)'
     )
     row_range = models.JSONField(
         default=dict,
         help_text="""
         Row range for this execution.
         Example: {"start": 0, "end": 20} for rows 0-19 (0-indexed)
-        """
+        """,
     )
     execution_metadata = models.JSONField(
         default=dict,
         help_text="""
         Additional execution metadata.
         Example: {"total_rows": 100, "retry_of_execution": "uuid", "scm_url": "..."}
-        """
+        """,
     )
     relaunch_of = models.ForeignKey(
         'self',
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name='relaunches',
-        help_text="Original execution this was relaunched from"
+        help_text='Original execution this was relaunched from',
     )
     relaunch_count = models.PositiveSmallIntegerField(
-        default=0,
-        help_text="Depth in relaunch chain (0 = original, 1 = first relaunch, ...)"
+        default=0, help_text='Depth in relaunch chain (0 = original, 1 = first relaunch, ...)'
     )
 
     # AWX workflow_job_template ID of the ephemeral clone created for this launch.
@@ -119,8 +109,9 @@ class AutomationExecution(models.Model):
     # the workflow_job reaches terminal status. The hourly reaper sweeps any
     # orphan clones whose linked execution failed to clean up.
     clone_template_id = models.IntegerField(
-        null=True, blank=True,
-        help_text="AWX workflow_job_template ID of the ephemeral clone (workflow only)",
+        null=True,
+        blank=True,
+        help_text='AWX workflow_job_template ID of the ephemeral clone (workflow only)',
     )
 
     # Per-host outcomes parsed from AWX artifacts after bulk execution completes.
@@ -141,7 +132,7 @@ class AutomationExecution(models.Model):
         ]
 
     def __str__(self):
-        return f"Execution {self.awx_job_id} - {self.status}"
+        return f'Execution {self.awx_job_id} - {self.status}'
 
     @property
     def is_terminal_status(self) -> bool:
@@ -149,7 +140,7 @@ class AutomationExecution(models.Model):
             self.STATUS_SUCCESSFUL,
             self.STATUS_FAILED,
             self.STATUS_ERROR,
-            self.STATUS_CANCELED
+            self.STATUS_CANCELED,
         ]
 
 
@@ -168,32 +159,28 @@ class JobOutputChunk(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     execution = models.ForeignKey(
-        'AutomationExecution',
-        on_delete=models.CASCADE,
-        related_name='output_chunks'
+        'AutomationExecution', on_delete=models.CASCADE, related_name='output_chunks'
     )
 
     # AWX event metadata
-    awx_job_id = models.IntegerField(db_index=True, help_text="AWX job ID for this output")
-    counter = models.IntegerField(help_text="AWX job_event counter for ordering")
+    awx_job_id = models.IntegerField(db_index=True, help_text='AWX job ID for this output')
+    counter = models.IntegerField(help_text='AWX job_event counter for ordering')
     event_type = models.CharField(
-        max_length=100,
-        help_text="Event type: runner_on_ok, runner_on_failed, etc."
+        max_length=100, help_text='Event type: runner_on_ok, runner_on_failed, etc.'
     )
 
     # Output content
-    stdout = models.TextField(blank=True, default='', help_text="Standard output from this event")
-    stderr = models.TextField(blank=True, default='', help_text="Standard error from this event")
+    stdout = models.TextField(blank=True, default='', help_text='Standard output from this event')
+    stderr = models.TextField(blank=True, default='', help_text='Standard error from this event')
 
     # Additional event data
     event_data = models.JSONField(
-        default=dict,
-        help_text="Additional event data (task name, play name, etc.)"
+        default=dict, help_text='Additional event data (task name, play name, etc.)'
     )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    awx_created = models.DateTimeField(help_text="Original event timestamp from AWX")
+    awx_created = models.DateTimeField(help_text='Original event timestamp from AWX')
 
     class Meta:
         db_table = 'awx_job_output_chunks'
@@ -205,4 +192,4 @@ class JobOutputChunk(models.Model):
         unique_together = [['execution', 'counter']]
 
     def __str__(self):
-        return f"Output chunk {self.counter} for job {self.awx_job_id}"
+        return f'Output chunk {self.counter} for job {self.awx_job_id}'

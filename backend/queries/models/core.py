@@ -1,4 +1,3 @@
-
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinLengthValidator
@@ -32,8 +31,9 @@ class SavedQuery(models.Model):
 
     is_template = models.BooleanField(default=False, help_text='Is this a reusable template?')
     variables = models.JSONField(
-        null=True, blank=True,
-        help_text='Template variable definitions (id, label, type, binding, etc.)'
+        null=True,
+        blank=True,
+        help_text='Template variable definitions (id, label, type, binding, etc.)',
     )
 
     enable_time_machine = models.BooleanField(
@@ -44,9 +44,7 @@ class SavedQuery(models.Model):
     enable_pagination = models.BooleanField(
         default=False, help_text='Enable pagination for query results'
     )
-    page_size = models.IntegerField(
-        default=50, help_text='Number of results per page (max: 1000)'
-    )
+    page_size = models.IntegerField(default=50, help_text='Number of results per page (max: 1000)')
 
     # Semantic versioning for Time Machine snapshots
     major_version = models.IntegerField(
@@ -56,17 +54,19 @@ class SavedQuery(models.Model):
         default=0, help_text='Minor version number (increments on filter/processor changes)'
     )
     current_version_hash = models.CharField(
-        max_length=8, blank=True, db_index=True,
-        help_text='Hash of current query structure for change detection'
+        max_length=8,
+        blank=True,
+        db_index=True,
+        help_text='Hash of current query structure for change detection',
     )
     version_history = models.JSONField(
-        default=list, blank=True,
-        help_text='Version changelog: [{ version, hash, changes, created_at, created_by }]'
+        default=list,
+        blank=True,
+        help_text='Version changelog: [{ version, hash, changes, created_at, created_by }]',
     )
 
     category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='queries'
+        Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='queries'
     )
     tags = models.CharField(max_length=500, blank=True, help_text='Comma-separated tags')
 
@@ -82,33 +82,30 @@ class SavedQuery(models.Model):
     favorited_by = models.ManyToManyField(User, blank=True, related_name='favorite_queries')
 
     is_validation_query = models.BooleanField(
-        default=False, db_index=True,
-        help_text='Is this query used for validation purposes?'
+        default=False, db_index=True, help_text='Is this query used for validation purposes?'
     )
     validation_description = models.TextField(
         blank=True, help_text='Description of what this validation query checks'
     )
     validation_error_message = models.CharField(
-        max_length=500, blank=True,
-        help_text='Error message to show when validation fails'
+        max_length=500, blank=True, help_text='Error message to show when validation fails'
     )
     validation_error_title = models.CharField(
-        max_length=100, blank=True,
-        help_text='Short error title for validation failures'
+        max_length=100, blank=True, help_text='Short error title for validation failures'
     )
     validation_value_field = models.CharField(
-        max_length=500, blank=True,
+        max_length=500,
+        blank=True,
         help_text=(
             'Dotted path to extract list values from APIC response. '
             'E.g. "fvTenant.attributes.name" extracts name from each imdata item.'
-        )
+        ),
     )
     validation_usage_count = models.IntegerField(
         default=0, help_text='Number of templates/columns using this validation query'
     )
     last_validated_at = models.DateTimeField(
-        null=True, blank=True,
-        help_text='Last time this query was used for validation'
+        null=True, blank=True, help_text='Last time this query was used for validation'
     )
 
     class Meta:
@@ -122,7 +119,7 @@ class SavedQuery(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} (by {self.created_by.username})"
+        return f'{self.name} (by {self.created_by.username})'
 
     @property
     def is_favorite(self):
@@ -131,12 +128,14 @@ class SavedQuery(models.Model):
     @property
     def version_string(self):
         from queries.version_utils import format_version
+
         return format_version(self.major_version, self.minor_version)
 
     def save(self, *args, **kwargs):
         # Safety net: ensure every row has a version hash for Time Machine
         if not self.current_version_hash and self.flow_data:
             from queries.version_utils import generate_query_version_hash
+
             self.current_version_hash = generate_query_version_hash(self.flow_data)
 
         if not self.major_version:
@@ -146,7 +145,9 @@ class SavedQuery(models.Model):
 
         super().save(*args, **kwargs)
 
-    def update_version_if_changed(self, new_flow_data: dict, user: 'User | None' = None) -> tuple[bool, str, list]:
+    def update_version_if_changed(
+        self, new_flow_data: dict, user: 'User | None' = None
+    ) -> tuple[bool, str, list]:
         """Compare incoming flow_data against stored version and bump if needed.
         Returns (version_changed, change_type, changes_list).
         """
@@ -220,8 +221,12 @@ class QueryExecutionLog(models.Model):
     query = models.ForeignKey(SavedQuery, on_delete=models.CASCADE, related_name='execution_logs')
     executed_by = models.ForeignKey(User, on_delete=models.CASCADE)
     executed_at = models.DateTimeField(auto_now_add=True)
-    execution_time_ms = models.IntegerField(null=True, blank=True, help_text='Execution time in milliseconds')
-    result_count = models.IntegerField(null=True, blank=True, help_text='Number of results returned')
+    execution_time_ms = models.IntegerField(
+        null=True, blank=True, help_text='Execution time in milliseconds'
+    )
+    result_count = models.IntegerField(
+        null=True, blank=True, help_text='Number of results returned'
+    )
     success = models.BooleanField(default=True)
     error_message = models.TextField(blank=True, null=True)
 
@@ -234,4 +239,4 @@ class QueryExecutionLog(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.query.name} - {self.executed_at}"
+        return f'{self.query.name} - {self.executed_at}'

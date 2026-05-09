@@ -30,32 +30,25 @@
 CLASS_RN_FORMATS = {
     'fvTenant': 'tn-{name}',
     'fvCtx': 'ctx-{name}',
-
     'fvAp': 'ap-{name}',
     'fvAEPg': 'epg-{name}',
-
     'fvBD': 'BD-{name}',
     'fvSubnet': 'subnet-[{ip}]',
-
     'vzBrCP': 'brc-{name}',
     'vzSubj': 'subj-{name}',
     'vzFilter': 'flt-{name}',
     'vzEntry': 'e-{name}',
-
     'l3extOut': 'out-{name}',
     'l3extInstP': 'instP-{name}',
     'l3extExtEncapAllocator': 'extEncapAlloc',
     'l3extRsEctx': 'rsectx',
-
     'fabricPod': 'pod-{id}',
     'fabricNode': 'node-{id}',
     'fabricPathEp': 'pathep-{name}',
     'fabricProtPol': 'protpol',
-
     'vmmProvP': 'provc-{name}',
     'vmmDomP': 'dom-{name}',
     'vmmEpPD': 'eppd-{name}',
-
     'fvRsBd': 'rsbd',
     'fvRsCons': 'rscons-{tnVzBrCPName}',
     'fvRsProv': 'rsprov-{tnVzBrCPName}',
@@ -78,12 +71,10 @@ CLASS_KEY_ATTRIBUTES = {
     'l3extInstP': 'name',
     'vmmProvP': 'name',
     'vmmDomP': 'name',
-
-    'fvSubnet': 'ip',     # key is the subnet prefix, e.g. "10.0.0.0/24"
-    'fabricPod': 'id',    # numeric, e.g. "1"
-    'fabricNode': 'id',   # numeric, e.g. "101"
+    'fvSubnet': 'ip',  # key is the subnet prefix, e.g. "10.0.0.0/24"
+    'fabricPod': 'id',  # numeric, e.g. "1"
+    'fabricNode': 'id',  # numeric, e.g. "101"
     'fabricPathEp': 'name',
-
     # Relation objects: None means there's no simple single-attribute key
     'fvRsBd': None,
     'fvRsCons': 'tnVzBrCPName',
@@ -139,13 +130,13 @@ def build_rn(class_name: str, value_dict: dict) -> str:
 
     if not rn_format:
         if 'name' in value_dict:
-            return f"{class_name}-{value_dict['name']}"
+            return f'{class_name}-{value_dict["name"]}'
         raise ValueError(f"Unknown class '{class_name}' and no name provided")
 
     try:
         return rn_format.format(**value_dict)
     except KeyError as e:
-        raise ValueError(f"Missing required attribute for {class_name}: {e}")
+        raise ValueError(f'Missing required attribute for {class_name}: {e}')
 
 
 def can_build_dn_from_filter(class_name: str, filter_data: dict) -> bool:

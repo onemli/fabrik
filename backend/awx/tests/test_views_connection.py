@@ -33,7 +33,8 @@ def make_user(username):
 
 def make_connection(user, name='AWX', url='https://awx.test', is_public=False):
     conn = AWXConnection.objects.create(
-        name=name, url=url,
+        name=name,
+        url=url,
         auth_type=AWXConnection.AUTH_TYPE_TOKEN,
         created_by=user,
         is_public=is_public,
@@ -46,14 +47,18 @@ def make_connection(user, name='AWX', url='https://awx.test', is_public=False):
 LIST_URL = '/api/awx/connections/'
 
 
-def detail_url(pk): return f'/api/awx/connections/{pk}/'
-def test_url(pk): return f'/api/awx/connections/{pk}/test/'
+def detail_url(pk):
+    return f'/api/awx/connections/{pk}/'
+
+
+def test_url(pk):
+    return f'/api/awx/connections/{pk}/test/'
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
 
-class ConnectionAuthTests(APITestCase):
 
+class ConnectionAuthTests(APITestCase):
     def test_list_requires_auth(self):
         resp = self.client.get(LIST_URL)
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -65,16 +70,18 @@ class ConnectionAuthTests(APITestCase):
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
-class ConnectionCRUDTests(APITestCase):
 
+class ConnectionCRUDTests(APITestCase):
     def setUp(self):
         self.user = make_user('owner')
         self.client = auth_client(self.user)
 
     def test_create_token_connection(self):
         data = {
-            'name': 'New AWX', 'url': 'https://new.awx',
-            'auth_type': 'token', 'token': 'mytoken123',
+            'name': 'New AWX',
+            'url': 'https://new.awx',
+            'auth_type': 'token',
+            'token': 'mytoken123',
             'verify_ssl': False,
         }
         resp = self.client.post(LIST_URL, data, format='json')
@@ -86,8 +93,11 @@ class ConnectionCRUDTests(APITestCase):
 
     def test_create_basic_auth_connection(self):
         data = {
-            'name': 'Basic AWX', 'url': 'https://basic.awx',
-            'auth_type': 'basic', 'username': 'admin', 'password': 'secret',
+            'name': 'Basic AWX',
+            'url': 'https://basic.awx',
+            'auth_type': 'basic',
+            'username': 'admin',
+            'password': 'secret',
         }
         resp = self.client.post(LIST_URL, data, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
@@ -135,18 +145,14 @@ class ConnectionCRUDTests(APITestCase):
 
     def test_update_own_connection(self):
         conn = make_connection(self.user, 'Old Name')
-        resp = self.client.patch(
-            detail_url(conn.id), {'name': 'New Name'}, format='json'
-        )
+        resp = self.client.patch(detail_url(conn.id), {'name': 'New Name'}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['name'], 'New Name')
 
     def test_update_other_user_connection_returns_404(self):
         other = make_user('other4')
         conn = make_connection(other, 'Theirs')
-        resp = self.client.patch(
-            detail_url(conn.id), {'name': 'Hijacked'}, format='json'
-        )
+        resp = self.client.patch(detail_url(conn.id), {'name': 'Hijacked'}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete_own_connection(self):
@@ -173,8 +179,8 @@ class ConnectionCRUDTests(APITestCase):
 
 # ── Test Connection Action ─────────────────────────────────────────────────────
 
-class ConnectionTestActionTests(APITestCase):
 
+class ConnectionTestActionTests(APITestCase):
     def setUp(self):
         self.user = make_user('tester')
         self.client = auth_client(self.user)
@@ -186,7 +192,7 @@ class ConnectionTestActionTests(APITestCase):
         instance.test_connection.return_value = (
             True,
             None,
-            {'version': '24.0.0', 'ansible_version': '2.15'}
+            {'version': '24.0.0', 'ansible_version': '2.15'},
         )
 
         resp = self.client.post(test_url(self.conn.id))
@@ -196,14 +202,10 @@ class ConnectionTestActionTests(APITestCase):
     @patch('awx.views.connection.AWXClient')
     def test_test_connection_failure(self, MockClient):
         instance = MockClient.for_connection.return_value
-        instance.test_connection.return_value = (
-            False, 'Connection refused', None
-        )
+        instance.test_connection.return_value = (False, 'Connection refused', None)
 
         resp = self.client.post(test_url(self.conn.id))
-        self.assertIn(resp.status_code, [
-            status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST
-        ])
+        self.assertIn(resp.status_code, [status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST])
         # success must be False
         self.assertFalse(resp.data.get('success', True))
 
@@ -225,34 +227,45 @@ class ConnectionTestActionTests(APITestCase):
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
-class ConnectionValidationTests(APITestCase):
 
+class ConnectionValidationTests(APITestCase):
     def setUp(self):
         self.user = make_user('validator')
         self.client = auth_client(self.user)
 
     def test_create_requires_url(self):
-        resp = self.client.post(LIST_URL, {
-            'name': 'No URL', 'auth_type': 'token', 'token': 'x'
-        }, format='json')
+        resp = self.client.post(
+            LIST_URL, {'name': 'No URL', 'auth_type': 'token', 'token': 'x'}, format='json'
+        )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_requires_name(self):
-        resp = self.client.post(LIST_URL, {
-            'url': 'https://awx.test', 'auth_type': 'token', 'token': 'x'
-        }, format='json')
+        resp = self.client.post(
+            LIST_URL, {'url': 'https://awx.test', 'auth_type': 'token', 'token': 'x'}, format='json'
+        )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_token_auth_requires_token(self):
-        resp = self.client.post(LIST_URL, {
-            'name': 'No Token', 'url': 'https://awx.test',
-            'auth_type': 'token',
-        }, format='json')
+        resp = self.client.post(
+            LIST_URL,
+            {
+                'name': 'No Token',
+                'url': 'https://awx.test',
+                'auth_type': 'token',
+            },
+            format='json',
+        )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_basic_auth_requires_password(self):
-        resp = self.client.post(LIST_URL, {
-            'name': 'No Pass', 'url': 'https://awx.test',
-            'auth_type': 'basic', 'username': 'admin',
-        }, format='json')
+        resp = self.client.post(
+            LIST_URL,
+            {
+                'name': 'No Pass',
+                'url': 'https://awx.test',
+                'auth_type': 'basic',
+                'username': 'admin',
+            },
+            format='json',
+        )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)

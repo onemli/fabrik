@@ -1,4 +1,5 @@
 """User model factories"""
+
 import factory
 from django.contrib.auth import get_user_model
 from factory.django import DjangoModelFactory

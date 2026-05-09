@@ -1,6 +1,7 @@
 """
 Management command to create the Validation category in Query Builder
 """
+
 from django.core.management.base import BaseCommand
 from queries.models import Category
 
@@ -18,14 +19,12 @@ class Command(BaseCommand):
                 'description': 'Queries that return lists of valid values for column validation',
                 'color': '#10b981',  # Green color (Tailwind green-500)
                 'icon': 'shield-check',  # Lucide icon name
-            }
+            },
         )
 
         if created:
             self.stdout.write(
-                self.style.SUCCESS(
-                    f'Successfully created Validation category (ID: {category.id})'
-                )
+                self.style.SUCCESS(f'Successfully created Validation category (ID: {category.id})')
             )
         else:
             # Update description and color if category already exists
@@ -41,7 +40,5 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(
-            self.style.SUCCESS(
-                '\nValidation category is ready to use in Query Builder!'
-            )
+            self.style.SUCCESS('\nValidation category is ready to use in Query Builder!')
         )

@@ -18,6 +18,7 @@ class QueryExportSerializer(serializers.ModelSerializer):
     - Execution statistics (execution_count, last_executed_at)
     - Auto-generated fields (created_at, updated_at, id)
     """
+
     category_name = serializers.CharField(source='category.name', read_only=True, allow_null=True)
 
     class Meta:
@@ -56,6 +57,7 @@ class QueryImportSerializer(serializers.Serializer):
 
     Validates structure and creates new SavedQuery instances
     """
+
     name = serializers.CharField(max_length=200, min_length=3)
     description = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     flow_data = serializers.JSONField()
@@ -76,7 +78,7 @@ class QueryImportSerializer(serializers.Serializer):
         Security: Prevent code injection and ensure valid structure
         """
         if not isinstance(value, dict):
-            raise serializers.ValidationError("flow_data must be a JSON object")
+            raise serializers.ValidationError('flow_data must be a JSON object')
 
         # Required keys
         if 'nodes' not in value:
@@ -86,32 +88,32 @@ class QueryImportSerializer(serializers.Serializer):
             raise serializers.ValidationError("flow_data must contain 'edges' array")
 
         if not isinstance(value['nodes'], list):
-            raise serializers.ValidationError("flow_data.nodes must be an array")
+            raise serializers.ValidationError('flow_data.nodes must be an array')
 
         if not isinstance(value['edges'], list):
-            raise serializers.ValidationError("flow_data.edges must be an array")
+            raise serializers.ValidationError('flow_data.edges must be an array')
 
         # Validate nodes structure
         for i, node in enumerate(value['nodes']):
             if not isinstance(node, dict):
-                raise serializers.ValidationError(f"Node {i} must be an object")
+                raise serializers.ValidationError(f'Node {i} must be an object')
 
             if 'id' not in node:
-                raise serializers.ValidationError(f"Node {i} missing required field: id")
+                raise serializers.ValidationError(f'Node {i} missing required field: id')
 
             if 'type' not in node:
-                raise serializers.ValidationError(f"Node {i} missing required field: type")
+                raise serializers.ValidationError(f'Node {i} missing required field: type')
 
         # Validate edges structure
         for i, edge in enumerate(value['edges']):
             if not isinstance(edge, dict):
-                raise serializers.ValidationError(f"Edge {i} must be an object")
+                raise serializers.ValidationError(f'Edge {i} must be an object')
 
             if 'source' not in edge:
-                raise serializers.ValidationError(f"Edge {i} missing required field: source")
+                raise serializers.ValidationError(f'Edge {i} missing required field: source')
 
             if 'target' not in edge:
-                raise serializers.ValidationError(f"Edge {i} missing required field: target")
+                raise serializers.ValidationError(f'Edge {i} missing required field: target')
 
         return value
 
@@ -122,17 +124,19 @@ class QueryImportSerializer(serializers.Serializer):
         Security: Ensure it's a safe APIC query string
         """
         if not value:
-            raise serializers.ValidationError("generated_query cannot be empty")
+            raise serializers.ValidationError('generated_query cannot be empty')
 
         # Basic APIC query validation
         if not value.startswith('/api/'):
-            raise serializers.ValidationError("generated_query must be a valid APIC API path starting with /api/")
+            raise serializers.ValidationError(
+                'generated_query must be a valid APIC API path starting with /api/'
+            )
 
         # Security: Block potentially dangerous patterns
         dangerous_patterns = ['<script', 'javascript:', 'onerror=', 'eval(']
         for pattern in dangerous_patterns:
             if pattern.lower() in value.lower():
-                raise serializers.ValidationError(f"Query contains dangerous pattern: {pattern}")
+                raise serializers.ValidationError(f'Query contains dangerous pattern: {pattern}')
 
         return value
 
@@ -144,17 +148,19 @@ class QueryImportSerializer(serializers.Serializer):
             return value
 
         if not isinstance(value, list):
-            raise serializers.ValidationError("variables must be an array")
+            raise serializers.ValidationError('variables must be an array')
 
         # Validate each variable
         for i, var in enumerate(value):
             if not isinstance(var, dict):
-                raise serializers.ValidationError(f"Variable {i} must be an object")
+                raise serializers.ValidationError(f'Variable {i} must be an object')
 
             required_fields = ['id', 'label', 'type']
             for field in required_fields:
                 if field not in var:
-                    raise serializers.ValidationError(f"Variable {i} missing required field: {field}")
+                    raise serializers.ValidationError(
+                        f'Variable {i} missing required field: {field}'
+                    )
 
         return value
 
@@ -166,7 +172,7 @@ class QueryImportSerializer(serializers.Serializer):
         dangerous_patterns = ['<script', 'javascript:', 'onerror=']
         for pattern in dangerous_patterns:
             if pattern.lower() in value.lower():
-                raise serializers.ValidationError(f"Name contains dangerous pattern: {pattern}")
+                raise serializers.ValidationError(f'Name contains dangerous pattern: {pattern}')
 
         return value
 
@@ -180,22 +186,17 @@ class QueryImportSerializer(serializers.Serializer):
         user = self.context.get('user')
 
         if not user:
-            raise serializers.ValidationError("User context required for import")
+            raise serializers.ValidationError('User context required for import')
 
         # Get or create category
         category = None
         if category_name:
             category, _ = Category.objects.get_or_create(
-                name=category_name,
-                defaults={'description': f'Imported category: {category_name}'}
+                name=category_name, defaults={'description': f'Imported category: {category_name}'}
             )
 
         # Create query
-        query = SavedQuery.objects.create(
-            created_by=user,
-            category=category,
-            **validated_data
-        )
+        query = SavedQuery.objects.create(created_by=user, category=category, **validated_data)
 
         return query
 
@@ -204,11 +205,12 @@ class BulkExportSerializer(serializers.Serializer):
     """
     Serializer for bulk export requests
     """
+
     query_ids = serializers.ListField(
         child=serializers.IntegerField(),
         min_length=1,
         max_length=100,  # Security: Limit bulk export size
-        help_text='List of query IDs to export (max 100)'
+        help_text='List of query IDs to export (max 100)',
     )
 
     def validate_query_ids(self, value):
@@ -219,7 +221,7 @@ class BulkExportSerializer(serializers.Serializer):
         unique_ids = list(set(value))
 
         if len(unique_ids) != len(value):
-            raise serializers.ValidationError("Duplicate query IDs found")
+            raise serializers.ValidationError('Duplicate query IDs found')
 
         return unique_ids
 
@@ -228,13 +230,14 @@ class BulkImportSerializer(serializers.Serializer):
     """
     Serializer for bulk import requests
     """
+
     version = serializers.CharField(required=True)
     exported_at = serializers.DateTimeField(required=False)
     queries = serializers.ListField(
         child=QueryImportSerializer(),
         min_length=1,
         max_length=100,  # Security: Limit bulk import size
-        help_text='List of queries to import (max 100)'
+        help_text='List of queries to import (max 100)',
     )
 
     def validate_version(self, value):
@@ -245,7 +248,7 @@ class BulkImportSerializer(serializers.Serializer):
 
         if value not in supported_versions:
             raise serializers.ValidationError(
-                f"Unsupported export version: {value}. Supported versions: {', '.join(supported_versions)}"
+                f'Unsupported export version: {value}. Supported versions: {", ".join(supported_versions)}'
             )
 
         return value
@@ -257,7 +260,7 @@ class BulkImportSerializer(serializers.Serializer):
         # Check for duplicate names in the import
         names = [q['name'] for q in data['queries']]
         if len(names) != len(set(names)):
-            raise serializers.ValidationError("Import contains duplicate query names")
+            raise serializers.ValidationError('Import contains duplicate query names')
 
         return data
 
@@ -269,7 +272,7 @@ class BulkImportSerializer(serializers.Serializer):
         """
         user = self.context.get('user')
         if not user:
-            raise serializers.ValidationError("User context required for import")
+            raise serializers.ValidationError('User context required for import')
 
         queries_data = validated_data['queries']
         created_queries = []
@@ -282,23 +285,23 @@ class BulkImportSerializer(serializers.Serializer):
                     query = serializer.save()
                     created_queries.append(query)
                 else:
-                    errors.append({
-                        'index': i,
-                        'name': query_data.get('name', 'Unknown'),
-                        'errors': serializer.errors
-                    })
+                    errors.append(
+                        {
+                            'index': i,
+                            'name': query_data.get('name', 'Unknown'),
+                            'errors': serializer.errors,
+                        }
+                    )
             except Exception as e:
-                errors.append({
-                    'index': i,
-                    'name': query_data.get('name', 'Unknown'),
-                    'error': str(e)
-                })
+                errors.append(
+                    {'index': i, 'name': query_data.get('name', 'Unknown'), 'error': str(e)}
+                )
 
         return {
             'success_count': len(created_queries),
             'error_count': len(errors),
             'created_queries': created_queries,
-            'errors': errors
+            'errors': errors,
         }
 
 
@@ -316,8 +319,7 @@ def generate_export_json(queries, user=None):
     # Filter queries based on permissions
     if user:
         exportable_queries = [
-            q for q in queries
-            if q.created_by == user or q.is_public or user in q.shared_with.all()
+            q for q in queries if q.created_by == user or q.is_public or user in q.shared_with.all()
         ]
     else:
         exportable_queries = list(queries)
@@ -330,5 +332,5 @@ def generate_export_json(queries, user=None):
         'exported_at': datetime.now().isoformat(),
         'exported_by': user.username if user else 'anonymous',
         'query_count': len(exportable_queries),
-        'queries': serializer.data
+        'queries': serializer.data,
     }

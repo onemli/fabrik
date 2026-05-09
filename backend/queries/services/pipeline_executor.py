@@ -36,8 +36,9 @@ MAX_ITERATE_VALUES = 100
 class PipelineStage:
     """Parsed representation of a single pipeline stage."""
 
-    def __init__(self, index: int, nodes: list, edges: list,
-                 inject_config: Optional[dict] = None) -> None:
+    def __init__(
+        self, index: int, nodes: list, edges: list, inject_config: Optional[dict] = None
+    ) -> None:
         self.index = index
         self.nodes = nodes
         self.edges = edges
@@ -80,15 +81,14 @@ class PipelineExecutor:
         """
         stages = self._parse_pipeline_stages()
         if not stages:
-            raise ValueError("No pipeline stages found in flow_data")
+            raise ValueError('No pipeline stages found in flow_data')
 
         if len(stages) > MAX_PIPELINE_STAGES:
-            raise ValueError(f"Pipeline exceeds maximum of {MAX_PIPELINE_STAGES} stages")
+            raise ValueError(f'Pipeline exceeds maximum of {MAX_PIPELINE_STAGES} stages')
 
         self.job.total_iterations = len(stages)
         self.job.pipeline_stages = [
-            {'index': s.index, 'class_name': s.class_name,
-             'inject_mode': s.inject_mode}
+            {'index': s.index, 'class_name': s.class_name, 'inject_mode': s.inject_mode}
             for s in stages
         ]
         self.job.save(update_fields=['total_iterations', 'pipeline_stages'])
@@ -139,15 +139,17 @@ class PipelineExecutor:
             except Exception as e:
                 elapsed_ms = int((time.time() - stage_start) * 1000)
                 error_msg = str(e)
-                logger.error(f"Pipeline stage {stage.index} failed: {error_msg}")
+                logger.error(f'Pipeline stage {stage.index} failed: {error_msg}')
 
-                self.stage_results.append({
-                    'stage_index': stage.index,
-                    'class_name': stage.class_name,
-                    'status': 'failed',
-                    'error': error_msg,
-                    'execution_time_ms': elapsed_ms,
-                })
+                self.stage_results.append(
+                    {
+                        'stage_index': stage.index,
+                        'class_name': stage.class_name,
+                        'status': 'failed',
+                        'error': error_msg,
+                        'execution_time_ms': elapsed_ms,
+                    }
+                )
 
                 ChainIterationResult.objects.create(
                     job=self.job,
@@ -273,19 +275,24 @@ class PipelineExecutor:
         for order_idx, comp_idx in enumerate(comp_order):
             comp_node_ids = components[comp_idx]
             stage_nodes = [n for n in all_nodes if n['id'] in comp_node_ids]
-            stage_edges = [e for e in normal_edges
-                           if e['source'] in comp_node_ids and e['target'] in comp_node_ids]
+            stage_edges = [
+                e
+                for e in normal_edges
+                if e['source'] in comp_node_ids and e['target'] in comp_node_ids
+            ]
             inject_config = comp_inject_config.get(comp_idx, {})
 
             # Only include stages that have at least one classNode
             has_class = any(n.get('type') == 'classNode' for n in stage_nodes)
             if has_class:
-                stages.append(PipelineStage(
-                    index=order_idx,
-                    nodes=stage_nodes,
-                    edges=stage_edges,
-                    inject_config=inject_config,
-                ))
+                stages.append(
+                    PipelineStage(
+                        index=order_idx,
+                        nodes=stage_nodes,
+                        edges=stage_edges,
+                        inject_config=inject_config,
+                    )
+                )
 
         return stages
 
@@ -299,13 +306,13 @@ class PipelineExecutor:
         try:
             intent = QueryIntent(flow_data)
         except ValueError as e:
-            raise ValueError(f"Stage {stage.index}: {e}")
+            raise ValueError(f'Stage {stage.index}: {e}')
 
         # If we have upstream data and this isn't the first stage, inject it
         if upstream_result is not None and stage.inject_config:
             upstream_values = self._extract_values(upstream_result, stage.extract_field)
             if not upstream_values:
-                logger.warning(f"Stage {stage.index}: No values extracted from upstream result")
+                logger.warning(f'Stage {stage.index}: No values extracted from upstream result')
                 return {'totalCount': '0', 'imdata': []}
 
             return self._execute_with_injection(stage, intent, upstream_values)
@@ -316,7 +323,7 @@ class PipelineExecutor:
 
         success, result, error = self.apic_client.execute_query(query_url)
         if not success:
-            raise RuntimeError(f"APIC query failed: {error}")
+            raise RuntimeError(f'APIC query failed: {error}')
 
         # Normalize multi-class chain responses before PostProcessors run.
         if isinstance(result, dict):
@@ -326,8 +333,7 @@ class PipelineExecutor:
         result = self._apply_stage_postprocessors(stage, result)
         return result
 
-    def _execute_with_injection(self, stage: PipelineStage, intent,
-                                upstream_values: list) -> Any:
+    def _execute_with_injection(self, stage: PipelineStage, intent, upstream_values: list) -> Any:
         """Execute a stage with upstream data injected as filters or DN scope."""
         mode = stage.inject_mode
 
@@ -338,19 +344,19 @@ class PipelineExecutor:
         elif mode == 'iterate':
             return self._inject_as_iterate(stage, upstream_values)
         else:
-            raise ValueError(f"Unknown inject mode: {mode}")
+            raise ValueError(f'Unknown inject mode: {mode}')
 
-    def _inject_as_filter(self, stage: PipelineStage, intent,
-                          upstream_values: list) -> Any:
+    def _inject_as_filter(self, stage: PipelineStage, intent, upstream_values: list) -> Any:
         """Build a single query with upstream values as filter expressions."""
         if len(upstream_values) > MAX_FILTER_VALUES:
             logger.warning(
-                f"Stage {stage.index}: Truncating {len(upstream_values)} values "
-                f"to {MAX_FILTER_VALUES} for filter injection"
+                f'Stage {stage.index}: Truncating {len(upstream_values)} values '
+                f'to {MAX_FILTER_VALUES} for filter injection'
             )
             upstream_values = upstream_values[:MAX_FILTER_VALUES]
 
         from queries.services.optimizer import QueryExecutor
+
         executor = QueryExecutor()
         query_url, metadata = executor.execute(intent)
 
@@ -368,8 +374,7 @@ class PipelineExecutor:
         if 'query-target-filter=' in query_url:
             # Merge with existing filter using and()
             query_url = query_url.replace(
-                'query-target-filter=',
-                f'query-target-filter=and({injected_filter},'
+                'query-target-filter=', f'query-target-filter=and({injected_filter},'
             )
             # Close the and() — find the end of the existing filter value
             # Simple approach: append closing paren before next & or end of string
@@ -384,7 +389,7 @@ class PipelineExecutor:
 
         success, result, error = self.apic_client.execute_query(query_url)
         if not success:
-            raise RuntimeError(f"APIC query failed: {error}")
+            raise RuntimeError(f'APIC query failed: {error}')
 
         if isinstance(result, dict):
             result = maybe_flatten_response(result, query_url)
@@ -396,8 +401,8 @@ class PipelineExecutor:
         """Run MO queries scoped to each upstream DN, merge results."""
         if len(upstream_values) > MAX_DN_SCOPE_VALUES:
             logger.warning(
-                f"Stage {stage.index}: Truncating {len(upstream_values)} DNs "
-                f"to {MAX_DN_SCOPE_VALUES} for dn_scope injection"
+                f'Stage {stage.index}: Truncating {len(upstream_values)} DNs '
+                f'to {MAX_DN_SCOPE_VALUES} for dn_scope injection'
             )
             upstream_values = upstream_values[:MAX_DN_SCOPE_VALUES]
 
@@ -405,7 +410,9 @@ class PipelineExecutor:
         target_class = stage.class_name
 
         for dn in upstream_values:
-            query_url = f'/api/mo/{dn}.json?query-target=subtree&target-subtree-class={target_class}'
+            query_url = (
+                f'/api/mo/{dn}.json?query-target=subtree&target-subtree-class={target_class}'
+            )
 
             success, result, error = self.apic_client.execute_query(query_url)
             if success and isinstance(result, dict):
@@ -426,8 +433,8 @@ class PipelineExecutor:
         """Fan-out: run downstream query once per upstream value."""
         if len(upstream_values) > MAX_ITERATE_VALUES:
             logger.warning(
-                f"Stage {stage.index}: Truncating {len(upstream_values)} values "
-                f"to {MAX_ITERATE_VALUES} for iterate injection"
+                f'Stage {stage.index}: Truncating {len(upstream_values)} values '
+                f'to {MAX_ITERATE_VALUES} for iterate injection'
             )
             upstream_values = upstream_values[:MAX_ITERATE_VALUES]
 
@@ -461,14 +468,14 @@ class PipelineExecutor:
         merged_result = self._apply_stage_postprocessors(stage, merged_result)
         return merged_result
 
-    def _inject_value_into_nodes(self, nodes: list, value: str,
-                                 stage: PipelineStage) -> list:
+    def _inject_value_into_nodes(self, nodes: list, value: str, stage: PipelineStage) -> list:
         """Clone nodes and add a filter for the injected value.
 
         Adds a synthetic filter node connected to the class node that
         constrains the query to the injected value.
         """
         import copy
+
         modified = copy.deepcopy(nodes)
 
         # Find the class node
@@ -560,9 +567,12 @@ class PipelineExecutor:
 
     def _apply_stage_postprocessors(self, stage: PipelineStage, result: Any) -> Any:
         """Apply post-processors defined within this stage's sub-graph."""
-        pp_nodes = [n for n in stage.nodes
-                    if n.get('type') in ('postProcessorNode', 'post-processor')
-                    and not n.get('data', {}).get('isPaused')]
+        pp_nodes = [
+            n
+            for n in stage.nodes
+            if n.get('type') in ('postProcessorNode', 'post-processor')
+            and not n.get('data', {}).get('isPaused')
+        ]
 
         if not pp_nodes:
             return result
@@ -570,7 +580,7 @@ class PipelineExecutor:
         try:
             return PostProcessorEngine.execute(result, pp_nodes)
         except Exception as e:
-            logger.warning(f"Stage {stage.index} post-processor failed: {e}")
+            logger.warning(f'Stage {stage.index} post-processor failed: {e}')
             return result
 
     def _count_results(self, result: Any) -> int:
@@ -604,5 +614,5 @@ class PipelineExecutor:
                 'message': message,
                 'stage_index': stage.index,
                 'stage_status': status,
-            }
+            },
         )

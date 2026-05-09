@@ -35,9 +35,9 @@ class CircuitBreaker:
     HALF_OPEN → cooldown expired; one probe attempt allowed.
     """
 
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
+    CLOSED = 'closed'
+    OPEN = 'open'
+    HALF_OPEN = 'half_open'
 
     def __init__(self, failure_threshold: int = 5, timeout: int = 60):
         self.failure_threshold = failure_threshold
@@ -53,9 +53,9 @@ class CircuitBreaker:
             if self.state == self.OPEN:
                 if self._should_attempt_reset():
                     self.state = self.HALF_OPEN
-                    logger.info("Circuit breaker: OPEN -> HALF_OPEN")
+                    logger.info('Circuit breaker: OPEN -> HALF_OPEN')
                 else:
-                    raise Exception(f"Circuit breaker is OPEN. Wait {self.timeout}s.")
+                    raise Exception(f'Circuit breaker is OPEN. Wait {self.timeout}s.')
 
         try:
             result = func(*args, **kwargs)
@@ -63,7 +63,7 @@ class CircuitBreaker:
                 if self.state == self.HALF_OPEN:
                     self.state = self.CLOSED
                     self.failure_count = 0
-                    logger.info("Circuit breaker: HALF_OPEN -> CLOSED")
+                    logger.info('Circuit breaker: HALF_OPEN -> CLOSED')
             return result
         except Exception:
             with self._lock:
@@ -73,7 +73,7 @@ class CircuitBreaker:
                 if self.failure_count >= self.failure_threshold:
                     self.state = self.OPEN
                     logger.error(
-                        f"Circuit breaker: CLOSED -> OPEN after {self.failure_count} failures"
+                        f'Circuit breaker: CLOSED -> OPEN after {self.failure_count} failures'
                     )
             raise
 
@@ -107,7 +107,7 @@ class RabbitMQPublisher:
         self._heartbeat = 60  # 1 minute - detect dead connections faster
         self._blocked_connection_timeout = 120  # 2 minutes
 
-        logger.info(f"RabbitMQ Publisher initialized: {self._mask_url(self.rabbitmq_url)}")
+        logger.info(f'RabbitMQ Publisher initialized: {self._mask_url(self.rabbitmq_url)}')
 
     def _mask_url(self, url: str) -> str:
         """Mask password in URL for logging"""
@@ -117,10 +117,10 @@ class RabbitMQPublisher:
                 user_pass = parts[0].split('//')[-1]
                 if ':' in user_pass:
                     user = user_pass.split(':')[0]
-                    return url.replace(user_pass, f"{user}:****")
+                    return url.replace(user_pass, f'{user}:****')
             return url
         except Exception:
-            return "***masked***"
+            return '***masked***'
 
     @contextmanager
     def _get_channel(self):
@@ -158,16 +158,16 @@ class RabbitMQPublisher:
                     durable=True,
                 )
 
-                logger.info(f"Connected to RabbitMQ (attempt {attempt + 1}/{max_retries})")
+                logger.info(f'Connected to RabbitMQ (attempt {attempt + 1}/{max_retries})')
                 return
 
             except AMQPConnectionError as e:
                 logger.warning(
-                    f"Failed to connect to RabbitMQ (attempt {attempt + 1}/{max_retries}): {str(e)}"
+                    f'Failed to connect to RabbitMQ (attempt {attempt + 1}/{max_retries}): {str(e)}'
                 )
 
                 if attempt < max_retries - 1:
-                    time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+                    time.sleep(retry_delay * (2**attempt))  # Exponential backoff
                 else:
                     raise
 
@@ -176,7 +176,7 @@ class RabbitMQPublisher:
         routing_key: str,
         event_data: Dict[str, Any],
         correlation_id: Optional[str] = None,
-        retry_count: int = 3
+        retry_count: int = 3,
     ) -> Tuple[bool, Optional[str]]:
         """
         Publish event to RabbitMQ with retry logic
@@ -194,14 +194,10 @@ class RabbitMQPublisher:
         try:
             # Use circuit breaker to prevent cascading failures
             return self._circuit_breaker.call(
-                self._publish_with_retry,
-                routing_key,
-                event_data,
-                correlation_id,
-                retry_count
+                self._publish_with_retry, routing_key, event_data, correlation_id, retry_count
             )
         except Exception as e:
-            error_msg = f"Circuit breaker prevented publish: {str(e)}"
+            error_msg = f'Circuit breaker prevented publish: {str(e)}'
             logger.error(error_msg)
             return False, error_msg
 
@@ -210,7 +206,7 @@ class RabbitMQPublisher:
         routing_key: str,
         event_data: Dict[str, Any],
         correlation_id: Optional[str],
-        retry_count: int
+        retry_count: int,
     ) -> Tuple[bool, Optional[str]]:
         """Internal method with retry logic"""
 
@@ -226,8 +222,8 @@ class RabbitMQPublisher:
                         'correlation_id': correlation_id,
                         'routing_key': routing_key,
                         'source': 'fabrik',
-                        'version': '1.0'
-                    }
+                        'version': '1.0',
+                    },
                 }
 
                 # Serialize to JSON
@@ -243,13 +239,13 @@ class RabbitMQPublisher:
                             delivery_mode=2,  # Persistent
                             content_type='application/json',
                             correlation_id=correlation_id,
-                            timestamp=int(time.time())
-                        )
+                            timestamp=int(time.time()),
+                        ),
                     )
 
                 logger.info(
-                    f"Event published: routing_key={routing_key}, "
-                    f"correlation_id={correlation_id}, attempt={attempt + 1}"
+                    f'Event published: routing_key={routing_key}, '
+                    f'correlation_id={correlation_id}, attempt={attempt + 1}'
                 )
 
                 return True, None
@@ -257,7 +253,7 @@ class RabbitMQPublisher:
             except (AMQPConnectionError, AMQPChannelError) as e:
                 last_error = str(e)
                 logger.warning(
-                    f"Failed to publish event (attempt {attempt + 1}/{retry_count}): {last_error}"
+                    f'Failed to publish event (attempt {attempt + 1}/{retry_count}): {last_error}'
                 )
 
                 # Reset connection on error
@@ -266,11 +262,11 @@ class RabbitMQPublisher:
                     self._channel = None
 
                 if attempt < retry_count - 1:
-                    time.sleep(0.5 * (2 ** attempt))  # Exponential backoff
+                    time.sleep(0.5 * (2**attempt))  # Exponential backoff
 
             except Exception as e:
                 last_error = str(e)
-                logger.exception(f"Unexpected error publishing event: {last_error}")
+                logger.exception(f'Unexpected error publishing event: {last_error}')
                 break
 
         return False, last_error
@@ -281,7 +277,7 @@ class RabbitMQPublisher:
         status: str,
         execution_id: str,
         request_id: str,
-        extra_data: Optional[Dict] = None
+        extra_data: Optional[Dict] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
         Publish job status change event
@@ -296,7 +292,7 @@ class RabbitMQPublisher:
             'status': status,
             'execution_id': execution_id,
             'request_id': request_id,
-            **(extra_data or {})
+            **(extra_data or {}),
         }
 
         routing_key = f'job.status.{status}'
@@ -310,7 +306,7 @@ class RabbitMQPublisher:
         status: str,
         execution_id: str,
         request_id: str,
-        extra_data: Optional[Dict] = None
+        extra_data: Optional[Dict] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
         Publish workflow status change event
@@ -325,7 +321,7 @@ class RabbitMQPublisher:
             'status': status,
             'execution_id': execution_id,
             'request_id': request_id,
-            **(extra_data or {})
+            **(extra_data or {}),
         }
 
         routing_key = f'workflow.status.{status}'
@@ -334,11 +330,7 @@ class RabbitMQPublisher:
         return self.publish_event(routing_key, event_data, correlation_id)
 
     def publish_job_output_event(
-        self,
-        job_id: int,
-        output_chunk: str,
-        execution_id: str,
-        chunk_index: int = 0
+        self, job_id: int, output_chunk: str, execution_id: str, chunk_index: int = 0
     ) -> Tuple[bool, Optional[str]]:
         """
         Publish job output chunk (Phase 2)
@@ -351,7 +343,7 @@ class RabbitMQPublisher:
             'job_id': job_id,
             'execution_id': execution_id,
             'chunk_index': chunk_index,
-            'output': output_chunk
+            'output': output_chunk,
         }
 
         routing_key = f'job.output.{job_id}'
@@ -375,7 +367,7 @@ class RabbitMQPublisher:
                 'status': 'healthy',
                 'rabbitmq_connected': True,
                 'circuit_breaker_state': self._circuit_breaker.state,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.utcnow().isoformat(),
             }
         except Exception as e:
             return {
@@ -383,7 +375,7 @@ class RabbitMQPublisher:
                 'rabbitmq_connected': False,
                 'circuit_breaker_state': self._circuit_breaker.state,
                 'error': str(e),
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.utcnow().isoformat(),
             }
 
     def close(self):
@@ -395,9 +387,9 @@ class RabbitMQPublisher:
             if self._connection and not self._connection.is_closed:
                 self._connection.close()
 
-            logger.info("RabbitMQ connection closed")
+            logger.info('RabbitMQ connection closed')
         except Exception as e:
-            logger.exception(f"Error closing RabbitMQ connection: {str(e)}")
+            logger.exception(f'Error closing RabbitMQ connection: {str(e)}')
 
 
 # Global singleton instance

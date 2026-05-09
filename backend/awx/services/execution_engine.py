@@ -53,6 +53,7 @@ class LaunchResult:
     AWX template clone — callers persist it on AutomationExecution so the
     terminal-status hook (and the orphan reaper) can clean it up later.
     """
+
     success: bool
     job_data: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
@@ -103,7 +104,9 @@ class ExecutionEngine:
     STATUS_CANCELED = 'canceled'
 
     def __init__(self) -> None:
-        self.awx_client: Optional[AWXClient] = None  # Created per-connection via _configure_awx_client
+        self.awx_client: Optional[AWXClient] = (
+            None  # Created per-connection via _configure_awx_client
+        )
         self.data_transformer: DataTransformer = DataTransformer()
 
     def execute_request(
@@ -114,16 +117,12 @@ class ExecutionEngine:
         try:
             # Load request with related data
             request = AutomationRequest.objects.select_related(
-                'template',
-                'awx_connection',
-                'target_apic',
-                'requested_by'
+                'template', 'awx_connection', 'target_apic', 'requested_by'
             ).get(id=request_id)
 
             logger.info(
-                f"Starting execution for request {request_id}"
-                + (f" (relaunch of {relaunch_of_execution_id})"
-                   if relaunch_of_execution_id else "")
+                f'Starting execution for request {request_id}'
+                + (f' (relaunch of {relaunch_of_execution_id})' if relaunch_of_execution_id else '')
             )
 
             # Get template — use snapshot if available so schema changes after
@@ -148,12 +147,12 @@ class ExecutionEngine:
                         status=AutomationExecution.STATUS_ERROR,
                         result_traceback=str(ve),
                         execution_mode=template.execution_mode or self.MODE_BULK,
-                        execution_metadata={'validation_error': str(ve)}
+                        execution_metadata={'validation_error': str(ve)},
                     )
                     request.status = AutomationRequest.STATUS_FAILED
                     request.save(update_fields=['status'])
 
-                logger.error(f"Validation failed for request {request_id}: {str(ve)}")
+                logger.error(f'Validation failed for request {request_id}: {str(ve)}')
                 return False, [execution.id], str(ve)
 
             # Configure AWX client
@@ -161,7 +160,8 @@ class ExecutionEngine:
 
             # Always bulk — all rows in one AWX job
             success, execution_ids, error = self.execute_bulk(
-                request, template,
+                request,
+                template,
                 relaunch_of_execution_id=relaunch_of_execution_id,
             )
 
@@ -171,25 +171,25 @@ class ExecutionEngine:
                 request.save()
 
                 logger.info(
-                    f"Successfully started execution for request {request_id}. "
-                    f"Created {len(execution_ids)} execution(s)"
+                    f'Successfully started execution for request {request_id}. '
+                    f'Created {len(execution_ids)} execution(s)'
                 )
             else:
-                logger.error(f"Failed to execute request {request_id}: {error}")
+                logger.error(f'Failed to execute request {request_id}: {error}')
 
             return success, execution_ids, error
 
         except AutomationRequest.DoesNotExist:
-            error_msg = f"Request {request_id} not found"
+            error_msg = f'Request {request_id} not found'
             logger.error(error_msg)
             return False, [], error_msg
 
         except (ValidationError, AWXConnectionError) as e:
-            logger.exception(f"Execution failed for request {request_id}: {str(e)}")
+            logger.exception(f'Execution failed for request {request_id}: {str(e)}')
             return False, [], str(e)
 
         except Exception as e:
-            error_msg = f"Unexpected error during execution: {str(e)}"
+            error_msg = f'Unexpected error during execution: {str(e)}'
             logger.exception(error_msg)
             return False, [], error_msg
 
@@ -201,7 +201,7 @@ class ExecutionEngine:
     ) -> Tuple[bool, List[uuid.UUID], Optional[str]]:
         # All rows packaged into one extra_vars dict → single AWX job.
         try:
-            logger.info(f"Executing request {request.id} in BULK mode")
+            logger.info(f'Executing request {request.id} in BULK mode')
 
             # Filter input data to only include AWX columns (send_to_awx=True)
             filtered_data = self._filter_awx_columns(request.input_data, template.table_schemas)
@@ -213,7 +213,9 @@ class ExecutionEngine:
             else:
                 # Single-schema: Use schema's awx_variable_name (NOT hard-coded!)
                 schema = template.table_schemas[0] if template.table_schemas else {}
-                var_name = schema.get('awx_variable_name', 'data')  # Default to 'data' if not specified
+                var_name = schema.get(
+                    'awx_variable_name', 'data'
+                )  # Default to 'data' if not specified
                 extra_vars = {var_name: filtered_data}
 
             # Add request metadata
@@ -230,14 +232,24 @@ class ExecutionEngine:
 
             # LDAP attributes (if available)
             extra_vars['fabrik_user_department'] = getattr(request.requested_by, 'department', None)
-            extra_vars['fabrik_user_employee_id'] = getattr(request.requested_by, 'employee_id', None)
+            extra_vars['fabrik_user_employee_id'] = getattr(
+                request.requested_by, 'employee_id', None
+            )
             extra_vars['fabrik_user_job_title'] = getattr(request.requested_by, 'job_title', None)
 
             # Audit context
-            extra_vars['fabrik_requested_at'] = request.requested_at.isoformat() if request.requested_at else timezone.now().isoformat()
+            extra_vars['fabrik_requested_at'] = (
+                request.requested_at.isoformat()
+                if request.requested_at
+                else timezone.now().isoformat()
+            )
             extra_vars['fabrik_execution_timestamp'] = timezone.now().isoformat()
-            extra_vars['fabrik_client_ip'] = request.metadata.get('client_ip') if request.metadata else None
-            extra_vars['fabrik_user_agent'] = request.metadata.get('user_agent') if request.metadata else None
+            extra_vars['fabrik_client_ip'] = (
+                request.metadata.get('client_ip') if request.metadata else None
+            )
+            extra_vars['fabrik_user_agent'] = (
+                request.metadata.get('user_agent') if request.metadata else None
+            )
 
             # Platform info
             extra_vars['fabrik_platform_version'] = getattr(settings, 'FABRIK_VERSION', '1.0.1')
@@ -282,10 +294,7 @@ class ExecutionEngine:
                 row_number=None,
                 batch_number=None,
                 row_range={'start': 0, 'end': total_rows},
-                metadata={
-                    'total_rows': total_rows,
-                    'awx_job_data': job_data
-                },
+                metadata={'total_rows': total_rows, 'awx_job_data': job_data},
                 clone_template_id=launch.clone_template_id,
                 relaunch_of_execution_id=relaunch_of_execution_id,
             )
@@ -297,15 +306,12 @@ class ExecutionEngine:
             return True, [execution.id], None
 
         except Exception as e:
-            error_msg = f"Bulk execution failed: {str(e)}"
+            error_msg = f'Bulk execution failed: {str(e)}'
             logger.exception(error_msg)
             return False, [], error_msg
 
     def transform_data_to_csv(
-        self,
-        input_data: Any,
-        table_schemas: List[Dict],
-        include_headers: bool = True
+        self, input_data: Any, table_schemas: List[Dict], include_headers: bool = True
     ) -> str:
         try:
             # Handle both formats: list directly or dict with 'data' key
@@ -323,15 +329,22 @@ class ExecutionEngine:
             if table_schemas and table_schemas[0].get('columns'):
                 # Filter: Only include columns with send_to_awx != False (default: True for backward compat)
                 awx_columns = [
-                    col for col in table_schemas[0]['columns']
+                    col
+                    for col in table_schemas[0]['columns']
                     if col.get('send_to_awx', True) is not False
                 ]
                 column_names = [col['name'] for col in awx_columns]
 
-                logger.info(f"[CSV Transform] Total columns: {len(table_schemas[0]['columns'])}, AWX columns: {len(column_names)}")
+                logger.info(
+                    f'[CSV Transform] Total columns: {len(table_schemas[0]["columns"])}, AWX columns: {len(column_names)}'
+                )
                 if len(column_names) < len(table_schemas[0]['columns']):
-                    excluded = [col['name'] for col in table_schemas[0]['columns'] if col.get('send_to_awx') is False]
-                    logger.info(f"[CSV Transform] Excluded metadata columns: {excluded}")
+                    excluded = [
+                        col['name']
+                        for col in table_schemas[0]['columns']
+                        if col.get('send_to_awx') is False
+                    ]
+                    logger.info(f'[CSV Transform] Excluded metadata columns: {excluded}')
             else:
                 # Fallback: Use keys from first row
                 column_names = list(rows[0].keys())
@@ -352,16 +365,12 @@ class ExecutionEngine:
             return csv_string
 
         except Exception as e:
-            logger.exception(f"Error transforming data to CSV: {str(e)}")
-            raise ValidationError(f"Failed to generate CSV: {str(e)}")
+            logger.exception(f'Error transforming data to CSV: {str(e)}')
+            raise ValidationError(f'Failed to generate CSV: {str(e)}')
 
-    def _filter_awx_columns(
-        self,
-        input_data: Any,
-        table_schemas: List[Dict]
-    ) -> Any:
+    def _filter_awx_columns(self, input_data: Any, table_schemas: List[Dict]) -> Any:
         # Keeps only columns with send_to_awx=True. Preserves input shape (list or dict).
-        # Keeps 
+        # Keeps
         try:
             # Dict format (normalized single-schema or multi-schema workflow)
             if isinstance(input_data, dict) and table_schemas:
@@ -379,7 +388,8 @@ class ExecutionEngine:
 
                     # Get AWX column names for this schema
                     awx_columns = [
-                        col for col in schema.get('columns', [])
+                        col
+                        for col in schema.get('columns', [])
                         if col.get('send_to_awx', True) is not False
                     ]
                     awx_column_names = [col['name'] for col in awx_columns]
@@ -398,7 +408,9 @@ class ExecutionEngine:
                         filtered_rows.append(filtered_row)
 
                     filtered_data[var_name] = filtered_rows
-                    logger.info(f"[AWX Filter] Schema '{var_name}': {len(rows)} rows, {len(awx_column_names)} AWX columns")
+                    logger.info(
+                        f"[AWX Filter] Schema '{var_name}': {len(rows)} rows, {len(awx_column_names)} AWX columns"
+                    )
 
                 return filtered_data
 
@@ -422,7 +434,8 @@ class ExecutionEngine:
                 # Get AWX column names from first schema
                 if table_schemas and table_schemas[0].get('columns'):
                     awx_columns = [
-                        col for col in table_schemas[0]['columns']
+                        col
+                        for col in table_schemas[0]['columns']
                         if col.get('send_to_awx', True) is not False
                     ]
                     awx_column_names = [col['name'] for col in awx_columns]
@@ -442,12 +455,14 @@ class ExecutionEngine:
                     filtered_row = _sanitize_awx_row(row, awx_column_names, col_types)
                     filtered_rows.append(filtered_row)
 
-                logger.info(f"[AWX Filter] Single schema: {len(rows)} rows, {len(awx_column_names)} AWX columns")
+                logger.info(
+                    f'[AWX Filter] Single schema: {len(rows)} rows, {len(awx_column_names)} AWX columns'
+                )
 
                 return filtered_rows
 
         except Exception as e:
-            logger.exception(f"Error filtering AWX columns: {str(e)}")
+            logger.exception(f'Error filtering AWX columns: {str(e)}')
             # Return original data as fallback
             return input_data if isinstance(input_data, list) else []
 
@@ -457,14 +472,24 @@ class ExecutionEngine:
         if not request.awx_credential_id:
             raise ValidationError(
                 "AWX Credential is required. Select a 'Cisco ACI' credential "
-                "that contains APIC host, username, and password."
+                'that contains APIC host, username, and password.'
             )
         return [request.awx_credential_id]
 
-    _SENSITIVE_KEYS = frozenset({
-        'password', 'passwd', 'secret', 'token', 'api_key', 'apikey',
-        'apic_password', 'apic_secret', 'private_key', 'credential',
-    })
+    _SENSITIVE_KEYS = frozenset(
+        {
+            'password',
+            'passwd',
+            'secret',
+            'token',
+            'api_key',
+            'apikey',
+            'apic_password',
+            'apic_secret',
+            'private_key',
+            'credential',
+        }
+    )
 
     @classmethod
     def _redact_extra_vars(cls, extra_vars: Dict[str, Any]) -> Dict[str, Any]:
@@ -497,9 +522,9 @@ class ExecutionEngine:
                     credentials=credentials,
                 )
                 if not ok:
-                    logger.error(f"AWX job launch failed: {err}")
+                    logger.error(f'AWX job launch failed: {err}')
                     return LaunchResult(False, {}, err)
-                logger.info(f"Successfully launched AWX job {job_data.get('id')}")
+                logger.info(f'Successfully launched AWX job {job_data.get("id")}')
                 return LaunchResult(True, job_data, None)
 
             if template.awx_type == AutomationTemplate.AWX_TYPE_WORKFLOW:
@@ -515,11 +540,13 @@ class ExecutionEngine:
                 )
 
             return LaunchResult(
-                False, {}, f"Unknown template type: {template.awx_type}",
+                False,
+                {},
+                f'Unknown template type: {template.awx_type}',
             )
 
         except Exception as e:
-            error_msg = f"Error launching AWX job: {str(e)}"
+            error_msg = f'Error launching AWX job: {str(e)}'
             logger.exception(error_msg)
             return LaunchResult(False, {}, error_msg)
 
@@ -556,15 +583,18 @@ class ExecutionEngine:
     ) -> LaunchResult:
         clone_name = self._build_clone_name(request_id)
         ok, clone_data, err = self.awx_client.copy_workflow_template(
-            template.awx_template_id, clone_name,
+            template.awx_template_id,
+            clone_name,
         )
         if not ok:
-            return LaunchResult(False, {}, f"Failed to clone workflow: {err}")
+            return LaunchResult(False, {}, f'Failed to clone workflow: {err}')
 
         clone_id = clone_data.get('id')
         if not clone_id:
             return LaunchResult(
-                False, {}, "AWX returned a clone without an id field",
+                False,
+                {},
+                'AWX returned a clone without an id field',
             )
 
         try:
@@ -581,10 +611,13 @@ class ExecutionEngine:
                 return LaunchResult(False, {}, err)
 
             logger.info(
-                f"Launched workflow clone {clone_id} (job {job_data.get('id') if job_data else None})"
+                f'Launched workflow clone {clone_id} (job {job_data.get("id") if job_data else None})'
             )
             return LaunchResult(
-                True, job_data or {}, None, clone_template_id=clone_id,
+                True,
+                job_data or {},
+                None,
+                clone_template_id=clone_id,
             )
 
         except Exception:
@@ -599,7 +632,7 @@ class ExecutionEngine:
     # giving up so we don't credential-bind an empty clone (which leaves
     # downstream nodes without apic_host and breaks the second-node onward).
     CLONE_NODE_POLL_DELAY = 0.5
-    CLONE_NODE_POLL_ATTEMPTS = 12   # 12 × 0.5s = 6s max
+    CLONE_NODE_POLL_ATTEMPTS = 12  # 12 × 0.5s = 6s max
     CLONE_NODE_POLL_MIN_NODES = 1
 
     def _wait_for_clone_nodes(self, clone_id: int) -> List[Dict[str, Any]]:
@@ -613,26 +646,28 @@ class ExecutionEngine:
         for attempt in range(self.CLONE_NODE_POLL_ATTEMPTS):
             ok, nodes, err = self.awx_client.list_workflow_nodes(clone_id)
             if not ok:
-                raise AWXConnectionError(f"Failed to list clone nodes: {err}")
+                raise AWXConnectionError(f'Failed to list clone nodes: {err}')
             if len(nodes) >= self.CLONE_NODE_POLL_MIN_NODES:
                 if attempt > 0:
                     logger.info(
-                        f"Clone {clone_id} nodes appeared after "
-                        f"{attempt * self.CLONE_NODE_POLL_DELAY:.1f}s "
-                        f"(count={len(nodes)})"
+                        f'Clone {clone_id} nodes appeared after '
+                        f'{attempt * self.CLONE_NODE_POLL_DELAY:.1f}s '
+                        f'(count={len(nodes)})'
                     )
                 return nodes
             last_count = len(nodes)
             time.sleep(self.CLONE_NODE_POLL_DELAY)
         logger.warning(
-            f"Clone {clone_id} still has {last_count} nodes after "
-            f"{self.CLONE_NODE_POLL_ATTEMPTS * self.CLONE_NODE_POLL_DELAY:.1f}s; "
-            f"proceeding without credential bind"
+            f'Clone {clone_id} still has {last_count} nodes after '
+            f'{self.CLONE_NODE_POLL_ATTEMPTS * self.CLONE_NODE_POLL_DELAY:.1f}s; '
+            f'proceeding without credential bind'
         )
         return []
 
     def _bind_credentials_to_clone(
-        self, clone_id: int, credentials: List[int],
+        self,
+        clone_id: int,
+        credentials: List[int],
     ) -> None:
         """Attach the requested credentials to every eligible job node on the clone.
 
@@ -656,20 +691,18 @@ class ExecutionEngine:
         eligible_node_ids = []
         for n in nodes:
             if not n.get('unified_job_template'):
-                continue   # approval node or unattached
+                continue  # approval node or unattached
             ujt_type = (
-                n.get('summary_fields', {})
-                 .get('unified_job_template', {})
-                 .get('unified_job_type')
+                n.get('summary_fields', {}).get('unified_job_template', {}).get('unified_job_type')
             )
             if ujt_type and ujt_type != 'job':
-                continue   # workflow_job / project_update / inventory_source / system_job
+                continue  # workflow_job / project_update / inventory_source / system_job
             eligible_node_ids.append(n['id'])
 
         if not eligible_node_ids:
             logger.warning(
-                f"Clone {clone_id} has no job-template nodes "
-                f"(total nodes returned: {len(nodes)}); credentials skipped."
+                f'Clone {clone_id} has no job-template nodes '
+                f'(total nodes returned: {len(nodes)}); credentials skipped.'
             )
             return
         if not credentials:
@@ -679,41 +712,37 @@ class ExecutionEngine:
         for cred_id in credentials:
             ok, cred_data, err = self.awx_client.get_credential(cred_id)
             if not ok:
-                raise AWXConnectionError(
-                    f"Failed to fetch credential {cred_id}: {err}"
-                )
+                raise AWXConnectionError(f'Failed to fetch credential {cred_id}: {err}')
             cred_types[cred_id] = cred_data.get('credential_type')
 
         for node_id in eligible_node_ids:
             ok, existing, err = self.awx_client.list_node_credentials(node_id)
             if not ok:
-                logger.warning(
-                    f"Skipping clone node {node_id} (list credentials failed): {err}"
-                )
+                logger.warning(f'Skipping clone node {node_id} (list credentials failed): {err}')
                 continue
             existing_types = {c.get('credential_type') for c in existing}
 
             for cred_id, cred_type in cred_types.items():
                 if cred_type in existing_types:
                     logger.info(
-                        f"Clone node {node_id} already has a credential of type "
-                        f"{cred_type}; respecting user binding"
+                        f'Clone node {node_id} already has a credential of type '
+                        f'{cred_type}; respecting user binding'
                     )
                     continue
                 ok, _, err = self.awx_client.associate_node_credential(
-                    node_id, cred_id,
+                    node_id,
+                    cred_id,
                 )
                 if not ok:
                     raise AWXConnectionError(
-                        f"Failed to associate credential {cred_id} on clone "
-                        f"node {node_id}: {err}"
+                        f'Failed to associate credential {cred_id} on clone node {node_id}: {err}'
                     )
 
     def _delete_clone_safely(self, clone_id: int) -> None:
         """Best-effort clone deletion. Failures are logged; reaper retries."""
         ok, err = self.awx_client.delete_workflow_template(clone_id)
         if not ok:
-            logger.warning(f"Failed to delete workflow clone {clone_id}: {err}")
+            logger.warning(f'Failed to delete workflow clone {clone_id}: {err}')
 
     @staticmethod
     def _build_clone_name(request_id: uuid.UUID) -> str:
@@ -721,9 +750,7 @@ class ExecutionEngine:
         # leaves comfortable margin and keeps clones grep-able in the AWX UI.
         # request_id prefix lets operators correlate a clone to its Fabrik
         # request without joining DBs.
-        return (
-            f"{_CLONE_NAME_PREFIX}{request_id.hex[:8]}_{uuid.uuid4().hex[:8]}"
-        )
+        return f'{_CLONE_NAME_PREFIX}{request_id.hex[:8]}_{uuid.uuid4().hex[:8]}'
 
     def _create_execution_record(
         self,
@@ -757,29 +784,30 @@ class ExecutionEngine:
                 clone_template_id=clone_template_id,
                 relaunch_of=relaunch_of,
                 relaunch_count=relaunch_count,
-                started_at=timezone.now()
+                started_at=timezone.now(),
             )
 
-            logger.info(f"Created execution record {execution.id} for job {awx_job_id}")
+            logger.info(f'Created execution record {execution.id} for job {awx_job_id}')
 
             # Start real-time output streaming via Celery task
             try:
                 from awx.tasks import stream_job_output
+
                 stream_job_output.delay(str(execution.id), poll_interval=1.0)
 
                 logger.info(
-                    f"Queued output streaming for execution {execution.id} (job {awx_job_id})"
+                    f'Queued output streaming for execution {execution.id} (job {awx_job_id})'
                 )
             except Exception as e:
                 logger.warning(
-                    f"Failed to queue output streaming for execution {execution.id}: {str(e)}"
+                    f'Failed to queue output streaming for execution {execution.id}: {str(e)}'
                 )
                 # Don't fail execution creation if streaming fails
 
             return execution
 
         except Exception as e:
-            logger.exception(f"Error creating execution record: {str(e)}")
+            logger.exception(f'Error creating execution record: {str(e)}')
             raise
 
     @staticmethod
@@ -799,33 +827,28 @@ class ExecutionEngine:
             previous = AutomationExecution.objects.get(id=relaunch_of_execution_id)
         except AutomationExecution.DoesNotExist:
             logger.warning(
-                f"relaunch_of execution {relaunch_of_execution_id} no longer exists; "
-                f"creating unlinked execution"
+                f'relaunch_of execution {relaunch_of_execution_id} no longer exists; '
+                f'creating unlinked execution'
             )
             return None, 0
         return previous, previous.relaunch_count + 1
 
-    def _validate_input_data(
-        self,
-        input_data: Dict,
-        table_schemas: List[Dict]
-    ) -> None:
+    def _validate_input_data(self, input_data: Dict, table_schemas: List[Dict]) -> None:
         try:
             # Use DataTransformer for validation
             is_valid, errors = self.data_transformer.validate_against_schema(
-                input_data,
-                table_schemas
+                input_data, table_schemas
             )
 
             if not is_valid:
-                error_msg = f"Input data validation failed: {'; '.join(errors)}"
+                error_msg = f'Input data validation failed: {"; ".join(errors)}'
                 raise ValidationError(error_msg)
 
         except ValidationError:
             raise
         except Exception as e:
-            logger.exception(f"Error validating input data: {str(e)}")
-            raise ValidationError(f"Validation error: {str(e)}")
+            logger.exception(f'Error validating input data: {str(e)}')
+            raise ValidationError(f'Validation error: {str(e)}')
 
     def _configure_awx_client(self, awx_connection: AWXConnection) -> None:
         # Fresh client per call — prevents credential leakage between concurrent executions.
@@ -841,13 +864,13 @@ class ExecutionEngine:
                 )
 
             logger.info(
-                f"AWX client ready for connection: {awx_connection.name} "
-                f"(version: {metadata.get('version', 'unknown')})"
+                f'AWX client ready for connection: {awx_connection.name} '
+                f'(version: {metadata.get("version", "unknown")})'
             )
 
         except AWXConnectionError:
             raise
         except Exception as e:
-            error_msg = f"Failed to configure AWX client: {str(e)}"
+            error_msg = f'Failed to configure AWX client: {str(e)}'
             logger.exception(error_msg)
             raise AWXConnectionError(error_msg)

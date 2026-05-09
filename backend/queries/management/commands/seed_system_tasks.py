@@ -24,9 +24,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--reset',
-            action='store_true',
-            help='Delete existing system tasks before seeding'
+            '--reset', action='store_true', help='Delete existing system tasks before seeding'
         )
 
     def handle(self, *args, **options):
@@ -49,7 +47,7 @@ class Command(BaseCommand):
             {
                 'name': 'Cleanup Old AWX Output Chunks',
                 'description': 'Delete JobOutputChunk records older than 90 days to manage storage. '
-                               'Enterprise retention policy: logs are automatically cleaned up after 90 days.',
+                'Enterprise retention policy: logs are automatically cleaned up after 90 days.',
                 'task_type': ScheduledTask.TASK_TYPE_SYSTEM_MAINTENANCE,
                 'category': 'Storage Management',
                 'system_task_handler': 'awx.cleanup_old_output_chunks',
@@ -61,7 +59,7 @@ class Command(BaseCommand):
             {
                 'name': 'Compress Old AWX Outputs',
                 'description': 'Gzip compress stdout/stderr for JobOutputChunk records 30-90 days old. '
-                               'Saves ~70-80% storage while keeping data accessible.',
+                'Saves ~70-80% storage while keeping data accessible.',
                 'task_type': ScheduledTask.TASK_TYPE_SYSTEM_MAINTENANCE,
                 'category': 'Storage Management',
                 'system_task_handler': 'awx.compress_old_output_chunks',
@@ -70,14 +68,13 @@ class Command(BaseCommand):
                 'priority': ScheduledTask.PRIORITY_LOW,
                 'order': 2,
             },
-
             # ============================================================================
             # Snapshot Management (system_snapshot)
             # ============================================================================
             {
                 'name': 'Cleanup Time Machine Snapshots',
                 'description': 'Delete Time Machine snapshots based on retention policies (7/30/90 days, 1 year). '
-                               'Runs daily at 3:30 AM.',
+                'Runs daily at 3:30 AM.',
                 'task_type': ScheduledTask.TASK_TYPE_SYSTEM_SNAPSHOT,
                 'category': 'Snapshot Management',
                 'system_task_handler': 'queries.cleanup_time_machine_snapshots',
@@ -94,9 +91,7 @@ class Command(BaseCommand):
         for task_data in system_tasks:
             # Check if task exists (by handler)
             handler = task_data['system_task_handler']
-            existing_task = ScheduledTask.objects.filter(
-                system_task_handler=handler
-            ).first()
+            existing_task = ScheduledTask.objects.filter(system_task_handler=handler).first()
 
             if existing_task:
                 # Update existing task
@@ -113,9 +108,7 @@ class Command(BaseCommand):
                 existing_task.save()
 
                 updated_count += 1
-                self.stdout.write(
-                    self.style.WARNING(f'  Updated: {existing_task.name}')
-                )
+                self.stdout.write(self.style.WARNING(f'  Updated: {existing_task.name}'))
             else:
                 # Create new task
                 task = ScheduledTask.objects.create(
@@ -132,19 +125,16 @@ class Command(BaseCommand):
                 task.save(update_fields=['next_run_at'])
 
                 created_count += 1
-                self.stdout.write(
-                    self.style.SUCCESS(f'  Created: {task.name}')
-                )
+                self.stdout.write(self.style.SUCCESS(f'  Created: {task.name}'))
 
-        self.stdout.write(self.style.SUCCESS(
-            f'\n✅ Seeding completed: {created_count} created, {updated_count} updated'
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'\n✅ Seeding completed: {created_count} created, {updated_count} updated'
+            )
+        )
 
         # Summary by category
         self.stdout.write(self.style.SUCCESS('\nSystem Tasks by Category:'))
         for category in ['Storage Management', 'Snapshot Management']:
-            count = ScheduledTask.objects.filter(
-                is_system_task=True,
-                category=category
-            ).count()
+            count = ScheduledTask.objects.filter(is_system_task=True, category=category).count()
             self.stdout.write(f'  - {category}: {count} tasks')

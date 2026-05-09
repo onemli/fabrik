@@ -29,20 +29,21 @@ class ChainExecutionConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # Join execution group
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
 
         # Send initial status
         execution_data = await self.get_execution_status()
         if execution_data:
-            await self.send(text_data=json.dumps({
-                'type': 'execution_status',
-                'status': execution_data['status'],
-                'progress': execution_data['progress'],
-                'message': execution_data['progress_message']
-            }))
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        'type': 'execution_status',
+                        'status': execution_data['status'],
+                        'progress': execution_data['progress'],
+                        'message': execution_data['progress_message'],
+                    }
+                )
+            )
         else:
             # Execution not found, close connection
             await self.close()
@@ -50,10 +51,7 @@ class ChainExecutionConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
         # Leave execution group
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive(self, text_data):
         """Handle incoming WebSocket messages"""
@@ -63,45 +61,51 @@ class ChainExecutionConsumer(AsyncWebsocketConsumer):
 
             # Handle different message types if needed
             if message_type == 'ping':
-                await self.send(text_data=json.dumps({
-                    'type': 'pong'
-                }))
+                await self.send(text_data=json.dumps({'type': 'pong'}))
         except json.JSONDecodeError:
             pass
 
     async def execution_progress(self, event):
         """Handle progress update from Celery task"""
-        await self.send(text_data=json.dumps({
-            'type': 'execution_progress',
-            'progress': event['progress'],
-            'message': event['message']
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    'type': 'execution_progress',
+                    'progress': event['progress'],
+                    'message': event['message'],
+                }
+            )
+        )
 
     async def execution_status(self, event):
         """Handle status update from Celery task"""
-        await self.send(text_data=json.dumps({
-            'type': 'execution_status',
-            'status': event['status']
-        }))
+        await self.send(
+            text_data=json.dumps({'type': 'execution_status', 'status': event['status']})
+        )
 
     async def execution_error(self, event):
         """Handle error from Celery task"""
-        await self.send(text_data=json.dumps({
-            'type': 'execution_error',
-            'error': event.get('error', 'Unknown error'),
-            'error_type': event.get('error_type', 'Error')
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    'type': 'execution_error',
+                    'error': event.get('error', 'Unknown error'),
+                    'error_type': event.get('error_type', 'Error'),
+                }
+            )
+        )
 
     @database_sync_to_async
     def get_execution_status(self):
         """Get current execution status from database (pipeline jobs)."""
         from .models import ChainExecutionJob
+
         try:
             job = ChainExecutionJob.objects.get(id=self.execution_id)
             return {
                 'status': job.status,
                 'progress': job.progress_percentage,
-                'progress_message': f'{job.completed_iterations}/{job.total_iterations} stages'
+                'progress_message': f'{job.completed_iterations}/{job.total_iterations} stages',
             }
         except ChainExecutionJob.DoesNotExist:
             return None

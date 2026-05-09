@@ -71,18 +71,30 @@ class MIMImportConsumer(AsyncWebsocketConsumer):
     async def mim_progress(self, event):
         # Forward all known fields verbatim. Older clients ignore unknown keys.
         payload = {'type': 'mim_progress'}
-        for key in ('stage', 'progress', 'message',
-                    'phase', 'done', 'total',
-                    'fallback_count', 'not_found_count', 'failed_count'):
+        for key in (
+            'stage',
+            'progress',
+            'message',
+            'phase',
+            'done',
+            'total',
+            'fallback_count',
+            'not_found_count',
+            'failed_count',
+        ):
             if key in event:
                 payload[key] = event[key]
         await self.send(text_data=json.dumps(payload))
 
     async def mim_core_ready(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'mim_core_ready',
-            'core_class_count': event.get('core_class_count'),
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    'type': 'mim_core_ready',
+                    'core_class_count': event.get('core_class_count'),
+                }
+            )
+        )
 
     async def mim_status(self, event):
         payload = {'type': 'mim_status', 'status': event.get('status')}

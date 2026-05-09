@@ -1,19 +1,22 @@
 """
 Integration tests for AutomationRequest ViewSet
 """
+
 import pytest
 from rest_framework import status
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from awx.models import AutomationRequest
 from tests.factories import (
-    UserFactory, AutomationRequestFactory,
-    AutomationTemplateFactory, PendingApprovalRequestFactory,
-    ApprovalRequiredTemplateFactory
+    UserFactory,
+    AutomationRequestFactory,
+    AutomationTemplateFactory,
+    PendingApprovalRequestFactory,
+    ApprovalRequiredTemplateFactory,
 )
 
 # Skip reason for permission/workflow issues
-SKIP_WORKFLOW_BUG = pytest.mark.skip(reason="Backend workflow/permission logic needs investigation")
+SKIP_WORKFLOW_BUG = pytest.mark.skip(reason='Backend workflow/permission logic needs investigation')
 
 
 @pytest.mark.integration
@@ -45,7 +48,7 @@ class TestAutomationRequestViewSet:
         permission = Permission.objects.create(
             codename='approve_automation_request',
             name='Can approve automation request',
-            content_type=content_type
+            content_type=content_type,
         )
         user.user_permissions.add(permission)
 
@@ -80,7 +83,7 @@ class TestAutomationRequestViewSet:
             'description': 'Test description',
             'template': str(template.id),
             'awx_connection': str(template.awx_connection.id),
-            'input_data': {'key': 'value'}
+            'input_data': {'key': 'value'},
         }
 
         response = authenticated_client.post('/api/awx/requests/', data, format='json')
@@ -101,19 +104,13 @@ class TestAutomationRequestViewSet:
     def test_update_request_as_owner(self, authenticated_client, user):
         """Test updating request as owner"""
         request_obj = AutomationRequestFactory(
-            requested_by=user,
-            status=AutomationRequest.STATUS_PENDING
+            requested_by=user, status=AutomationRequest.STATUS_PENDING
         )
 
-        data = {
-            'title': 'Updated Title',
-            'description': 'Updated description'
-        }
+        data = {'title': 'Updated Title', 'description': 'Updated description'}
 
         response = authenticated_client.patch(
-            f'/api/awx/requests/{request_obj.id}/',
-            data,
-            format='json'
+            f'/api/awx/requests/{request_obj.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -134,9 +131,7 @@ class TestAutomationRequestViewSet:
         """Test submitting request for review"""
         template = ApprovalRequiredTemplateFactory()
         request_obj = AutomationRequestFactory(
-            requested_by=user,
-            template=template,
-            status=AutomationRequest.STATUS_DRAFT
+            requested_by=user, template=template, status=AutomationRequest.STATUS_DRAFT
         )
 
         response = authenticated_client.post(f'/api/awx/requests/{request_obj.id}/submit/')
@@ -145,15 +140,14 @@ class TestAutomationRequestViewSet:
         request_obj.refresh_from_db()
         assert request_obj.status in [
             AutomationRequest.STATUS_UNDER_REVIEW,
-            AutomationRequest.STATUS_PENDING_APPROVAL
+            AutomationRequest.STATUS_PENDING_APPROVAL,
         ]
 
     def test_submit_request_not_owner_forbidden(self, authenticated_client, user):
         """Test that only owner can submit request"""
         other_user = UserFactory()
         request_obj = AutomationRequestFactory(
-            requested_by=other_user,
-            status=AutomationRequest.STATUS_PENDING
+            requested_by=other_user, status=AutomationRequest.STATUS_PENDING
         )
 
         response = authenticated_client.post(f'/api/awx/requests/{request_obj.id}/submit/')
@@ -168,7 +162,7 @@ class TestAutomationRequestViewSet:
         permission = Permission.objects.create(
             codename='approve_automation_request',
             name='Can approve automation request',
-            content_type=content_type
+            content_type=content_type,
         )
         user.user_permissions.add(permission)
 
@@ -177,9 +171,7 @@ class TestAutomationRequestViewSet:
         data = {'notes': 'Approved for testing'}
 
         response = authenticated_client.post(
-            f'/api/awx/requests/{request_obj.id}/approve/',
-            data,
-            format='json'
+            f'/api/awx/requests/{request_obj.id}/approve/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -195,9 +187,7 @@ class TestAutomationRequestViewSet:
         data = {'notes': 'Trying to approve'}
 
         response = authenticated_client.post(
-            f'/api/awx/requests/{request_obj.id}/approve/',
-            data,
-            format='json'
+            f'/api/awx/requests/{request_obj.id}/approve/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -210,7 +200,7 @@ class TestAutomationRequestViewSet:
         permission = Permission.objects.create(
             codename='approve_automation_request',
             name='Can approve automation request',
-            content_type=content_type
+            content_type=content_type,
         )
         user.user_permissions.add(permission)
 
@@ -219,9 +209,7 @@ class TestAutomationRequestViewSet:
         data = {'notes': 'Rejected due to invalid data'}
 
         response = authenticated_client.post(
-            f'/api/awx/requests/{request_obj.id}/reject/',
-            data,
-            format='json'
+            f'/api/awx/requests/{request_obj.id}/reject/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -251,7 +239,9 @@ class TestAutomationRequestViewSet:
         AutomationRequestFactory(requested_by=user, title='Security Policy Update')
         AutomationRequestFactory(requested_by=user, title='Network Monitoring')
 
-        response = authenticated_client.get('/api/awx/requests/?view_type=my_requests&search=Network')
+        response = authenticated_client.get(
+            '/api/awx/requests/?view_type=my_requests&search=Network'
+        )
 
         assert response.status_code == status.HTTP_200_OK
         results = response.data.get('results', response.data)

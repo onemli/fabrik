@@ -62,7 +62,7 @@ def flatten_to_target_class(response: Any, target_class: str) -> Any:
                 attributes = body.get('attributes', {})
                 if isinstance(attributes, dict):
                     flat.append({class_name: {'attributes': attributes}})
-            for child in (body.get('children') or []):
+            for child in body.get('children') or []:
                 walk(child)
 
     imdata = response.get('imdata')

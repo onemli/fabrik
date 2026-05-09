@@ -24,6 +24,7 @@ def delete_recovery_user(user_id: int) -> None:
 
             try:
                 from audit.services import AuditService
+
                 AuditService.log(
                     user=None,
                     action='recovery_superuser_deleted',
@@ -36,9 +37,7 @@ def delete_recovery_user(user_id: int) -> None:
             except Exception:
                 pass
         else:
-            logger.warning(
-                'Refusing to auto-delete user %d — not a recovery account.', user_id
-            )
+            logger.warning('Refusing to auto-delete user %d — not a recovery account.', user_id)
     except User.DoesNotExist:
         logger.info('Recovery user %d already deleted.', user_id)
 
@@ -50,8 +49,6 @@ def cleanup_expired_reset_codes() -> None:
     from users.models import PasswordResetCode
 
     cutoff = timezone.now() - timezone.timedelta(hours=24)
-    deleted, _ = PasswordResetCode.objects.filter(
-        created_at__lt=cutoff
-    ).delete()
+    deleted, _ = PasswordResetCode.objects.filter(created_at__lt=cutoff).delete()
     if deleted:
         logger.info('Cleaned up %d expired password reset codes.', deleted)

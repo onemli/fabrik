@@ -43,10 +43,12 @@ class TransformInputToAnsibleVarsTests(SimpleTestCase):
         self.assertEqual(row['vlan']['id'], 100)
 
     def test_multiple_rows_transformed(self):
-        input_data = {'data': [
-            {'tenant_name': 'prod'},
-            {'tenant_name': 'dev'},
-        ]}
+        input_data = {
+            'data': [
+                {'tenant_name': 'prod'},
+                {'tenant_name': 'dev'},
+            ]
+        }
         mappings = {'tenant_name': 'tenant'}
         result = self.dt.transform_input_to_ansible_vars(input_data, mappings)
         self.assertEqual(len(result['data']), 2)
@@ -73,6 +75,7 @@ class TransformInputToAnsibleVarsTests(SimpleTestCase):
 
 
 # ── apply_variable_mapping ────────────────────────────────────────────────────
+
 
 class ApplyVariableMappingTests(SimpleTestCase):
     """Tests for DataTransformer.apply_variable_mapping"""
@@ -116,19 +119,22 @@ class ApplyVariableMappingTests(SimpleTestCase):
 
 # ── validate_against_schema ───────────────────────────────────────────────────
 
+
 class ValidateAgainstSchemaTests(SimpleTestCase):
     """Tests for DataTransformer.validate_against_schema"""
 
     def setUp(self):
         self.dt = DataTransformer()
-        self.schema = [{
-            'name': 'Sheet1',
-            'awx_variable_name': 'sheet1',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True},
-                {'name': 'vlan_id', 'type': 'number', 'required': False},
-            ],
-        }]
+        self.schema = [
+            {
+                'name': 'Sheet1',
+                'awx_variable_name': 'sheet1',
+                'columns': [
+                    {'name': 'tenant_name', 'type': 'text', 'required': True},
+                    {'name': 'vlan_id', 'type': 'number', 'required': False},
+                ],
+            }
+        ]
 
     def test_valid_data_passes(self):
         data = {'data': [{'tenant_name': 'prod', 'vlan_id': 100}]}
@@ -140,7 +146,9 @@ class ValidateAgainstSchemaTests(SimpleTestCase):
         data = {'data': [{'tenant_name': ''}]}
         is_valid, errors = self.dt.validate_against_schema(data, self.schema)
         self.assertFalse(is_valid)
-        self.assertTrue(any('tenant_name' in e or 'Required' in e or 'missing' in e.lower() for e in errors))
+        self.assertTrue(
+            any('tenant_name' in e or 'Required' in e or 'missing' in e.lower() for e in errors)
+        )
 
     def test_invalid_number_type_fails(self):
         data = {'data': [{'tenant_name': 'prod', 'vlan_id': 'not-a-number'}]}
@@ -162,153 +170,223 @@ class ValidateAgainstSchemaTests(SimpleTestCase):
         self.assertTrue(is_valid)
 
     def test_min_rows_constraint(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'col', 'type': 'text', 'required': True}],
-            'min_rows': 2,
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'col', 'type': 'text', 'required': True}],
+                'min_rows': 2,
+            }
+        ]
         data = {'data': [{'col': 'only-one-row'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
         self.assertTrue(any('minimum' in e.lower() or 'min' in e.lower() for e in errors))
 
     def test_max_rows_constraint(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'col', 'type': 'text', 'required': True}],
-            'max_rows': 2,
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'col', 'type': 'text', 'required': True}],
+                'max_rows': 2,
+            }
+        ]
         data = {'data': [{'col': 'a'}, {'col': 'b'}, {'col': 'c'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
         self.assertTrue(any('maximum' in e.lower() or 'max' in e.lower() for e in errors))
 
     def test_number_min_constraint(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'vlan_id', 'type': 'number', 'required': False, 'min': 1, 'max': 4094}],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {'name': 'vlan_id', 'type': 'number', 'required': False, 'min': 1, 'max': 4094}
+                ],
+            }
+        ]
         data = {'data': [{'vlan_id': 0}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
         self.assertTrue(any('at least' in e or 'minimum' in e.lower() for e in errors))
 
     def test_number_max_constraint(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'vlan_id', 'type': 'number', 'required': False, 'min': 1, 'max': 4094}],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {'name': 'vlan_id', 'type': 'number', 'required': False, 'min': 1, 'max': 4094}
+                ],
+            }
+        ]
         data = {'data': [{'vlan_id': 9999}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
         self.assertTrue(any('at most' in e or 'maximum' in e.lower() for e in errors))
 
     def test_text_max_length_constraint(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'name', 'type': 'text', 'required': True, 'max_length': 5}],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'name', 'type': 'text', 'required': True, 'max_length': 5}],
+            }
+        ]
         data = {'data': [{'name': 'toolongvalue'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
 
     def test_regex_validation_passes(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{
-                'name': 'tenant_name', 'type': 'text', 'required': True,
-                'validation': r'^[a-zA-Z0-9_-]+$',
-            }],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {
+                        'name': 'tenant_name',
+                        'type': 'text',
+                        'required': True,
+                        'validation': r'^[a-zA-Z0-9_-]+$',
+                    }
+                ],
+            }
+        ]
         data = {'data': [{'tenant_name': 'valid-name_123'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertTrue(is_valid)
 
     def test_regex_validation_fails(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{
-                'name': 'tenant_name', 'type': 'text', 'required': True,
-                'validation': r'^[a-z]+$',
-            }],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {
+                        'name': 'tenant_name',
+                        'type': 'text',
+                        'required': True,
+                        'validation': r'^[a-z]+$',
+                    }
+                ],
+            }
+        ]
         data = {'data': [{'tenant_name': 'Invalid Name 123'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
 
     def test_boolean_invalid_value_fails(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'enabled', 'type': 'boolean', 'required': False}],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'enabled', 'type': 'boolean', 'required': False}],
+            }
+        ]
         data = {'data': [{'enabled': 'maybe'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
 
     def test_boolean_valid_values_pass(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'enabled', 'type': 'boolean', 'required': False}],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'enabled', 'type': 'boolean', 'required': False}],
+            }
+        ]
         for val in [True, False, 'true', 'false', '1', '0', 1, 0]:
             data = {'data': [{'enabled': val}]}
             is_valid, _ = self.dt.validate_against_schema(data, schema)
-            self.assertTrue(is_valid, f"Expected valid for boolean value: {val!r}")
+            self.assertTrue(is_valid, f'Expected valid for boolean value: {val!r}')
 
     def test_select_valid_enum_passes(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{
-                'name': 'env', 'type': 'select', 'required': False,
-                'enum_values': ['prod', 'dev', 'staging'],
-            }],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {
+                        'name': 'env',
+                        'type': 'select',
+                        'required': False,
+                        'enum_values': ['prod', 'dev', 'staging'],
+                    }
+                ],
+            }
+        ]
         data = {'data': [{'env': 'prod'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertTrue(is_valid)
 
     def test_select_invalid_enum_fails(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{
-                'name': 'env', 'type': 'select', 'required': False,
-                'enum_values': ['prod', 'dev'],
-            }],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {
+                        'name': 'env',
+                        'type': 'select',
+                        'required': False,
+                        'enum_values': ['prod', 'dev'],
+                    }
+                ],
+            }
+        ]
         data = {'data': [{'env': 'invalid'}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
 
     def test_multiselect_valid_list_passes(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{
-                'name': 'tags', 'type': 'multiselect', 'required': False,
-                'enum_values': ['a', 'b', 'c'],
-            }],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {
+                        'name': 'tags',
+                        'type': 'multiselect',
+                        'required': False,
+                        'enum_values': ['a', 'b', 'c'],
+                    }
+                ],
+            }
+        ]
         data = {'data': [{'tags': ['a', 'b']}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertTrue(is_valid)
 
     def test_multiselect_invalid_value_fails(self):
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{
-                'name': 'tags', 'type': 'multiselect', 'required': False,
-                'enum_values': ['a', 'b'],
-            }],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [
+                    {
+                        'name': 'tags',
+                        'type': 'multiselect',
+                        'required': False,
+                        'enum_values': ['a', 'b'],
+                    }
+                ],
+            }
+        ]
         data = {'data': [{'tags': ['a', 'unknown']}]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
         self.assertFalse(is_valid)
 
     def test_error_count_capped_at_50(self):
         """Should stop collecting errors after 50 to prevent huge error lists."""
-        schema = [{
-            'name': 'S', 'awx_variable_name': 's',
-            'columns': [{'name': 'col', 'type': 'text', 'required': True}],
-        }]
+        schema = [
+            {
+                'name': 'S',
+                'awx_variable_name': 's',
+                'columns': [{'name': 'col', 'type': 'text', 'required': True}],
+            }
+        ]
         # 100 rows with missing required field
         data = {'data': [{'col': ''} for _ in range(100)]}
         is_valid, errors = self.dt.validate_against_schema(data, schema)
@@ -328,6 +406,7 @@ class ValidateAgainstSchemaTests(SimpleTestCase):
 
 
 # ── _set_nested_value ─────────────────────────────────────────────────────────
+
 
 class SetNestedValueTests(SimpleTestCase):
     """Unit tests for the private _set_nested_value helper."""

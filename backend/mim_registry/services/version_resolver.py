@@ -31,7 +31,7 @@ def split_normalized_class(class_pkg: str, class_name: str) -> tuple[str, str]:
     if not class_pkg or not class_name:
         return class_pkg or '', class_name or ''
     if class_name.startswith(class_pkg) and len(class_name) > len(class_pkg):
-        return class_pkg, class_name[len(class_pkg):]
+        return class_pkg, class_name[len(class_pkg) :]
     return class_pkg, class_name
 
 

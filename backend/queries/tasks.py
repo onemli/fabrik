@@ -36,7 +36,7 @@ def emit_status(execution_id: str, status: str) -> None:
             {
                 'type': 'execution_status',
                 'status': status,
-            }
+            },
         )
 
 
@@ -47,7 +47,7 @@ def apply_post_processors(data: Any, post_processor_nodes: list) -> Any:
     try:
         return PostProcessorEngine.execute(data, post_processor_nodes)
     except Exception as e:
-        logger.error("Post-processor execution failed: %s", e, exc_info=True)
+        logger.error('Post-processor execution failed: %s', e, exc_info=True)
         return data
 
 
@@ -84,9 +84,7 @@ def check_scheduled_tasks():
     with transaction.atomic():
         due_tasks = list(
             ScheduledTask.objects.select_for_update(skip_locked=True).filter(
-                status=ScheduledTask.STATUS_ACTIVE,
-                next_run_at__lte=now,
-                next_run_at__isnull=False
+                status=ScheduledTask.STATUS_ACTIVE, next_run_at__lte=now, next_run_at__isnull=False
             )
         )
 
@@ -110,7 +108,7 @@ def execute_system_task(task: ScheduledTask) -> dict:
     """
     from celery import current_app
 
-    logger.info(f"[System Task] Executing: {task.name} (handler: {task.system_task_handler})")
+    logger.info(f'[System Task] Executing: {task.name} (handler: {task.system_task_handler})')
 
     task.last_run_at = timezone.now()
     task.execution_count += 1
@@ -119,7 +117,7 @@ def execute_system_task(task: ScheduledTask) -> dict:
 
     handler = task.system_task_handler
     if not handler:
-        logger.error(f"[System Task] No handler defined for task: {task.name}")
+        logger.error(f'[System Task] No handler defined for task: {task.name}')
         task.failure_count += 1
         task.save(update_fields=['failure_count'])
         return {'status': 'error', 'message': 'No handler defined'}
@@ -128,14 +126,14 @@ def execute_system_task(task: ScheduledTask) -> dict:
         celery_task = current_app.tasks.get(handler)
 
         if not celery_task:
-            logger.error(f"[System Task] Handler not found: {handler}")
+            logger.error(f'[System Task] Handler not found: {handler}')
             task.failure_count += 1
             task.save(update_fields=['failure_count'])
             return {'status': 'error', 'message': f'Handler not found: {handler}'}
 
         result = celery_task.delay()
 
-        logger.info(f"[System Task] Launched: {task.name} (Celery task ID: {result.id})")
+        logger.info(f'[System Task] Launched: {task.name} (Celery task ID: {result.id})')
 
         task.success_count += 1
         task.save(update_fields=['success_count'])
@@ -147,7 +145,7 @@ def execute_system_task(task: ScheduledTask) -> dict:
         }
 
     except Exception as e:
-        logger.exception(f"[System Task] Error executing {task.name}: {str(e)}")
+        logger.exception(f'[System Task] Error executing {task.name}: {str(e)}')
         task.failure_count += 1
         task.save(update_fields=['failure_count'])
 
@@ -215,7 +213,7 @@ def execute_scheduled_task(task_id: str) -> None:
                 execution = ScheduledTaskExecution.objects.create(
                     scheduled_task=task,
                     apic_connection_id=connection_id,
-                    status=ScheduledTaskExecution.STATUS_PENDING
+                    status=ScheduledTaskExecution.STATUS_PENDING,
                 )
 
                 try:
@@ -240,7 +238,7 @@ def execute_scheduled_task(task_id: str) -> None:
                     username=apic_connection.username,
                     password=apic_connection.get_password(),
                     verify_ssl=apic_connection.verify_ssl,
-                    timeout=apic_connection.timeout
+                    timeout=apic_connection.timeout,
                 )
 
                 login_success, login_error = apic_client.login()
@@ -257,8 +255,12 @@ def execute_scheduled_task(task_id: str) -> None:
                 query_params = generated_query.get('params', {})
 
                 if query_params:
-                    param_str = '&'.join([f"{k}={v}" for k, v in query_params.items()])
-                    query_url = f"{query_url}?{param_str}" if '?' not in query_url else f"{query_url}&{param_str}"
+                    param_str = '&'.join([f'{k}={v}' for k, v in query_params.items()])
+                    query_url = (
+                        f'{query_url}?{param_str}'
+                        if '?' not in query_url
+                        else f'{query_url}&{param_str}'
+                    )
 
                 success, result, error = apic_client.execute_query(query_url)
 
@@ -268,6 +270,7 @@ def execute_scheduled_task(task_id: str) -> None:
                 # class queries.
                 if success and isinstance(result, dict):
                     from queries.services.response_flattener import maybe_flatten_response
+
                     result = maybe_flatten_response(result, query_url)
 
                 if not success:
@@ -279,6 +282,7 @@ def execute_scheduled_task(task_id: str) -> None:
 
                     try:
                         from audit.services import AuditService
+
                         AuditService.log(
                             user=task.created_by,
                             action='query_executed',
@@ -299,7 +303,7 @@ def execute_scheduled_task(task_id: str) -> None:
                         )
                     except Exception as e:
                         # Audit failures shouldn't abort the task
-                        logger.warning("Audit logging failed: %s", e)
+                        logger.warning('Audit logging failed: %s', e)
 
                     continue
 
@@ -318,6 +322,7 @@ def execute_scheduled_task(task_id: str) -> None:
 
                 try:
                     from audit.services import AuditService
+
                     AuditService.log(
                         user=task.created_by,
                         action='query_executed',
@@ -339,7 +344,7 @@ def execute_scheduled_task(task_id: str) -> None:
                         success=True,
                     )
                 except Exception as e:
-                    logger.warning("Audit logging failed: %s", e)
+                    logger.warning('Audit logging failed: %s', e)
 
                 # Capture a Time Machine snapshot after each successful run.
                 # Failures here should never kill the task — the query result
@@ -350,7 +355,11 @@ def execute_scheduled_task(task_id: str) -> None:
 
                         class_name = None
                         if saved_query.flow_data and 'nodes' in saved_query.flow_data:
-                            class_nodes = [n for n in saved_query.flow_data['nodes'] if n.get('type') == 'class']
+                            class_nodes = [
+                                n
+                                for n in saved_query.flow_data['nodes']
+                                if n.get('type') == 'class'
+                            ]
                             if class_nodes:
                                 class_name = class_nodes[0].get('data', {}).get('className')
 
@@ -369,7 +378,7 @@ def execute_scheduled_task(task_id: str) -> None:
                             execution_type='scheduled',
                         )
                     except Exception as e:
-                        logger.error("Time Machine snapshot failed: %s", e, exc_info=True)
+                        logger.error('Time Machine snapshot failed: %s', e, exc_info=True)
 
             except Exception as e:
                 try:
@@ -421,11 +430,10 @@ def execute_scheduled_task(task_id: str) -> None:
     except ScheduledTask.DoesNotExist:
         return
     except Exception as e:
-        logger.error("Scheduled task %s failed: %s", task_id, e, exc_info=True)
+        logger.error('Scheduled task %s failed: %s', task_id, e, exc_info=True)
 
 
-@shared_task(bind=True, name='queries.execute_pipeline',
-             soft_time_limit=3600, time_limit=3900)
+@shared_task(bind=True, name='queries.execute_pipeline', soft_time_limit=3600, time_limit=3900)
 def execute_pipeline(self, job_id: str) -> None:
     """Run a multi-stage query pipeline with WebSocket progress updates.
 
@@ -440,16 +448,14 @@ def execute_pipeline(self, job_id: str) -> None:
         job = ChainExecutionJob.objects.get(id=job_id)
         job.mark_as_started()
 
-        apic_connection = APICConnection.objects.get(
-            id=job.chain_config.get('apic_connection_id')
-        )
+        apic_connection = APICConnection.objects.get(id=job.chain_config.get('apic_connection_id'))
 
         apic_client = APICClient(
             url=apic_connection.url,
             username=apic_connection.username,
             password=apic_connection.get_password(),
             verify_ssl=apic_connection.verify_ssl,
-            timeout=apic_connection.timeout
+            timeout=apic_connection.timeout,
         )
 
         login_success, login_error = apic_client.login()
@@ -466,9 +472,7 @@ def execute_pipeline(self, job_id: str) -> None:
         job.save(update_fields=['aggregated_results'])
 
         if job.failed_iterations > 0:
-            job.mark_as_failed(
-                f'{job.failed_iterations} of {job.total_iterations} stages failed'
-            )
+            job.mark_as_failed(f'{job.failed_iterations} of {job.total_iterations} stages failed')
             emit_status(str(job.id), 'failed')
         else:
             job.mark_as_completed()
@@ -487,7 +491,7 @@ def execute_pipeline(self, job_id: str) -> None:
 
     except Exception as e:
         error_traceback = traceback.format_exc()
-        logger.error(f"Pipeline execution failed: {e}\n{error_traceback}")
+        logger.error(f'Pipeline execution failed: {e}\n{error_traceback}')
         try:
             job = ChainExecutionJob.objects.get(id=job_id)
             job.mark_as_failed(str(e))
@@ -532,7 +536,7 @@ def execute_saved_query_sync(query_id: int, connection_id: int) -> Any:
         username=apic_connection.username,
         password=apic_connection.get_password(),
         verify_ssl=apic_connection.verify_ssl,
-        timeout=apic_connection.timeout
+        timeout=apic_connection.timeout,
     )
 
     login_success, login_error = apic_client.login()
@@ -548,8 +552,10 @@ def execute_saved_query_sync(query_id: int, connection_id: int) -> Any:
         query_params = {}
 
     if query_params:
-        param_str = '&'.join([f"{k}={v}" for k, v in query_params.items()])
-        query_url = f"{query_url}?{param_str}" if '?' not in query_url else f"{query_url}&{param_str}"
+        param_str = '&'.join([f'{k}={v}' for k, v in query_params.items()])
+        query_url = (
+            f'{query_url}?{param_str}' if '?' not in query_url else f'{query_url}&{param_str}'
+        )
 
     success, result, error = apic_client.execute_query(query_url)
     if not success:
@@ -559,11 +565,14 @@ def execute_saved_query_sync(query_id: int, connection_id: int) -> Any:
     # AWX column validation sees the target class as flat imdata.
     if isinstance(result, dict):
         from queries.services.response_flattener import maybe_flatten_response
+
         result = maybe_flatten_response(result, query_url)
 
     flow_data = query.flow_data or {}
     nodes = flow_data.get('nodes', [])
-    post_processor_nodes = [n for n in nodes if n.get('type') in ['post-processor', 'postProcessorNode']]
+    post_processor_nodes = [
+        n for n in nodes if n.get('type') in ['post-processor', 'postProcessorNode']
+    ]
 
     if post_processor_nodes:
         result = apply_post_processors(result, post_processor_nodes)

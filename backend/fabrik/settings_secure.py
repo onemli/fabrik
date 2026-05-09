@@ -2,6 +2,7 @@
 Django settings for fabrik project - PRODUCTION READY
 Security best practices implemented
 """
+
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -16,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable must be set!")
+    raise ValueError('SECRET_KEY environment variable must be set!')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -46,7 +47,9 @@ SESSION_SAVE_EVERY_REQUEST = False
 # CSRF security
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+CSRF_TRUSTED_ORIGINS = (
+    os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+)
 
 # ==============================================================================
 # DATABASE - PostgreSQL (Production Ready)
@@ -68,7 +71,7 @@ DATABASES = {
 }
 
 if not DATABASES['default']['PASSWORD']:
-    raise ValueError("POSTGRES_PASSWORD environment variable must be set!")
+    raise ValueError('POSTGRES_PASSWORD environment variable must be set!')
 
 # ==============================================================================
 # EXTERNAL SERVICES
@@ -80,12 +83,14 @@ NEO4J_USER = os.getenv('NEO4J_USER', 'neo4j')
 NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD')
 
 if not NEO4J_PASSWORD:
-    raise ValueError("NEO4J_PASSWORD environment variable must be set!")
+    raise ValueError('NEO4J_PASSWORD environment variable must be set!')
 
 # Encryption Key for APIC Passwords
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 if not ENCRYPTION_KEY:
-    raise ValueError("ENCRYPTION_KEY environment variable must be set! Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'")
+    raise ValueError(
+        "ENCRYPTION_KEY environment variable must be set! Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+    )
 
 # Redis Configuration (for Celery broker and cache)
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -101,13 +106,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',  # For token blacklist
     'corsheaders',
     'django_ratelimit',  # Rate limiting
-
     # Local apps
     'mim',
     'queries',
@@ -133,10 +136,12 @@ MIDDLEWARE = [
 
 # NEVER use CORS_ALLOW_ALL_ORIGINS = True in production!
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if os.getenv('CORS_ALLOWED_ORIGINS') else []
+CORS_ALLOWED_ORIGINS = (
+    os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if os.getenv('CORS_ALLOWED_ORIGINS') else []
+)
 
 if not CORS_ALLOWED_ORIGINS and not DEBUG:
-    raise ValueError("CORS_ALLOWED_ORIGINS must be set in production!")
+    raise ValueError('CORS_ALLOWED_ORIGINS must be set in production!')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -250,7 +255,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
         'OPTIONS': {
             'min_length': 12,  # Increased from default 8
-        }
+        },
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -310,10 +315,7 @@ CACHES = {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'SOCKET_CONNECT_TIMEOUT': 5,
             'SOCKET_TIMEOUT': 5,
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 50,
-                'retry_on_timeout': True
-            }
+            'CONNECTION_POOL_KWARGS': {'max_connections': 50, 'retry_on_timeout': True},
         },
         'KEY_PREFIX': 'fabrik',
         'TIMEOUT': 300,  # 5 minutes default

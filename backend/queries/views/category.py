@@ -40,7 +40,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
                 'description': instance.description,
                 'color': instance.color,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer):
@@ -77,7 +77,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
             resource_name=updated_instance.name,
             description=f"Category '{updated_instance.name}' updated",
             metadata={'changes': changes} if changes else {},
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance):
@@ -93,7 +93,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
             metadata={
                 'query_count': instance.queries.count(),
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()

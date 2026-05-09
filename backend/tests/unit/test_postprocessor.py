@@ -2,6 +2,7 @@
 Unit tests for PostProcessorEngine
 Tests each processor type and the execution pipeline
 """
+
 import pytest
 from queries.services.postprocessor import PostProcessorEngine
 
@@ -10,14 +11,12 @@ from queries.services.postprocessor import PostProcessorEngine
 # Helpers
 # ======================================================================
 
+
 def _make_apic_response(class_name, items):
     """Build a minimal APIC imdata response"""
     return {
         'totalCount': str(len(items)),
-        'imdata': [
-            {class_name: {'attributes': attrs}}
-            for attrs in items
-        ]
+        'imdata': [{class_name: {'attributes': attrs}} for attrs in items],
     }
 
 
@@ -29,7 +28,7 @@ def _processor_node(processor_type, config=None):
         'data': {
             'processorType': processor_type,
             'config': config or {},
-        }
+        },
     }
 
 
@@ -37,9 +36,9 @@ def _processor_node(processor_type, config=None):
 # PostProcessorEngine.execute (pipeline)
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestPostProcessorEngineExecute:
-
     def test_empty_processors_returns_data_unchanged(self):
         data = [1, 2, 3]
         result = PostProcessorEngine.execute(data, [])
@@ -73,38 +72,50 @@ class TestPostProcessorEngineExecute:
 # DN Extract
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestDnExtract:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('dn-extract', config or {})])
 
     def test_extracts_dn_from_apic_response(self):
-        data = _make_apic_response('fvTenant', [
-            {'name': 'prod', 'dn': 'uni/tn-prod'},
-            {'name': 'dev', 'dn': 'uni/tn-dev'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'prod', 'dn': 'uni/tn-prod'},
+                {'name': 'dev', 'dn': 'uni/tn-dev'},
+            ],
+        )
         result = self._run(data)
         assert result == ['uni/tn-prod', 'uni/tn-dev']
 
     def test_extracts_custom_field(self):
-        data = _make_apic_response('fvTenant', [
-            {'name': 'prod', 'dn': 'uni/tn-prod'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'prod', 'dn': 'uni/tn-prod'},
+            ],
+        )
         result = self._run(data, {'extractField': 'name'})
         assert result == ['prod']
 
     def test_applies_remove_prefix(self):
-        data = _make_apic_response('fvTenant', [
-            {'name': 'prod', 'dn': 'uni/tn-prod'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'prod', 'dn': 'uni/tn-prod'},
+            ],
+        )
         result = self._run(data, {'extractField': 'dn', 'removePrefix': r'^uni/'})
         assert result == ['tn-prod']
 
     def test_applies_extract_pattern_with_capture_group(self):
-        data = _make_apic_response('fvTenant', [
-            {'name': 'prod', 'dn': 'uni/tn-production-env'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'prod', 'dn': 'uni/tn-production-env'},
+            ],
+        )
         result = self._run(data, {'extractField': 'dn', 'extractPattern': r'tn-(.+)'})
         assert result == ['production-env']
 
@@ -121,9 +132,9 @@ class TestDnExtract:
 # Regex Transform
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestRegexTransform:
-
     def _run(self, data, config):
         return PostProcessorEngine.execute(data, [_processor_node('regex-transform', config)])
 
@@ -155,9 +166,9 @@ class TestRegexTransform:
 # Array Sort
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestArraySort:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('array-sort', config or {})])
 
@@ -196,9 +207,9 @@ class TestArraySort:
 # Pattern Filter
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestPatternFilter:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('pattern-filter', config or {})])
 
@@ -214,10 +225,7 @@ class TestPatternFilter:
 
     def test_include_and_exclude_combined(self):
         data = ['uni/tn-prod-A', 'uni/tn-prod-B', 'uni/tn-dev']
-        result = self._run(data, {
-            'includePatterns': ['prod'],
-            'excludePatterns': ['-B']
-        })
+        result = self._run(data, {'includePatterns': ['prod'], 'excludePatterns': ['-B']})
         assert result == ['uni/tn-prod-A']
 
     def test_case_insensitive_by_default(self):
@@ -244,9 +252,9 @@ class TestPatternFilter:
 # Field Extract
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestFieldExtract:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('field-extract', config or {})])
 
@@ -278,9 +286,9 @@ class TestFieldExtract:
 # Flatten
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestFlatten:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('flatten', config or {})])
 
@@ -304,9 +312,9 @@ class TestFlatten:
 # Text Operations
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestTextOperations:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('text-operations', config or {})])
 
@@ -343,9 +351,9 @@ class TestTextOperations:
 # Aggregate
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestAggregate:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('aggregate', config or {})])
 
@@ -415,16 +423,20 @@ class TestAggregate:
 # APIC Envelope Normalization in execute()
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestAPICEnvelopeNormalization:
     """Tests for the APIC envelope unwrapping added to execute()"""
 
     def test_execute_unwraps_apic_envelope_before_pipeline(self):
         """execute() should unwrap imdata so processors get a list"""
-        data = _make_apic_response('fvTenant', [
-            {'name': 'prod', 'dn': 'uni/tn-prod'},
-            {'name': 'dev', 'dn': 'uni/tn-dev'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'prod', 'dn': 'uni/tn-prod'},
+                {'name': 'dev', 'dn': 'uni/tn-dev'},
+            ],
+        )
         processors = [_processor_node('aggregate')]
         result = PostProcessorEngine.execute(data, processors)
         assert result == 2
@@ -449,11 +461,16 @@ class TestAPICEnvelopeNormalization:
         _get_nested_value auto-unwraps the single-key class envelope, so
         'attributes.name' resolves through fvBD → attributes → name.
         """
-        data = _make_apic_response('fvBD', [
-            {'name': 'web-bd', 'dn': 'uni/tn-prod/BD-web-bd', 'seg': '16777209'},
-            {'name': 'app-bd', 'dn': 'uni/tn-prod/BD-app-bd', 'seg': '16777210'},
-        ])
-        processors = [_processor_node('field-extract', {'fields': ['attributes.name', 'attributes.seg']})]
+        data = _make_apic_response(
+            'fvBD',
+            [
+                {'name': 'web-bd', 'dn': 'uni/tn-prod/BD-web-bd', 'seg': '16777209'},
+                {'name': 'app-bd', 'dn': 'uni/tn-prod/BD-app-bd', 'seg': '16777210'},
+            ],
+        )
+        processors = [
+            _processor_node('field-extract', {'fields': ['attributes.name', 'attributes.seg']})
+        ]
         result = PostProcessorEngine.execute(data, processors)
         assert len(result) == 2
         assert result[0].get('name') == 'web-bd'
@@ -461,11 +478,14 @@ class TestAPICEnvelopeNormalization:
 
     def test_execute_apic_envelope_with_pattern_filter(self):
         """pattern-filter on APIC envelope items after normalization"""
-        data = _make_apic_response('fvTenant', [
-            {'name': 'prod', 'dn': 'uni/tn-prod'},
-            {'name': 'dev', 'dn': 'uni/tn-dev'},
-            {'name': 'staging', 'dn': 'uni/tn-staging'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'prod', 'dn': 'uni/tn-prod'},
+                {'name': 'dev', 'dn': 'uni/tn-dev'},
+                {'name': 'staging', 'dn': 'uni/tn-staging'},
+            ],
+        )
         processors = [
             _processor_node('dn-extract', {'extractField': 'name'}),
             _processor_node('pattern-filter', {'includePatterns': ['prod']}),
@@ -475,11 +495,14 @@ class TestAPICEnvelopeNormalization:
 
     def test_pipeline_chain_apic_envelope_to_multiple_processors(self):
         """Full chain: APIC data → dn-extract → regex-transform → pattern-filter"""
-        data = _make_apic_response('fvTenant', [
-            {'name': 'tn-prod-east', 'dn': 'uni/tn-prod-east'},
-            {'name': 'tn-dev-west', 'dn': 'uni/tn-dev-west'},
-            {'name': 'tn-prod-west', 'dn': 'uni/tn-prod-west'},
-        ])
+        data = _make_apic_response(
+            'fvTenant',
+            [
+                {'name': 'tn-prod-east', 'dn': 'uni/tn-prod-east'},
+                {'name': 'tn-dev-west', 'dn': 'uni/tn-dev-west'},
+                {'name': 'tn-prod-west', 'dn': 'uni/tn-prod-west'},
+            ],
+        )
         processors = [
             _processor_node('dn-extract', {'extractField': 'name'}),
             _processor_node('regex-transform', {'pattern': '^tn-', 'replacement': ''}),
@@ -492,6 +515,7 @@ class TestAPICEnvelopeNormalization:
 # ======================================================================
 # _get_nested_value APIC Envelope Auto-Unwrap
 # ======================================================================
+
 
 @pytest.mark.unit
 class TestGetNestedValueEnvelopeUnwrap:
@@ -545,6 +569,7 @@ class TestGetNestedValueEnvelopeUnwrap:
 # DN Extract — List Input Support
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestDnExtractListInput:
     """Tests for _dn_extract accepting pre-normalized list input"""
@@ -594,9 +619,9 @@ class TestDnExtractListInput:
 # Filter Rows
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestFilterRows:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('filter_rows', config or {})])
 
@@ -660,7 +685,7 @@ class TestFilterRows:
         assert len(result) == 2
 
     def test_invalid_condition_format_raises(self):
-        with pytest.raises(Exception, match="Unsupported condition"):
+        with pytest.raises(Exception, match='Unsupported condition'):
             self._run([{'a': 1}], {'condition': 'invalid syntax'})
 
     def test_non_list_raises(self):
@@ -685,9 +710,9 @@ class TestFilterRows:
 # Map Transform
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestMapTransform:
-
     def _run(self, data, config=None):
         return PostProcessorEngine.execute(data, [_processor_node('map-transform', config or {})])
 
@@ -741,9 +766,9 @@ class TestMapTransform:
 # _walk_path
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestWalkPath:
-
     def test_simple_path(self):
         obj = {'a': {'b': 'value'}}
         assert PostProcessorEngine._walk_path(obj, 'a.b') == 'value'

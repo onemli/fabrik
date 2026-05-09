@@ -23,7 +23,9 @@ class Command(BaseCommand):
             # Admin gets ALL permissions
             all_permissions = Permission.objects.all()
             admin_group.permissions.set(all_permissions)
-            self.stdout.write(self.style.SUCCESS(f'  → Assigned {all_permissions.count()} permissions'))
+            self.stdout.write(
+                self.style.SUCCESS(f'  → Assigned {all_permissions.count()} permissions')
+            )
         else:
             self.stdout.write(self.style.WARNING('Admin group already exists'))
 
@@ -44,20 +46,36 @@ class Command(BaseCommand):
             operator_permissions = []
 
             # SavedQuery permissions
-            operator_permissions.append(Permission.objects.get(codename='view_savedquery', content_type=savedquery_ct))
-            operator_permissions.append(Permission.objects.get(codename='add_savedquery', content_type=savedquery_ct))
-            operator_permissions.append(Permission.objects.get(codename='change_savedquery', content_type=savedquery_ct))
-            operator_permissions.append(Permission.objects.get(codename='delete_savedquery', content_type=savedquery_ct))
+            operator_permissions.append(
+                Permission.objects.get(codename='view_savedquery', content_type=savedquery_ct)
+            )
+            operator_permissions.append(
+                Permission.objects.get(codename='add_savedquery', content_type=savedquery_ct)
+            )
+            operator_permissions.append(
+                Permission.objects.get(codename='change_savedquery', content_type=savedquery_ct)
+            )
+            operator_permissions.append(
+                Permission.objects.get(codename='delete_savedquery', content_type=savedquery_ct)
+            )
 
             # APIC Connection permissions (view only)
-            operator_permissions.append(Permission.objects.get(codename='view_apicconnection', content_type=apicconnection_ct))
+            operator_permissions.append(
+                Permission.objects.get(
+                    codename='view_apicconnection', content_type=apicconnection_ct
+                )
+            )
 
             operator_group.permissions.set(operator_permissions)
-            self.stdout.write(self.style.SUCCESS(f'  → Assigned {len(operator_permissions)} permissions'))
+            self.stdout.write(
+                self.style.SUCCESS(f'  → Assigned {len(operator_permissions)} permissions')
+            )
         else:
             self.stdout.write(self.style.WARNING('Operator group already exists'))
 
         self.stdout.write(self.style.SUCCESS('\n✅ Default groups configured successfully!'))
         self.stdout.write(self.style.SUCCESS('\nGroup Summary:'))
         self.stdout.write(f'  Admin: {admin_group.permissions.count()} permissions (full access)')
-        self.stdout.write(f'  Operator: {operator_group.permissions.count()} permissions (limited access)')
+        self.stdout.write(
+            f'  Operator: {operator_group.permissions.count()} permissions (limited access)'
+        )

@@ -38,13 +38,15 @@ def _resolve_site_url(request):
     site_url = getattr(django_settings, 'SITE_URL', None)
     if site_url:
         return site_url.rstrip('/')
-    return f"{request.scheme}://{request.get_host()}"
+    return f'{request.scheme}://{request.get_host()}'
 
 
 # --- Password Reset ---
 
+
 class PasswordResetRequestView(APIView):
     """Request password reset via email. Falls back to admin code if no email."""
+
     permission_classes = [AllowAny]
     throttle_classes = [PasswordResetRateThrottle]
 
@@ -53,10 +55,12 @@ class PasswordResetRequestView(APIView):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data['username']
 
-        generic_response = Response({
-            'message': 'If this account exists, instructions have been sent.',
-            'fallback': False,
-        })
+        generic_response = Response(
+            {
+                'message': 'If this account exists, instructions have been sent.',
+                'fallback': False,
+            }
+        )
 
         try:
             user = User.objects.select_related('profile').get(username=username)
@@ -73,7 +77,7 @@ class PasswordResetRequestView(APIView):
 
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        combined_token = f"{uid}:{token}"
+        combined_token = f'{uid}:{token}'
         site_url = _resolve_site_url(request)
 
         EmailService.send_password_reset_email(user, combined_token, site_url)
@@ -83,6 +87,7 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     """Confirm password reset via email token OR admin-generated code."""
+
     permission_classes = [AllowAny]
     throttle_classes = [PasswordResetRateThrottle]
 
@@ -158,9 +163,9 @@ class PasswordResetConfirmView(APIView):
         except User.DoesNotExist:
             return generic_error
 
-        reset_code = PasswordResetCode.objects.filter(
-            user=user, used=False
-        ).order_by('-created_at').first()
+        reset_code = (
+            PasswordResetCode.objects.filter(user=user, used=False).order_by('-created_at').first()
+        )
 
         if not reset_code or not reset_code.verify_code(code):
             return generic_error
@@ -170,6 +175,7 @@ class PasswordResetConfirmView(APIView):
 
 
 # --- MFA / TOTP ---
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -196,11 +202,13 @@ def mfa_setup(request):
     img.save(buf, format='PNG')
     qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
-    return Response({
-        'secret': secret,
-        'otpauth_uri': uri,
-        'qr_code': f'data:image/png;base64,{qr_b64}',
-    })
+    return Response(
+        {
+            'secret': secret,
+            'otpauth_uri': uri,
+            'qr_code': f'data:image/png;base64,{qr_b64}',
+        }
+    )
 
 
 @api_view(['POST'])
@@ -232,10 +240,12 @@ def mfa_verify(request):
         request=request,
     )
 
-    return Response({
-        'message': 'MFA enabled successfully.',
-        'backup_codes': backup_codes,
-    })
+    return Response(
+        {
+            'message': 'MFA enabled successfully.',
+            'backup_codes': backup_codes,
+        }
+    )
 
 
 @api_view(['POST'])
@@ -270,10 +280,12 @@ def mfa_disable(request):
 @permission_classes([IsAuthenticated])
 def mfa_status(request):
     profile = request.user.profile
-    return Response({
-        'mfa_enabled': profile.totp_enabled,
-        'backup_codes_remaining': len(profile.backup_codes) if profile.totp_enabled else 0,
-    })
+    return Response(
+        {
+            'mfa_enabled': profile.totp_enabled,
+            'backup_codes_remaining': len(profile.backup_codes) if profile.totp_enabled else 0,
+        }
+    )
 
 
 @api_view(['POST'])
@@ -294,6 +306,7 @@ def mfa_regenerate_backup_codes(request):
 
 # --- Email Verification ---
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([EmailSendThrottle])
@@ -307,17 +320,19 @@ def send_verification_email(request):
 
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
-    combined_token = f"{uid}:{token}"
+    combined_token = f'{uid}:{token}'
     site_url = _resolve_site_url(request)
 
     result = EmailService.send_verification_email(user, combined_token, site_url)
 
     if result['sent']:
         return Response({'message': 'Verification email sent.'})
-    return Response({
-        'message': 'Email service is unavailable. Try again later.',
-        'fallback': True,
-    })
+    return Response(
+        {
+            'message': 'Email service is unavailable. Try again later.',
+            'fallback': True,
+        }
+    )
 
 
 @api_view(['POST'])
@@ -345,6 +360,7 @@ def verify_email(request):
 
 # --- Health & Quota ---
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def auth_health(request):
@@ -371,10 +387,12 @@ def auth_health(request):
 
         return Response(health)
 
-    return Response({
-        'email_available': EmailService.is_email_available(),
-        'email_enabled': EmailService.is_email_enabled(),
-    })
+    return Response(
+        {
+            'email_available': EmailService.is_email_available(),
+            'email_enabled': EmailService.is_email_enabled(),
+        }
+    )
 
 
 @api_view(['GET'])
@@ -382,7 +400,9 @@ def auth_health(request):
 def quota_usage(request):
     quota = QuotaService.get_effective_quota(request.user)
     usage = QuotaService.get_usage(request.user)
-    return Response({
-        'quota': quota,
-        'usage': usage,
-    })
+    return Response(
+        {
+            'quota': quota,
+            'usage': usage,
+        }
+    )

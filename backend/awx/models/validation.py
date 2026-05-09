@@ -24,6 +24,7 @@ class ValidationList(models.Model):
     is_public lets an admin publish a list so all users can use it without
     making every user an admin.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Metadata
@@ -31,51 +32,34 @@ class ValidationList(models.Model):
         max_length=200,
         unique=True,
         db_index=True,
-        help_text="Unique validation list name (e.g., 'ACI Tenant Names')"
+        help_text="Unique validation list name (e.g., 'ACI Tenant Names')",
     )
-    description = models.TextField(
-        blank=True,
-        help_text="Explain what this list validates and why"
-    )
+    description = models.TextField(blank=True, help_text='Explain what this list validates and why')
 
     # Validation Data
-    values = models.JSONField(
-        help_text="Array of allowed values ['value1', 'value2', ...]"
-    )
-    case_sensitive = models.BooleanField(
-        default=False,
-        help_text="Case-sensitive matching"
-    )
+    values = models.JSONField(help_text="Array of allowed values ['value1', 'value2', ...]")
+    case_sensitive = models.BooleanField(default=False, help_text='Case-sensitive matching')
 
     # Error Message (MANDATORY)
     error_message = models.CharField(
-        max_length=500,
-        help_text="Error message shown when value not in list (max 500 chars)"
+        max_length=500, help_text='Error message shown when value not in list (max 500 chars)'
     )
     error_message_title = models.CharField(
-        max_length=100,
-        help_text="Short error title (max 100 chars)"
+        max_length=100, help_text='Short error title (max 100 chars)'
     )
 
     # Metadata
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='validation_lists_created'
+        User, on_delete=models.SET_NULL, null=True, related_name='validation_lists_created'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_public = models.BooleanField(
-        default=False,
-        help_text="Visible to all users (vs. creator only)"
+        default=False, help_text='Visible to all users (vs. creator only)'
     )
 
     # Usage tracking (denormalized for performance)
-    usage_count = models.IntegerField(
-        default=0,
-        help_text="Number of columns using this list"
-    )
+    usage_count = models.IntegerField(default=0, help_text='Number of columns using this list')
     last_used_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -94,6 +78,7 @@ class ValidationList(models.Model):
     def increment_usage(self):
         """Called when list is attached to a column. Uses F() for atomic increment."""
         from django.db.models import F
+
         type(self).objects.filter(pk=self.pk).update(
             usage_count=F('usage_count') + 1,
             last_used_at=timezone.now(),
@@ -104,6 +89,7 @@ class ValidationList(models.Model):
         """Called when list is detached from a column. Uses F() for atomic decrement."""
         from django.db.models import F
         from django.db.models.functions import Greatest
+
         type(self).objects.filter(pk=self.pk).update(
             usage_count=Greatest(F('usage_count') - 1, 0),
         )
@@ -124,13 +110,12 @@ class ValidationUsage(models.Model):
     would be cleaner but Django doesn't do those portably, so it's enforced in
     the serializer instead.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # What is being validated
     template = models.ForeignKey(
-        'AutomationTemplate',
-        on_delete=models.CASCADE,
-        related_name='validation_usages'
+        'AutomationTemplate', on_delete=models.CASCADE, related_name='validation_usages'
     )
     sheet_name = models.CharField(max_length=200)
     column_name = models.CharField(max_length=200)
@@ -142,37 +127,28 @@ class ValidationUsage(models.Model):
             ('regex', 'Regex Pattern'),
             ('static_list', 'Static List'),
             ('query_list', 'Query List'),
-        ]
+        ],
     )
     validation_list = models.ForeignKey(
-        'ValidationList',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='usages'
+        'ValidationList', on_delete=models.CASCADE, null=True, blank=True, related_name='usages'
     )
     validation_query = models.ForeignKey(
         'queries.SavedQuery',
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='validation_usages'
+        related_name='validation_usages',
     )
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='validation_usages_created'
+        User, on_delete=models.SET_NULL, null=True, related_name='validation_usages_created'
     )
 
     class Meta:
         db_table = 'awx_validation_usage'
-        unique_together = [
-            ('template', 'sheet_name', 'column_name')
-        ]
+        unique_together = [('template', 'sheet_name', 'column_name')]
         indexes = [
             models.Index(fields=['validation_list']),
             models.Index(fields=['validation_query']),
@@ -181,7 +157,7 @@ class ValidationUsage(models.Model):
         verbose_name_plural = 'Validation Usages'
 
     def __str__(self):
-        return f"{self.template.name} - {self.column_name}"
+        return f'{self.template.name} - {self.column_name}'
 
 
 class RegexPattern(models.Model):
@@ -204,15 +180,12 @@ class RegexPattern(models.Model):
         max_length=200,
         unique=True,
         db_index=True,
-        help_text="Unique pattern name (e.g., 'IPv4 Address')"
+        help_text="Unique pattern name (e.g., 'IPv4 Address')",
     )
     description = models.TextField(
-        blank=True,
-        help_text="Explain what this pattern matches and when to use it"
+        blank=True, help_text='Explain what this pattern matches and when to use it'
     )
-    pattern = models.TextField(
-        help_text="The regex pattern string (e.g., '^[a-zA-Z0-9_-]+$')"
-    )
+    pattern = models.TextField(help_text="The regex pattern string (e.g., '^[a-zA-Z0-9_-]+$')")
     category = models.CharField(
         max_length=20,
         choices=CATEGORY_CHOICES,
@@ -222,40 +195,31 @@ class RegexPattern(models.Model):
     test_strings = models.JSONField(
         default=list,
         blank=True,
-        help_text="Sample test strings saved with the pattern [{'value': '...', 'should_match': true}]"
+        help_text="Sample test strings saved with the pattern [{'value': '...', 'should_match': true}]",
     )
     flags = models.JSONField(
         default=list,
         blank=True,
-        help_text="Regex flags: ['i'] for case-insensitive, ['m'] for multiline, etc."
+        help_text="Regex flags: ['i'] for case-insensitive, ['m'] for multiline, etc.",
     )
 
     # Error message shown when validation fails
     error_message = models.CharField(
-        max_length=500,
-        blank=True,
-        help_text="Custom error message when a value doesn't match"
+        max_length=500, blank=True, help_text="Custom error message when a value doesn't match"
     )
 
     # Ownership and sharing
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='regex_patterns_created'
+        User, on_delete=models.SET_NULL, null=True, related_name='regex_patterns_created'
     )
     is_public = models.BooleanField(
-        default=False,
-        help_text="Visible to all users (vs. creator only)"
+        default=False, help_text='Visible to all users (vs. creator only)'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # Usage tracking (denormalized)
-    usage_count = models.IntegerField(
-        default=0,
-        help_text="Number of columns using this pattern"
-    )
+    usage_count = models.IntegerField(default=0, help_text='Number of columns using this pattern')
     last_used_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -295,6 +259,7 @@ class RegexPattern(models.Model):
 
     def increment_usage(self):
         from django.db.models import F
+
         type(self).objects.filter(pk=self.pk).update(
             usage_count=F('usage_count') + 1,
             last_used_at=timezone.now(),
@@ -304,6 +269,7 @@ class RegexPattern(models.Model):
     def decrement_usage(self):
         from django.db.models import F
         from django.db.models.functions import Greatest
+
         type(self).objects.filter(pk=self.pk).update(
             usage_count=Greatest(F('usage_count') - 1, 0),
         )
@@ -358,27 +324,21 @@ class ColumnTemplate(models.Model):
         max_length=20,
         choices=SCOPE_CHOICES,
         default=SCOPE_USER,
-        help_text="Template scope: user-specific or company-wide"
+        help_text='Template scope: user-specific or company-wide',
     )
     is_public = models.BooleanField(
-        default=False,
-        help_text="True if publicly available to all users"
+        default=False, help_text='True if publicly available to all users'
     )
     created_by = models.ForeignKey(
-        'auth.User',
-        on_delete=models.CASCADE,
-        related_name='column_templates_created'
+        'auth.User', on_delete=models.CASCADE, related_name='column_templates_created'
     )
     shared_with = models.ManyToManyField(
-        'auth.User',
-        blank=True,
-        related_name='column_templates_shared'
+        'auth.User', blank=True, related_name='column_templates_shared'
     )
 
     # Usage statistics
     usage_count = models.IntegerField(
-        default=0,
-        help_text="Number of times this template has been applied"
+        default=0, help_text='Number of times this template has been applied'
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -396,4 +356,4 @@ class ColumnTemplate(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.scope})"
+        return f'{self.name} ({self.scope})'

@@ -21,6 +21,7 @@ class AutomationRequest(models.Model):
     metadata captures HTTP request context (IP, user agent, session) for compliance.
     This is populated by capture_request_metadata() right when the request is created.
     """
+
     STATUS_AWAITING_APPROVAL = 'awaiting_approval'
     STATUS_APPROVED = 'approved'
     STATUS_REJECTED = 'rejected'
@@ -46,57 +47,60 @@ class AutomationRequest(models.Model):
     description = models.TextField(blank=True, null=True)
 
     # Template & Connections
-    template = models.ForeignKey('AutomationTemplate', on_delete=models.CASCADE, related_name='requests')
-    awx_connection = models.ForeignKey('AWXConnection', on_delete=models.CASCADE, related_name='requests')
+    template = models.ForeignKey(
+        'AutomationTemplate', on_delete=models.CASCADE, related_name='requests'
+    )
+    awx_connection = models.ForeignKey(
+        'AWXConnection', on_delete=models.CASCADE, related_name='requests'
+    )
     target_apic = models.ForeignKey(
         'apic_connections.APICConnection',
         on_delete=models.CASCADE,
         related_name='automation_requests',
         null=True,
         blank=True,
-        help_text="Target APIC (if required)"
+        help_text='Target APIC (if required)',
     )
 
     # AWX Credential — selected at execution time (per-site).
     # References a credential stored in AWX's own vault (never in Fabrik's DB).
     # AWX injects the secret values into the playbook environment at launch time.
     awx_credential_id = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text="AWX Credential ID for target device authentication"
+        null=True, blank=True, help_text='AWX Credential ID for target device authentication'
     )
     awx_credential_name = models.CharField(
         max_length=200,
         blank=True,
         default='',
-        help_text="Cached credential name from AWX (display only)"
+        help_text='Cached credential name from AWX (display only)',
     )
 
     # Input Data (from wizard tables)
     input_data = models.JSONField(
-        help_text="User-provided data from tables (structured by sheet name)"
+        help_text='User-provided data from tables (structured by sheet name)'
     )
 
     # Transformed Data
     ansible_extra_vars = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="Transformed extra_vars for AWX"
+        null=True, blank=True, help_text='Transformed extra_vars for AWX'
     )
 
     # Workflow State
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     check_mode = models.BooleanField(
-        default=False,
-        help_text="Run in Ansible check mode (dry-run, no changes applied)"
+        default=False, help_text='Run in Ansible check mode (dry-run, no changes applied)'
     )
 
     # Audit Trail - Creation
-    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests_created')
+    requested_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='requests_created'
+    )
     requested_at = models.DateTimeField(auto_now_add=True)
 
     # Execution
-    awx_job_id = models.IntegerField(null=True, blank=True, help_text="AWX job ID or workflow job ID")
+    awx_job_id = models.IntegerField(
+        null=True, blank=True, help_text='AWX job ID or workflow job ID'
+    )
 
     # Request Metadata (for audit trail and compliance)
     metadata = models.JSONField(
@@ -109,7 +113,7 @@ class AutomationRequest(models.Model):
         - session_id: Django session ID
         - ldap_attributes: LDAP user attributes (if LDAP enabled)
         - geo_location: IP geolocation (optional)
-        """
+        """,
     )
 
     # Prevent duplicate submissions from double-clicks or network retries.
@@ -125,8 +129,11 @@ class AutomationRequest(models.Model):
 
     # Approval workflow fields
     approved_by = models.ForeignKey(
-        User, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='approved_awx_requests',
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_awx_requests',
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True, default='')
@@ -145,7 +152,7 @@ class AutomationRequest(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.title} ({self.status})"
+        return f'{self.title} ({self.status})'
 
     @staticmethod
     def get_client_ip(request):
@@ -176,9 +183,11 @@ class AutomationRequest(models.Model):
         Capture HTTP request metadata for audit trail
         Call this method when creating/updating request
         """
-        self.metadata.update({
-            'client_ip': self.get_client_ip(request),
-            'user_agent': request.META.get('HTTP_USER_AGENT', ''),
-            'session_id': request.session.session_key if hasattr(request, 'session') else None,
-            'timestamp_captured': timezone.now().isoformat(),
-        })
+        self.metadata.update(
+            {
+                'client_ip': self.get_client_ip(request),
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+                'session_id': request.session.session_key if hasattr(request, 'session') else None,
+                'timestamp_captured': timezone.now().isoformat(),
+            }
+        )

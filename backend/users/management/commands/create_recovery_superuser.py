@@ -18,9 +18,11 @@ class Command(BaseCommand):
         alphabet = string.ascii_letters + string.digits + '!@#$%&'
         password = ''.join(secrets.choice(alphabet) for _ in range(16))
 
-        self.stdout.write(self.style.WARNING(
-            '\n  This will create a temporary superuser that should be deleted within 1 hour.'
-        ))
+        self.stdout.write(
+            self.style.WARNING(
+                '\n  This will create a temporary superuser that should be deleted within 1 hour.'
+            )
+        )
         confirmation = input("  Type 'CONFIRM' to proceed: ")
         if confirmation.strip() != 'CONFIRM':
             self.stdout.write(self.style.ERROR('Aborted.'))
@@ -35,19 +37,23 @@ class Command(BaseCommand):
         # Schedule auto-cleanup via Celery if available
         try:
             from users.tasks import delete_recovery_user
+
             delete_recovery_user.apply_async(
                 args=[user.id],
                 countdown=3600,  # 1 hour
             )
             self.stdout.write('  Auto-deletion scheduled in 1 hour via Celery.')
         except Exception:
-            self.stdout.write(self.style.WARNING(
-                '  Could not schedule auto-deletion. MANUALLY delete this user within 1 hour!'
-            ))
+            self.stdout.write(
+                self.style.WARNING(
+                    '  Could not schedule auto-deletion. MANUALLY delete this user within 1 hour!'
+                )
+            )
 
         # Audit log
         try:
             from audit.services import AuditService
+
             AuditService.log(
                 user=user,
                 action='recovery_superuser_created',
@@ -63,7 +69,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\n  Recovery superuser created:'))
         self.stdout.write(self.style.SUCCESS(f'  Username: {username}'))
         self.stdout.write(self.style.SUCCESS(f'  Password: {password}'))
-        self.stdout.write(self.style.WARNING(
-            '\n  This account will be auto-deleted in 1 hour.'
-            '\n  Change any necessary passwords and delete this account manually when done.\n'
-        ))
+        self.stdout.write(
+            self.style.WARNING(
+                '\n  This account will be auto-deleted in 1 hour.'
+                '\n  Change any necessary passwords and delete this account manually when done.\n'
+            )
+        )

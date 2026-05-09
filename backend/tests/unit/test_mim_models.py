@@ -2,6 +2,7 @@
 Unit tests for MIM models (FavoriteClass, TableTemplate, UserTablePreference)
 Tests model creation, constraints, and str representations
 """
+
 import pytest
 from mim.models import FavoriteClass, TableTemplate, UserTablePreference
 from tests.factories import UserFactory
@@ -11,10 +12,10 @@ from tests.factories import UserFactory
 # FavoriteClass model
 # ======================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestFavoriteClassModel:
-
     def test_create_favorite_class(self):
         user = UserFactory()
         fav = FavoriteClass.objects.create(
@@ -77,10 +78,10 @@ class TestFavoriteClassModel:
 # TableTemplate model
 # ======================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestTableTemplateModel:
-
     def test_create_table_template(self):
         user = UserFactory()
         template = TableTemplate.objects.create(
@@ -139,8 +140,12 @@ class TestTableTemplateModel:
     def test_templates_isolated_per_user(self):
         user1 = UserFactory()
         user2 = UserFactory()
-        TableTemplate.objects.create(user=user1, class_name='fvTenant', template_name='T1', columns={})
-        TableTemplate.objects.create(user=user2, class_name='fvTenant', template_name='T2', columns={})
+        TableTemplate.objects.create(
+            user=user1, class_name='fvTenant', template_name='T1', columns={}
+        )
+        TableTemplate.objects.create(
+            user=user2, class_name='fvTenant', template_name='T2', columns={}
+        )
 
         assert TableTemplate.objects.filter(user=user1).count() == 1
         assert TableTemplate.objects.filter(user=user2).count() == 1
@@ -150,10 +155,10 @@ class TestTableTemplateModel:
 # UserTablePreference model
 # ======================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.django_db
 class TestUserTablePreferenceModel:
-
     def test_create_preference(self):
         user = UserFactory()
         pref = UserTablePreference.objects.create(
@@ -188,6 +193,7 @@ class TestUserTablePreferenceModel:
         user = UserFactory()
         UserTablePreference.objects.create(user=user, class_name='fvTenant')
         from django.db import IntegrityError
+
         with pytest.raises(IntegrityError):
             UserTablePreference.objects.create(user=user, class_name='fvTenant')
 

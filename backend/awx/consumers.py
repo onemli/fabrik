@@ -44,43 +44,39 @@ class AWXExecutionConsumer(AsyncWebsocketConsumer):
         self.room_group_name = f'request-{self.request_id}'
 
         # Join room group
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
         await self.accept()
 
         # Send initial status on connection
         try:
             initial_status = await self.get_request_status()
-            await self.send(text_data=json.dumps({
-                'type': 'initial_status',
-                'data': initial_status
-            }, cls=DjangoJSONEncoder))
+            await self.send(
+                text_data=json.dumps(
+                    {'type': 'initial_status', 'data': initial_status}, cls=DjangoJSONEncoder
+                )
+            )
 
-            logger.info(f"WebSocket connected to request {self.request_id} by user {user.id}")
+            logger.info(f'WebSocket connected to request {self.request_id} by user {user.id}')
         except Exception as e:
-            logger.error(f"Failed to send initial status: {str(e)}")
+            logger.error(f'Failed to send initial status: {str(e)}')
 
     @database_sync_to_async
     def _check_request_access(self, user):
         """Check if user owns this request or is staff."""
         from .models import AutomationRequest
+
         if user.is_staff:
             return AutomationRequest.objects.filter(id=self.request_id).exists()
-        return AutomationRequest.objects.filter(
-            id=self.request_id, requested_by=user
-        ).exists()
+        return AutomationRequest.objects.filter(id=self.request_id, requested_by=user).exists()
 
     async def disconnect(self, close_code):
         """Leave request channel on disconnect."""
         if hasattr(self, 'room_group_name'):
-            await self.channel_layer.group_discard(
-                self.room_group_name,
-                self.channel_name
-            )
-        logger.info(f"WebSocket disconnected from request {getattr(self, 'request_id', '?')} (code: {close_code})")
+            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        logger.info(
+            f'WebSocket disconnected from request {getattr(self, "request_id", "?")} (code: {close_code})'
+        )
 
     async def receive(self, text_data):
         """
@@ -99,14 +95,15 @@ class AWXExecutionConsumer(AsyncWebsocketConsumer):
             elif message_type == 'refresh':
                 # Client requests status refresh
                 status = await self.get_request_status()
-                await self.send(text_data=json.dumps({
-                    'type': 'status_update',
-                    'data': status
-                }, cls=DjangoJSONEncoder))
+                await self.send(
+                    text_data=json.dumps(
+                        {'type': 'status_update', 'data': status}, cls=DjangoJSONEncoder
+                    )
+                )
         except json.JSONDecodeError:
-            logger.error(f"Invalid JSON received: {text_data}")
+            logger.error(f'Invalid JSON received: {text_data}')
         except Exception as e:
-            logger.error(f"Error handling message: {str(e)}")
+            logger.error(f'Error handling message: {str(e)}')
 
     async def execution_update(self, event):
         """
@@ -114,10 +111,11 @@ class AWXExecutionConsumer(AsyncWebsocketConsumer):
 
         Broadcasts execution status changes to connected clients.
         """
-        await self.send(text_data=json.dumps({
-            'type': 'execution_update',
-            'data': event['data']
-        }, cls=DjangoJSONEncoder))
+        await self.send(
+            text_data=json.dumps(
+                {'type': 'execution_update', 'data': event['data']}, cls=DjangoJSONEncoder
+            )
+        )
 
     async def progress_update(self, event):
         """
@@ -125,10 +123,11 @@ class AWXExecutionConsumer(AsyncWebsocketConsumer):
 
         Broadcasts execution progress (percentage, current task, etc).
         """
-        await self.send(text_data=json.dumps({
-            'type': 'progress_update',
-            'data': event['data']
-        }, cls=DjangoJSONEncoder))
+        await self.send(
+            text_data=json.dumps(
+                {'type': 'progress_update', 'data': event['data']}, cls=DjangoJSONEncoder
+            )
+        )
 
     async def status_change(self, event):
         """
@@ -136,10 +135,11 @@ class AWXExecutionConsumer(AsyncWebsocketConsumer):
 
         Broadcasts when request or execution status changes.
         """
-        await self.send(text_data=json.dumps({
-            'type': 'status_change',
-            'data': event['data']
-        }, cls=DjangoJSONEncoder))
+        await self.send(
+            text_data=json.dumps(
+                {'type': 'status_change', 'data': event['data']}, cls=DjangoJSONEncoder
+            )
+        )
 
     @database_sync_to_async
     def get_request_status(self):
@@ -154,23 +154,20 @@ class AWXExecutionConsumer(AsyncWebsocketConsumer):
 
         try:
             request = AutomationRequest.objects.get(id=self.request_id)
-            executions = AutomationExecution.objects.filter(
-                automation_request=request
-            ).order_by('-created_at')
+            executions = AutomationExecution.objects.filter(automation_request=request).order_by(
+                '-created_at'
+            )
 
             return {
                 'request_id': str(request.id),
                 'status': request.status,
                 'created_at': request.created_at,
                 'updated_at': request.updated_at,
-                'executions': AutomationExecutionSerializer(executions, many=True).data
+                'executions': AutomationExecutionSerializer(executions, many=True).data,
             }
         except AutomationRequest.DoesNotExist:
-            logger.error(f"Request {self.request_id} not found")
-            return {
-                'error': 'Request not found',
-                'request_id': str(self.request_id)
-            }
+            logger.error(f'Request {self.request_id} not found')
+            return {'error': 'Request not found', 'request_id': str(self.request_id)}
 
 
 class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
@@ -202,44 +199,41 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
         self.room_group_name = f'execution-{self.execution_id}'
 
         # Join room group
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
         await self.accept()
 
         # Send initial execution details
         try:
             initial_data = await self.get_execution_details()
-            await self.send(text_data=json.dumps({
-                'type': 'initial_data',
-                'data': initial_data
-            }, cls=DjangoJSONEncoder))
+            await self.send(
+                text_data=json.dumps(
+                    {'type': 'initial_data', 'data': initial_data}, cls=DjangoJSONEncoder
+                )
+            )
 
-            logger.info(f"WebSocket connected to execution {self.execution_id} by user {user.id}")
+            logger.info(f'WebSocket connected to execution {self.execution_id} by user {user.id}')
         except Exception as e:
-            logger.error(f"Failed to send initial execution data: {str(e)}")
+            logger.error(f'Failed to send initial execution data: {str(e)}')
 
     @database_sync_to_async
     def _check_execution_access(self, user):
         """Check if user owns the parent request or is staff."""
         from .models import AutomationExecution
+
         if user.is_staff:
             return AutomationExecution.objects.filter(id=self.execution_id).exists()
         return AutomationExecution.objects.filter(
-            id=self.execution_id,
-            automation_request__requested_by=user
+            id=self.execution_id, automation_request__requested_by=user
         ).exists()
 
     async def disconnect(self, close_code):
         """Leave execution channel on disconnect."""
         if hasattr(self, 'room_group_name'):
-            await self.channel_layer.group_discard(
-                self.room_group_name,
-                self.channel_name
-            )
-        logger.info(f"WebSocket disconnected from execution {getattr(self, 'execution_id', '?')} (code: {close_code})")
+            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        logger.info(
+            f'WebSocket disconnected from execution {getattr(self, "execution_id", "?")} (code: {close_code})'
+        )
 
     async def receive(self, text_data):
         """
@@ -258,21 +252,23 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({'type': 'pong'}))
             elif message_type == 'refresh':
                 details = await self.get_execution_details()
-                await self.send(text_data=json.dumps({
-                    'type': 'execution_details',
-                    'data': details
-                }, cls=DjangoJSONEncoder))
+                await self.send(
+                    text_data=json.dumps(
+                        {'type': 'execution_details', 'data': details}, cls=DjangoJSONEncoder
+                    )
+                )
             elif message_type == 'fetch_output':
                 # Fetch job output from AWX
                 output = await self.get_job_output()
-                await self.send(text_data=json.dumps({
-                    'type': 'job_output',
-                    'data': output
-                }, cls=DjangoJSONEncoder))
+                await self.send(
+                    text_data=json.dumps(
+                        {'type': 'job_output', 'data': output}, cls=DjangoJSONEncoder
+                    )
+                )
         except json.JSONDecodeError:
-            logger.error(f"Invalid JSON received: {text_data}")
+            logger.error(f'Invalid JSON received: {text_data}')
         except Exception as e:
-            logger.error(f"Error handling message: {str(e)}")
+            logger.error(f'Error handling message: {str(e)}')
 
     async def execution_progress(self, event):
         """
@@ -280,10 +276,11 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
 
         Broadcasts progress percentage and current task.
         """
-        await self.send(text_data=json.dumps({
-            'type': 'execution_progress',
-            'data': event['data']
-        }, cls=DjangoJSONEncoder))
+        await self.send(
+            text_data=json.dumps(
+                {'type': 'execution_progress', 'data': event['data']}, cls=DjangoJSONEncoder
+            )
+        )
 
     async def execution_status(self, event):
         """
@@ -291,10 +288,11 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
 
         Broadcasts when execution status changes (running -> successful/failed).
         """
-        await self.send(text_data=json.dumps({
-            'type': 'execution_status',
-            'data': event['data']
-        }, cls=DjangoJSONEncoder))
+        await self.send(
+            text_data=json.dumps(
+                {'type': 'execution_status', 'data': event['data']}, cls=DjangoJSONEncoder
+            )
+        )
 
     async def execution_output(self, event):
         """
@@ -302,10 +300,11 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
 
         Broadcasts job stdout/output chunks in real-time.
         """
-        await self.send(text_data=json.dumps({
-            'type': 'execution_output',
-            'data': event['data']
-        }, cls=DjangoJSONEncoder))
+        await self.send(
+            text_data=json.dumps(
+                {'type': 'execution_output', 'data': event['data']}, cls=DjangoJSONEncoder
+            )
+        )
 
     @database_sync_to_async
     def get_execution_details(self):
@@ -320,18 +319,14 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
 
         try:
             execution = AutomationExecution.objects.select_related(
-                'automation_request',
-                'automation_request__template'
+                'automation_request', 'automation_request__template'
             ).get(id=self.execution_id)
 
             serializer = AutomationExecutionSerializer(execution)
             return serializer.data
         except AutomationExecution.DoesNotExist:
-            logger.error(f"Execution {self.execution_id} not found")
-            return {
-                'error': 'Execution not found',
-                'execution_id': str(self.execution_id)
-            }
+            logger.error(f'Execution {self.execution_id} not found')
+            return {'error': 'Execution not found', 'execution_id': str(self.execution_id)}
 
     @database_sync_to_async
     def get_job_output(self):
@@ -359,12 +354,9 @@ class AWXExecutionDetailConsumer(AsyncWebsocketConsumer):
             # Fetch job output
             output_data = client.get_job_output(execution.awx_job_id)
 
-            return {
-                'output': output_data.get('content', ''),
-                'job_id': execution.awx_job_id
-            }
+            return {'output': output_data.get('content', ''), 'job_id': execution.awx_job_id}
         except AutomationExecution.DoesNotExist:
             return {'output': '', 'error': 'Execution not found'}
         except Exception as e:
-            logger.error(f"Failed to fetch job output: {str(e)}")
+            logger.error(f'Failed to fetch job output: {str(e)}')
             return {'output': '', 'error': 'Failed to fetch job output'}

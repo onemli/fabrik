@@ -17,6 +17,7 @@ class QueryExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
     Users can see logs for queries they own, queries shared with them,
     and any query they personally executed — even public ones they don't own.
     """
+
     serializer_class = QueryExecutionLogSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
@@ -25,9 +26,13 @@ class QueryExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return QueryExecutionLog.objects.filter(
-            Q(query__created_by=user) |
-            Q(query__shared_with=user) |
-            Q(query__is_public=True) |
-            Q(executed_by=user)
-        ).select_related('query', 'executed_by').distinct()
+        return (
+            QueryExecutionLog.objects.filter(
+                Q(query__created_by=user)
+                | Q(query__shared_with=user)
+                | Q(query__is_public=True)
+                | Q(executed_by=user)
+            )
+            .select_related('query', 'executed_by')
+            .distinct()
+        )

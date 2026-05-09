@@ -1,6 +1,11 @@
 """Test factories for generating test data"""
+
 from .user_factory import UserFactory, AdminUserFactory, StaffUserFactory
-from .apic_factory import APICConnectionFactory, PublicAPICConnectionFactory, CiscoSandboxAPICFactory
+from .apic_factory import (
+    APICConnectionFactory,
+    PublicAPICConnectionFactory,
+    CiscoSandboxAPICFactory,
+)
 from .query_factory import (
     SavedQueryFactory,
     TimeMachineEnabledQueryFactory,

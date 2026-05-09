@@ -1,6 +1,7 @@
 """
 Integration tests for MIM ViewSets
 """
+
 import pytest
 from rest_framework import status
 from mim.models import FavoriteClass, TableTemplate, UserTablePreference
@@ -31,10 +32,7 @@ class TestFavoriteClassViewSet:
 
     def test_create_favorite(self, authenticated_client, user):
         """Test creating a favorite class"""
-        data = {
-            'class_name': 'fvTenant',
-            'note': 'Main tenant class'
-        }
+        data = {'class_name': 'fvTenant', 'note': 'Main tenant class'}
 
         response = authenticated_client.post('/api/mim/favorites/', data, format='json')
 
@@ -58,9 +56,7 @@ class TestFavoriteClassViewSet:
         data = {'note': 'Updated note'}
 
         response = authenticated_client.patch(
-            f'/api/mim/favorites/{favorite.id}/',
-            data,
-            format='json'
+            f'/api/mim/favorites/{favorite.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -99,18 +95,17 @@ class TestTableTemplateViewSet:
             user=user,
             template_name='Tenant Template',
             class_name='fvTenant',
-            columns={'name': {'width': 200}}
+            columns={'name': {'width': 200}},
         )
         TableTemplate.objects.create(
-            user=user,
-            template_name='BD Template',
-            class_name='fvBD',
-            columns={}
+            user=user, template_name='BD Template', class_name='fvBD', columns={}
         )
 
         # Other user's templates (should not see)
         other_user = UserFactory()
-        TableTemplate.objects.create(user=other_user, template_name='Other', class_name='fvCtx', columns={})
+        TableTemplate.objects.create(
+            user=other_user, template_name='Other', class_name='fvCtx', columns={}
+        )
 
         response = authenticated_client.get('/api/mim/table-templates/')
 
@@ -123,7 +118,7 @@ class TestTableTemplateViewSet:
         data = {
             'template_name': 'My Tenant Template',
             'class_name': 'fvTenant',
-            'columns': {'name': {'width': 200, 'visible': True}}
+            'columns': {'name': {'width': 200, 'visible': True}},
         }
 
         response = authenticated_client.post('/api/mim/table-templates/', data, format='json')
@@ -133,9 +128,15 @@ class TestTableTemplateViewSet:
 
     def test_filter_templates_by_class(self, authenticated_client, user):
         """Test filtering templates by class name"""
-        TableTemplate.objects.create(user=user, template_name='Template 1', class_name='fvTenant', columns={})
-        TableTemplate.objects.create(user=user, template_name='Template 2', class_name='fvBD', columns={})
-        TableTemplate.objects.create(user=user, template_name='Template 3', class_name='fvTenant', columns={})
+        TableTemplate.objects.create(
+            user=user, template_name='Template 1', class_name='fvTenant', columns={}
+        )
+        TableTemplate.objects.create(
+            user=user, template_name='Template 2', class_name='fvBD', columns={}
+        )
+        TableTemplate.objects.create(
+            user=user, template_name='Template 3', class_name='fvTenant', columns={}
+        )
 
         response = authenticated_client.get('/api/mim/table-templates/?class_name=fvTenant')
 
@@ -152,21 +153,17 @@ class TestUserTablePreferenceViewSet:
         """Test listing user's table preferences"""
         # User's preferences
         UserTablePreference.objects.create(
-            user=user,
-            class_name='fvTenant',
-            hidden_columns=['dn'],
-            column_order=['name', 'descr']
+            user=user, class_name='fvTenant', hidden_columns=['dn'], column_order=['name', 'descr']
         )
         UserTablePreference.objects.create(
-            user=user,
-            class_name='fvBD',
-            hidden_columns=[],
-            column_order=[]
+            user=user, class_name='fvBD', hidden_columns=[], column_order=[]
         )
 
         # Other user's preferences (should not see)
         other_user = UserFactory()
-        UserTablePreference.objects.create(user=other_user, class_name='fvCtx', hidden_columns=[], column_order=[])
+        UserTablePreference.objects.create(
+            user=other_user, class_name='fvCtx', hidden_columns=[], column_order=[]
+        )
 
         response = authenticated_client.get('/api/mim/table-preferences/')
 
@@ -180,7 +177,7 @@ class TestUserTablePreferenceViewSet:
         data = {
             'class_name': 'fvTenant',
             'hidden_columns': ['dn', 'modTs'],
-            'column_order': ['name', 'descr', 'status']
+            'column_order': ['name', 'descr', 'status'],
         }
 
         response = authenticated_client.post('/api/mim/table-preferences/', data, format='json')
@@ -190,8 +187,12 @@ class TestUserTablePreferenceViewSet:
 
     def test_filter_preferences_by_class(self, authenticated_client, user):
         """Test filtering preferences by class name"""
-        UserTablePreference.objects.create(user=user, class_name='fvTenant', hidden_columns=[], column_order=[])
-        UserTablePreference.objects.create(user=user, class_name='fvBD', hidden_columns=[], column_order=[])
+        UserTablePreference.objects.create(
+            user=user, class_name='fvTenant', hidden_columns=[], column_order=[]
+        )
+        UserTablePreference.objects.create(
+            user=user, class_name='fvBD', hidden_columns=[], column_order=[]
+        )
 
         response = authenticated_client.get('/api/mim/table-preferences/?class_name=fvTenant')
 

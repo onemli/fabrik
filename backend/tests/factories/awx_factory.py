@@ -1,9 +1,13 @@
 """AWX model factories for testing"""
+
 import factory
 from factory.django import DjangoModelFactory
 from awx.models import (
-    AWXConnection, TemplateCategory, AutomationTemplate,
-    AutomationRequest, AutomationExecution
+    AWXConnection,
+    TemplateCategory,
+    AutomationTemplate,
+    AutomationRequest,
+    AutomationExecution,
 )
 from .user_factory import UserFactory
 
@@ -46,6 +50,7 @@ class AWXConnectionFactory(DjangoModelFactory):
 
 class PublicAWXConnectionFactory(AWXConnectionFactory):
     """Factory for creating public AWX connections"""
+
     is_public = True
 
 
@@ -101,11 +106,13 @@ class AutomationRequestFactory(DjangoModelFactory):
 
 class PendingApprovalRequestFactory(AutomationRequestFactory):
     """Factory for requests pending approval"""
+
     status = AutomationRequest.STATUS_PENDING
 
 
 class ApprovedRequestFactory(AutomationRequestFactory):
     """Factory for approved requests"""
+
     status = AutomationRequest.STATUS_RUNNING
 
 
@@ -125,14 +132,17 @@ class AutomationExecutionFactory(DjangoModelFactory):
 
 class RunningExecutionFactory(AutomationExecutionFactory):
     """Factory for running executions"""
+
     status = AutomationExecution.STATUS_RUNNING
 
 
 class SuccessfulExecutionFactory(AutomationExecutionFactory):
     """Factory for successful executions"""
+
     status = AutomationExecution.STATUS_SUCCESSFUL
 
 
 class FailedExecutionFactory(AutomationExecutionFactory):
     """Factory for failed executions"""
+
     status = AutomationExecution.STATUS_FAILED

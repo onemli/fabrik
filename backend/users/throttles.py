@@ -24,8 +24,10 @@ def _get_rate(scope: str, default: str) -> str:
 
 # ─── Anonymous (unauthenticated) throttles ───────────────────────
 
+
 class LoginRateThrottle(AnonRateThrottle):
     """Throttle login attempts per IP. Prevents credential stuffing."""
+
     scope = 'login'
 
     def get_rate(self) -> str:
@@ -34,6 +36,7 @@ class LoginRateThrottle(AnonRateThrottle):
 
 class MFARateThrottle(AnonRateThrottle):
     """Throttle MFA verification attempts per IP. Prevents TOTP brute-force."""
+
     scope = 'mfa'
 
     def get_rate(self) -> str:
@@ -42,6 +45,7 @@ class MFARateThrottle(AnonRateThrottle):
 
 class RegistrationRateThrottle(AnonRateThrottle):
     """Throttle registration per IP. Prevents mass account creation."""
+
     scope = 'registration'
 
     def get_rate(self) -> str:
@@ -50,6 +54,7 @@ class RegistrationRateThrottle(AnonRateThrottle):
 
 class PasswordResetRateThrottle(AnonRateThrottle):
     """Throttle password reset requests per IP. Prevents email bombing."""
+
     scope = 'password_reset'
 
     def get_rate(self) -> str:
@@ -58,6 +63,7 @@ class PasswordResetRateThrottle(AnonRateThrottle):
 
 class TokenRefreshRateThrottle(AnonRateThrottle):
     """Throttle token refresh per IP. Prevents token refresh abuse."""
+
     scope = 'token_refresh'
 
     def get_rate(self) -> str:
@@ -66,6 +72,7 @@ class TokenRefreshRateThrottle(AnonRateThrottle):
 
 class EmailVerifyRateThrottle(AnonRateThrottle):
     """Throttle email verification per IP."""
+
     scope = 'email_verify'
 
     def get_rate(self) -> str:
@@ -74,6 +81,7 @@ class EmailVerifyRateThrottle(AnonRateThrottle):
 
 class WebhookRateThrottle(AnonRateThrottle):
     """Throttle incoming webhooks per IP. Defense-in-depth alongside HMAC."""
+
     scope = 'webhook'
 
     def get_rate(self) -> str:
@@ -82,8 +90,10 @@ class WebhookRateThrottle(AnonRateThrottle):
 
 # ─── Authenticated user throttles ────────────────────────────────
 
+
 class SensitiveActionThrottle(UserRateThrottle):
     """Throttle sensitive actions (password change, MFA toggle) per user."""
+
     scope = 'sensitive_action'
 
     def get_rate(self) -> str:
@@ -92,6 +102,7 @@ class SensitiveActionThrottle(UserRateThrottle):
 
 class EmailSendThrottle(UserRateThrottle):
     """Throttle outbound email sending per user. Prevents email spam."""
+
     scope = 'email_send'
 
     def get_rate(self) -> str:

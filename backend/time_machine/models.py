@@ -93,26 +93,33 @@ class QueryExecutionSnapshot(models.Model):
         indexes = [
             # Index names must match exactly what the queries/ migrations created —
             # SeparateDatabaseAndState means the DB indexes already exist under these names
-            models.Index(fields=['saved_query', '-executed_at'],
-                         name='queries_que_saved_q_execut_idx'),
-            models.Index(fields=['saved_query', 'query_version_hash', '-executed_at'],
-                         name='queries_que_saved_q_query__idx'),
-            models.Index(fields=['class_name', '-executed_at'],
-                         name='queries_que_class_n_execut_idx'),
-            models.Index(fields=['executed_by', '-executed_at'],
-                         name='queries_que_execute_execut_idx'),
-            models.Index(fields=['apic_connection_id', '-executed_at'],
-                         name='queries_que_apic_co_execut_idx'),
-            models.Index(fields=['execution_type', '-executed_at'],
-                         name='queries_que_executi_execut_idx'),
-            models.Index(fields=['result_hash'],
-                         name='queries_que_result__idx'),
-            models.Index(fields=['saved_query', 'has_changes', '-executed_at'],
-                         name='tm_sq_haschanges_idx'),
+            models.Index(
+                fields=['saved_query', '-executed_at'], name='queries_que_saved_q_execut_idx'
+            ),
+            models.Index(
+                fields=['saved_query', 'query_version_hash', '-executed_at'],
+                name='queries_que_saved_q_query__idx',
+            ),
+            models.Index(
+                fields=['class_name', '-executed_at'], name='queries_que_class_n_execut_idx'
+            ),
+            models.Index(
+                fields=['executed_by', '-executed_at'], name='queries_que_execute_execut_idx'
+            ),
+            models.Index(
+                fields=['apic_connection_id', '-executed_at'], name='queries_que_apic_co_execut_idx'
+            ),
+            models.Index(
+                fields=['execution_type', '-executed_at'], name='queries_que_executi_execut_idx'
+            ),
+            models.Index(fields=['result_hash'], name='queries_que_result__idx'),
+            models.Index(
+                fields=['saved_query', 'has_changes', '-executed_at'], name='tm_sq_haschanges_idx'
+            ),
         ]
 
     def __str__(self):
-        return f"{self.query_name} @ {self.executed_at}"
+        return f'{self.query_name} @ {self.executed_at}'
 
     @property
     def is_duplicate(self):
@@ -169,8 +176,8 @@ class TimeMachineSettings(models.Model):
 
     def __str__(self):
         if self.user:
-            return f"Time Machine Settings for {self.user.username}"
-        return "Global Time Machine Settings"
+            return f'Time Machine Settings for {self.user.username}'
+        return 'Global Time Machine Settings'
 
     @classmethod
     def get_for_user(cls, user):
@@ -216,11 +223,9 @@ class TimeMachineSettings(models.Model):
 
         if self.retention_policy == self.RETENTION_BY_DAYS:
             cutoff_date = timezone.now() - timedelta(days=self.retention_days)
-            expired_qs = (
-                QueryExecutionSnapshot.objects
-                .defer('result_data', 'query_structure')
-                .filter(executed_at__lt=cutoff_date)
-            )
+            expired_qs = QueryExecutionSnapshot.objects.defer(
+                'result_data', 'query_structure'
+            ).filter(executed_at__lt=cutoff_date)
             if query_id:
                 expired_qs = expired_qs.filter(saved_query_id=query_id)
 
@@ -246,17 +251,17 @@ class TimeMachineSettings(models.Model):
                     'size_bytes': snap.result_size_bytes,
                 }
                 for snap in preview_rows
-            ]
+            ],
         }
 
     def _by_count_expired_preview(self, query_id, limit):
         """Window-function-based expired list for RETENTION_BY_COUNT — returns (rows, total)."""
         from django.db import connection
 
-        where_clause = "saved_query_id IS NOT NULL"
+        where_clause = 'saved_query_id IS NOT NULL'
         params = []
         if query_id:
-            where_clause += " AND saved_query_id = %s"
+            where_clause += ' AND saved_query_id = %s'
             params.append(query_id)
 
         # CTE ranks each saved_query's snapshots newest-first; anything with
@@ -294,8 +299,7 @@ class TimeMachineSettings(models.Model):
             return [], total
 
         rows = list(
-            QueryExecutionSnapshot.objects
-            .defer('result_data', 'query_structure')
+            QueryExecutionSnapshot.objects.defer('result_data', 'query_structure')
             .filter(id__in=preview_ids)
             .order_by('executed_at')
         )
@@ -320,21 +324,21 @@ class TimeMachineSettings(models.Model):
 
         if self.retention_policy == self.RETENTION_BY_DAYS:
             cutoff = timezone.now() - timedelta(days=self.retention_days)
-            where = "executed_at < %s"
+            where = 'executed_at < %s'
             params = [cutoff]
             if query_id:
-                where += " AND saved_query_id = %s"
+                where += ' AND saved_query_id = %s'
                 params.append(query_id)
-            sql = f"DELETE FROM time_machine_snapshots WHERE {where}"
+            sql = f'DELETE FROM time_machine_snapshots WHERE {where}'
             with connection.cursor() as cursor:
                 cursor.execute(sql, params)
                 return cursor.rowcount
 
         if self.retention_policy == self.RETENTION_BY_COUNT:
-            where_clause = "saved_query_id IS NOT NULL"
+            where_clause = 'saved_query_id IS NOT NULL'
             params = []
             if query_id:
-                where_clause += " AND saved_query_id = %s"
+                where_clause += ' AND saved_query_id = %s'
                 params.append(query_id)
             sql = f"""
                 DELETE FROM time_machine_snapshots

@@ -13,6 +13,7 @@ from audit.services import AuditService
 
 class AISettingsViewSet(viewsets.ViewSet):
     """Read/update the singleton AI settings row. Update is admin-only."""
+
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
@@ -41,15 +42,11 @@ class AISettingsViewSet(viewsets.ViewSet):
         if not is_admin:
             return Response(
                 {'error': 'Only administrators can update AI settings'},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         settings = AIQueryBuilderSettings.get_settings()
-        serializer = AIQueryBuilderSettingsSerializer(
-            settings,
-            data=request.data,
-            partial=True
-        )
+        serializer = AIQueryBuilderSettingsSerializer(settings, data=request.data, partial=True)
 
         if serializer.is_valid():
             updated = serializer.save(updated_by=request.user)
@@ -60,8 +57,8 @@ class AISettingsViewSet(viewsets.ViewSet):
                 action='ai_settings_updated',
                 category='system_settings',
                 resource_type='AIQueryBuilderSettings',
-                description="AI Query Builder settings updated",
-                request=request
+                description='AI Query Builder settings updated',
+                request=request,
             )
 
             response_data = serializer.data
@@ -81,42 +78,46 @@ class AISettingsViewSet(viewsets.ViewSet):
 
         try:
             # Test connection
-            response = http_requests.get(
-                f"{ollama_url.rstrip('/')}/api/tags",
-                timeout=10
-            )
+            response = http_requests.get(f'{ollama_url.rstrip("/")}/api/tags', timeout=10)
             response.raise_for_status()
 
             data = response.json()
             models = [m.get('name', '') for m in data.get('models', [])]
 
-            return Response({
-                'success': True,
-                'message': 'Connection successful',
-                'available_models': models,
-                'ollama_url': ollama_url
-            })
+            return Response(
+                {
+                    'success': True,
+                    'message': 'Connection successful',
+                    'available_models': models,
+                    'ollama_url': ollama_url,
+                }
+            )
 
         except http_requests.Timeout:
-            return Response({
-                'success': False,
-                'message': 'Connection timeout after 10 seconds',
-                'available_models': []
-            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Connection timeout after 10 seconds',
+                    'available_models': [],
+                },
+                status=status.HTTP_408_REQUEST_TIMEOUT,
+            )
 
         except http_requests.ConnectionError:
-            return Response({
-                'success': False,
-                'message': f'Cannot connect to Ollama at {ollama_url}',
-                'available_models': []
-            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {
+                    'success': False,
+                    'message': f'Cannot connect to Ollama at {ollama_url}',
+                    'available_models': [],
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         except Exception as e:
-            return Response({
-                'success': False,
-                'message': str(e),
-                'available_models': []
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'success': False, 'message': str(e), 'available_models': []},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=['get'])
     def status(self, request):
@@ -162,16 +163,18 @@ class AISettingsViewSet(viewsets.ViewSet):
         # 2. Either user has a configured provider with API key OR Ollama is connected
         is_available = settings.enabled and connection_status in ('connected', 'configured')
 
-        return Response({
-            'enabled': settings.enabled,
-            'is_available': is_available,
-            'connection_status': connection_status,
-            'ollama_url': settings.ollama_url,
-            'intent_model': settings.intent_model,
-            'query_builder_model': settings.query_builder_model,
-            'has_user_provider': has_user_provider,
-            'user_provider': user_provider.provider if user_provider else None
-        })
+        return Response(
+            {
+                'enabled': settings.enabled,
+                'is_available': is_available,
+                'connection_status': connection_status,
+                'ollama_url': settings.ollama_url,
+                'intent_model': settings.intent_model,
+                'query_builder_model': settings.query_builder_model,
+                'has_user_provider': has_user_provider,
+                'user_provider': user_provider.provider if user_provider else None,
+            }
+        )
 
     @action(detail=False, methods=['get'])
     def models(self, request):
@@ -182,32 +185,24 @@ class AISettingsViewSet(viewsets.ViewSet):
         settings = AIQueryBuilderSettings.get_settings()
 
         try:
-            response = http_requests.get(
-                f"{settings.ollama_url.rstrip('/')}/api/tags",
-                timeout=10
-            )
+            response = http_requests.get(f'{settings.ollama_url.rstrip("/")}/api/tags', timeout=10)
             response.raise_for_status()
 
             data = response.json()
             models = []
             for m in data.get('models', []):
-                models.append({
-                    'name': m.get('name', ''),
-                    'size': m.get('size', 0),
-                    'modified_at': m.get('modified_at', '')
-                })
+                models.append(
+                    {
+                        'name': m.get('name', ''),
+                        'size': m.get('size', 0),
+                        'modified_at': m.get('modified_at', ''),
+                    }
+                )
 
-            return Response({
-                'success': True,
-                'models': models
-            })
+            return Response({'success': True, 'models': models})
 
         except Exception as e:
-            return Response({
-                'success': False,
-                'models': [],
-                'error': str(e)
-            })
+            return Response({'success': False, 'models': [], 'error': str(e)})
 
     def _check_connection_status(self, settings):
         """Check system Ollama connection status"""
@@ -223,10 +218,7 @@ class AISettingsViewSet(viewsets.ViewSet):
             return 'unconfigured'
 
         try:
-            response = http_requests.get(
-                f"{ollama_url.rstrip('/')}/api/tags",
-                timeout=5
-            )
+            response = http_requests.get(f'{ollama_url.rstrip("/")}/api/tags', timeout=5)
             response.raise_for_status()
             return 'connected'
         except http_requests.Timeout:
@@ -245,6 +237,7 @@ class UserAIProviderViewSet(viewsets.ViewSet):
     instance set up in AIQueryBuilderSettings.
     API keys are stored Fernet-encrypted — the serializer never returns raw keys.
     """
+
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
@@ -255,54 +248,53 @@ class UserAIProviderViewSet(viewsets.ViewSet):
         try:
             provider = UserAIProvider.objects.get(user=request.user)
             serializer = UserAIProviderSerializer(provider)
-            return Response({
-                'success': True,
-                'provider': serializer.data
-            })
+            return Response({'success': True, 'provider': serializer.data})
         except UserAIProvider.DoesNotExist:
-            return Response({
-                'success': True,
-                'provider': None,
-                'message': 'No provider configured. Using global settings.'
-            })
+            return Response(
+                {
+                    'success': True,
+                    'provider': None,
+                    'message': 'No provider configured. Using global settings.',
+                }
+            )
 
     def create(self, request):
         """Create or update user's AI provider configuration"""
         from queries.serializers import UserAIProviderSerializer
 
-        serializer = UserAIProviderSerializer(
-            data=request.data,
-            context={'request': request}
-        )
+        serializer = UserAIProviderSerializer(data=request.data, context={'request': request})
 
         if serializer.is_valid():
             provider = serializer.save()
-            return Response({
-                'success': True,
-                'provider': UserAIProviderSerializer(provider).data,
-                'message': 'Provider configuration saved'
-            })
+            return Response(
+                {
+                    'success': True,
+                    'provider': UserAIProviderSerializer(provider).data,
+                    'message': 'Provider configuration saved',
+                }
+            )
         else:
-            return Response({
-                'success': False,
-                'errors': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=False, methods=['post'])
     def test(self, request):
         """Test AI provider connection"""
         from queries.serializers import TestProviderSerializer
         from queries.services.multi_provider_client import (
-            OpenAIClient, AzureOpenAIClient, AnthropicClient,
-            GoogleAIClient, OllamaClient
+            OpenAIClient,
+            AzureOpenAIClient,
+            AnthropicClient,
+            GoogleAIClient,
+            OllamaClient,
         )
 
         serializer = TestProviderSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response({
-                'success': False,
-                'errors': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         data = serializer.validated_data
         provider = data['provider']
@@ -315,63 +307,53 @@ class UserAIProviderViewSet(viewsets.ViewSet):
             if provider == 'openai':
                 client = OpenAIClient(
                     api_key=api_key,
-                    base_url=base_url or "https://api.openai.com/v1",
-                    model=model or "gpt-4o"
+                    base_url=base_url or 'https://api.openai.com/v1',
+                    model=model or 'gpt-4o',
                 )
             elif provider == 'azure_openai':
                 client = AzureOpenAIClient(
                     api_key=api_key,
                     base_url=base_url,
                     deployment_name=data.get('azure_deployment_name', ''),
-                    api_version=data.get('azure_api_version', '2024-02-15-preview')
+                    api_version=data.get('azure_api_version', '2024-02-15-preview'),
                 )
             elif provider == 'anthropic':
                 client = AnthropicClient(
-                    api_key=api_key,
-                    model=model or "claude-3-5-sonnet-20241022"
+                    api_key=api_key, model=model or 'claude-3-5-sonnet-20241022'
                 )
             elif provider == 'groq':
                 client = OpenAIClient(
                     api_key=api_key,
-                    base_url="https://api.groq.com/openai/v1",
-                    model=model or "llama-3.3-70b-versatile"
+                    base_url='https://api.groq.com/openai/v1',
+                    model=model or 'llama-3.3-70b-versatile',
                 )
             elif provider == 'google':
-                client = GoogleAIClient(
-                    api_key=api_key,
-                    model=model or "gemini-2.5-flash"
-                )
+                client = GoogleAIClient(api_key=api_key, model=model or 'gemini-2.5-flash')
             elif provider == 'openrouter':
                 client = OpenAIClient(
                     api_key=api_key,
-                    base_url="https://openrouter.ai/api/v1",
-                    model=model or "meta-llama/llama-3.2-3b-instruct:free"
+                    base_url='https://openrouter.ai/api/v1',
+                    model=model or 'meta-llama/llama-3.2-3b-instruct:free',
                 )
             elif provider == 'ollama':
                 client = OllamaClient(
-                    base_url=base_url or "http://localhost:11434",
-                    model=model or "phi3:mini"
+                    base_url=base_url or 'http://localhost:11434', model=model or 'phi3:mini'
                 )
             else:
-                return Response({
-                    'success': False,
-                    'error': f'Unknown provider: {provider}'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'success': False, 'error': f'Unknown provider: {provider}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             # Test connection
             success, message = client.test_connection()
 
-            return Response({
-                'success': success,
-                'message': message,
-                'provider': provider
-            })
+            return Response({'success': success, 'message': message, 'provider': provider})
 
         except Exception as e:
-            return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=False, methods=['get'])
     def available(self, request):
@@ -409,7 +391,11 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                 'name': 'Anthropic',
                 'description': 'Claude 3.5 Sonnet, Claude 3 Opus',
                 'default_model': 'claude-3-5-sonnet-20241022',
-                'models': ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
+                'models': [
+                    'claude-3-5-sonnet-20241022',
+                    'claude-3-opus-20240229',
+                    'claude-3-haiku-20240307',
+                ],
                 'requires_api_key': True,
                 'supports_json_mode': True,
             },
@@ -421,14 +407,19 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                 'models': groq_models,
                 'requires_api_key': True,
                 'supports_json_mode': True,
-                'note': 'Free tier available at console.groq.com'
+                'note': 'Free tier available at console.groq.com',
             },
             {
                 'id': 'google',
                 'name': 'Google AI',
                 'description': 'Gemini 2.5 Flash, Gemini 2.0 Flash',
                 'default_model': 'gemini-2.5-flash',
-                'models': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-exp'],
+                'models': [
+                    'gemini-2.5-flash',
+                    'gemini-2.5-pro',
+                    'gemini-2.0-flash',
+                    'gemini-2.0-flash-exp',
+                ],
                 'requires_api_key': True,
                 'supports_json_mode': True,
             },
@@ -442,11 +433,11 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                     'google/gemini-flash-1.5-8b:free',
                     'mistralai/mistral-7b-instruct:free',
                     'qwen/qwen-2-7b-instruct:free',
-                    'nousresearch/hermes-3-llama-3.1-405b:free'
+                    'nousresearch/hermes-3-llama-3.1-405b:free',
                 ],
                 'requires_api_key': True,
                 'supports_json_mode': True,
-                'note': 'Free tier models available at openrouter.ai/models'
+                'note': 'Free tier models available at openrouter.ai/models',
             },
             {
                 'id': 'ollama',
@@ -457,14 +448,11 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                 'requires_api_key': False,
                 'requires_base_url': True,
                 'supports_json_mode': True,
-                'note': 'Requires Ollama running locally'
+                'note': 'Requires Ollama running locally',
             },
         ]
 
-        return Response({
-            'success': True,
-            'providers': providers
-        })
+        return Response({'success': True, 'providers': providers})
 
     def _fetch_groq_models(self, user):
         """Fetch live model list from Groq API using the user's saved key.
@@ -543,19 +531,23 @@ class UserAIProviderViewSet(viewsets.ViewSet):
         )
 
         if not models:
-            return Response({
-                'success': False,
-                'provider': provider,
-                'models': fallback,
-                'source': 'fallback',
-            })
+            return Response(
+                {
+                    'success': False,
+                    'provider': provider,
+                    'models': fallback,
+                    'source': 'fallback',
+                }
+            )
 
-        return Response({
-            'success': True,
-            'provider': provider,
-            'models': models,
-            'source': source,
-        })
+        return Response(
+            {
+                'success': True,
+                'provider': provider,
+                'models': models,
+                'source': source,
+            }
+        )
 
     def _fallback_models_for(self, provider):
         """Hardcoded model list mirrored from `available` for graceful fallback."""
@@ -568,7 +560,12 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                 'claude-3-haiku-20240307',
             ],
             'groq': ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-            'google': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-exp'],
+            'google': [
+                'gemini-2.5-flash',
+                'gemini-2.5-pro',
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-exp',
+            ],
             'openrouter': [
                 'meta-llama/llama-3.2-3b-instruct:free',
                 'google/gemini-flash-1.5-8b:free',
@@ -590,7 +587,7 @@ class UserAIProviderViewSet(viewsets.ViewSet):
 
         try:
             if provider == 'openai':
-                url = f"{(base_url or 'https://api.openai.com/v1').rstrip('/')}/models"
+                url = f'{(base_url or "https://api.openai.com/v1").rstrip("/")}/models'
                 if not api_key:
                     return [], ''
                 resp = http_requests.get(
@@ -657,13 +654,13 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                     name = m.get('name', '')
                     methods = m.get('supportedGenerationMethods', [])
                     if 'generateContent' in methods and name.startswith('models/'):
-                        models.append(name[len('models/'):])
+                        models.append(name[len('models/') :])
                 return sorted(models), 'live'
 
             if provider == 'azure_openai':
                 if not api_key or not base_url:
                     return [], ''
-                url = f"{base_url.rstrip('/')}/openai/deployments"
+                url = f'{base_url.rstrip("/")}/openai/deployments'
                 resp = http_requests.get(
                     url,
                     headers={'api-key': api_key},
@@ -675,7 +672,7 @@ class UserAIProviderViewSet(viewsets.ViewSet):
                 return ids, 'live'
 
             if provider == 'ollama':
-                url = f"{(base_url or 'http://localhost:11434').rstrip('/')}/api/tags"
+                url = f'{(base_url or "http://localhost:11434").rstrip("/")}/api/tags'
                 resp = http_requests.get(url, timeout=timeout)
                 resp.raise_for_status()
                 names = sorted(m['name'] for m in resp.json().get('models', []) if 'name' in m)
@@ -693,12 +690,9 @@ class UserAIProviderViewSet(viewsets.ViewSet):
         try:
             provider = UserAIProvider.objects.get(user=request.user)
             provider.delete()
-            return Response({
-                'success': True,
-                'message': 'Provider configuration deleted'
-            })
+            return Response({'success': True, 'message': 'Provider configuration deleted'})
         except UserAIProvider.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': 'No provider configuration found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'success': False, 'error': 'No provider configuration found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )

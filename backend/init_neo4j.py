@@ -10,10 +10,10 @@ django.setup()
 from mim.services import MIMService
 
 if __name__ == '__main__':
-    print("Initializing Neo4j schema...")
+    print('Initializing Neo4j schema...')
     try:
         mim_service = MIMService()
         mim_service.init_schema()
-        print("Neo4j schema initialized successfully!")
+        print('Neo4j schema initialized successfully!')
     except Exception as e:
-        print(f"Error: {e}")
+        print(f'Error: {e}')

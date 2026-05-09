@@ -21,10 +21,13 @@ from audit.tasks import deliver_webhook, _build_webhook_payload, _sign_payload
 
 # -- Helpers --
 
+
 def make_admin(username='auditadmin'):
     return User.objects.create_user(
-        username=username, email=f'{username}@test.com',
-        password='pass123!', is_superuser=True,
+        username=username,
+        email=f'{username}@test.com',
+        password='pass123!',
+        is_superuser=True,
     )
 
 
@@ -36,9 +39,12 @@ def make_webhook(name='Test Hook', url='https://hooks.example.com/audit', **kwar
 
 def make_log_entry(**kwargs):
     defaults = dict(
-        username='testuser', category='user_management',
-        action='user_created', resource_type='User',
-        resource_name='john', description='User john created',
+        username='testuser',
+        category='user_management',
+        action='user_created',
+        resource_type='User',
+        resource_name='john',
+        description='User john created',
     )
     defaults.update(kwargs)
     return AuditLog.objects.create(**defaults)
@@ -46,9 +52,9 @@ def make_log_entry(**kwargs):
 
 # -- Model --
 
+
 @pytest.mark.unit
 class AuditWebhookModelTests(TestCase):
-
     def test_should_forward_all_when_no_categories(self):
         wh = make_webhook(categories=[])
         self.assertTrue(wh.should_forward('user_management'))
@@ -72,9 +78,9 @@ class AuditWebhookModelTests(TestCase):
 
 # -- Payload & Signing --
 
+
 @pytest.mark.unit
 class WebhookPayloadTests(TestCase):
-
     def test_build_payload_has_required_fields(self):
         entry = make_log_entry()
         payload = _build_webhook_payload(entry)
@@ -91,9 +97,7 @@ class WebhookPayloadTests(TestCase):
         secret = 'my-secret'
         signature = _sign_payload(body, secret)
 
-        expected = hmac.new(
-            secret.encode('utf-8'), body, hashlib.sha256
-        ).hexdigest()
+        expected = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
         self.assertEqual(signature, expected)
 
     def test_different_secrets_produce_different_signatures(self):
@@ -105,9 +109,9 @@ class WebhookPayloadTests(TestCase):
 
 # -- Delivery Task --
 
+
 @pytest.mark.unit
 class DeliverWebhookTaskTests(TestCase):
-
     @patch('audit.tasks.requests.post')
     def test_successful_delivery_resets_failure_counter(self, mock_post):
         mock_post.return_value = MagicMock(status_code=200)
@@ -126,6 +130,7 @@ class DeliverWebhookTaskTests(TestCase):
     @patch('audit.tasks.requests.post')
     def test_failed_delivery_increments_failure_counter(self, mock_post):
         from requests.exceptions import ConnectionError
+
         mock_post.side_effect = ConnectionError('refused')
 
         wh = make_webhook(consecutive_failures=0, max_failures=50)
@@ -141,6 +146,7 @@ class DeliverWebhookTaskTests(TestCase):
     @patch('audit.tasks.requests.post')
     def test_auto_disable_after_max_failures(self, mock_post):
         from requests.exceptions import ConnectionError
+
         mock_post.side_effect = ConnectionError('dead')
 
         wh = make_webhook(consecutive_failures=49, max_failures=50)
@@ -197,16 +203,18 @@ class DeliverWebhookTaskTests(TestCase):
 
 # -- Service Integration --
 
+
 @pytest.mark.unit
 class AuditServiceWebhookTests(TestCase):
-
     @patch('audit.tasks.deliver_webhook.delay')
     def test_log_dispatches_to_matching_webhooks(self, mock_delay):
         wh = make_webhook(categories=['user_management'])
 
         AuditService.log(
-            user=None, action='user_created',
-            category='user_management', description='test',
+            user=None,
+            action='user_created',
+            category='user_management',
+            description='test',
         )
 
         mock_delay.assert_called_once()
@@ -218,8 +226,10 @@ class AuditServiceWebhookTests(TestCase):
         make_webhook(categories=['awx_automation'])
 
         AuditService.log(
-            user=None, action='user_created',
-            category='user_management', description='test',
+            user=None,
+            action='user_created',
+            category='user_management',
+            description='test',
         )
 
         mock_delay.assert_not_called()
@@ -229,8 +239,10 @@ class AuditServiceWebhookTests(TestCase):
         make_webhook(categories=[])
 
         AuditService.log(
-            user=None, action='user_created',
-            category='user_management', description='test',
+            user=None,
+            action='user_created',
+            category='user_management',
+            description='test',
         )
 
         mock_delay.assert_called_once()
@@ -238,13 +250,15 @@ class AuditServiceWebhookTests(TestCase):
 
 # -- API Endpoints --
 
+
 @pytest.mark.unit
 class AuditWebhookAPITests(TestCase):
-
     def setUp(self):
         self.admin = make_admin()
         self.regular = User.objects.create_user(
-            username='regular', email='r@test.com', password='pass123!',
+            username='regular',
+            email='r@test.com',
+            password='pass123!',
         )
         self.client = APIClient()
 
@@ -258,12 +272,16 @@ class AuditWebhookAPITests(TestCase):
 
     def test_create_webhook(self):
         self.client.force_authenticate(user=self.admin)
-        resp = self.client.post('/api/audit/webhooks/', {
-            'name': 'Splunk',
-            'url': 'https://splunk.example.com/services/collector',
-            'secret': 'hec-token',
-            'categories': ['user_management', 'awx_automation'],
-        }, format='json')
+        resp = self.client.post(
+            '/api/audit/webhooks/',
+            {
+                'name': 'Splunk',
+                'url': 'https://splunk.example.com/services/collector',
+                'secret': 'hec-token',
+                'categories': ['user_management', 'awx_automation'],
+            },
+            format='json',
+        )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resp.data['name'], 'Splunk')
         # Secret must be write-only
@@ -300,6 +318,7 @@ class AuditWebhookAPITests(TestCase):
     @patch('requests.post')
     def test_test_webhook_failure(self, mock_post):
         from requests.exceptions import ConnectionError
+
         mock_post.side_effect = ConnectionError('refused')
 
         wh = make_webhook()
@@ -311,9 +330,9 @@ class AuditWebhookAPITests(TestCase):
 
 # -- JSON Export --
 
+
 @pytest.mark.unit
 class AuditLogJSONExportTests(TestCase):
-
     def setUp(self):
         self.admin = make_admin('jsonadmin')
         self.client = APIClient()
@@ -349,7 +368,9 @@ class AuditLogJSONExportTests(TestCase):
 
     def test_regular_user_denied(self):
         regular = User.objects.create_user(
-            username='jsonregular', email='jr@test.com', password='pass123!',
+            username='jsonregular',
+            email='jr@test.com',
+            password='pass123!',
         )
         self.client.force_authenticate(user=regular)
         resp = self.client.get('/api/audit/logs/export-json/')

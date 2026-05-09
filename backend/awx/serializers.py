@@ -23,9 +23,14 @@ from typing import Any
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    AWXConnection, TemplateCategory, AutomationTemplate,
-    AutomationRequest, AutomationExecution, ColumnTemplate,
-    ValidationList, ValidationUsage
+    AWXConnection,
+    TemplateCategory,
+    AutomationTemplate,
+    AutomationRequest,
+    AutomationExecution,
+    ColumnTemplate,
+    ValidationList,
+    ValidationUsage,
 )
 
 
@@ -41,16 +46,14 @@ def _normalize_input_data(input_data: Any, table_schemas: list) -> dict:
     if isinstance(input_data, dict):
         return input_data
     if isinstance(input_data, list):
-        var_name = (
-            table_schemas[0].get('awx_variable_name')
-            if table_schemas else None
-        ) or 'data'
+        var_name = (table_schemas[0].get('awx_variable_name') if table_schemas else None) or 'data'
         return {var_name: input_data}
     return {}
 
 
 class UserSerializer(serializers.ModelSerializer):
     """Basic user info"""
+
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email']
@@ -61,8 +64,10 @@ class UserSerializer(serializers.ModelSerializer):
 # AWX Connection Serializers
 # ===========================
 
+
 class AWXConnectionListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for connection lists"""
+
     created_by = UserSerializer(read_only=True)
     is_shared_with_me = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
@@ -71,15 +76,32 @@ class AWXConnectionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AWXConnection
         fields = [
-            'id', 'name', 'description', 'url', 'auth_type',
-            'verify_ssl', 'timeout', 'awx_version', 'last_tested_at',
-            'last_test_status', 'created_by', 'is_public',
-            'created_at', 'updated_at', 'is_shared_with_me',
-            'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'url',
+            'auth_type',
+            'verify_ssl',
+            'timeout',
+            'awx_version',
+            'last_tested_at',
+            'last_test_status',
+            'created_by',
+            'is_public',
+            'created_at',
+            'updated_at',
+            'is_shared_with_me',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'awx_version', 'last_tested_at',
-            'last_test_status', 'created_at', 'updated_at'
+            'id',
+            'created_by',
+            'awx_version',
+            'last_tested_at',
+            'last_test_status',
+            'created_at',
+            'updated_at',
         ]
 
     def get_is_shared_with_me(self, obj):
@@ -103,6 +125,7 @@ class AWXConnectionListSerializer(serializers.ModelSerializer):
 
 class AWXConnectionDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer with sharing info"""
+
     created_by = UserSerializer(read_only=True)
     shared_with = UserSerializer(many=True, read_only=True)
     can_edit = serializers.SerializerMethodField()
@@ -111,14 +134,33 @@ class AWXConnectionDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AWXConnection
         fields = [
-            'id', 'name', 'description', 'url', 'auth_type', 'username',
-            'verify_ssl', 'timeout', 'awx_version', 'last_tested_at',
-            'last_test_status', 'created_by', 'shared_with', 'is_public',
-            'created_at', 'updated_at', 'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'url',
+            'auth_type',
+            'username',
+            'verify_ssl',
+            'timeout',
+            'awx_version',
+            'last_tested_at',
+            'last_test_status',
+            'created_by',
+            'shared_with',
+            'is_public',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'awx_version', 'last_tested_at',
-            'last_test_status', 'created_at', 'updated_at'
+            'id',
+            'created_by',
+            'awx_version',
+            'last_tested_at',
+            'last_test_status',
+            'created_at',
+            'updated_at',
         ]
 
     def get_can_edit(self, obj):
@@ -136,20 +178,28 @@ class AWXConnectionDetailSerializer(serializers.ModelSerializer):
 
 class AWXConnectionCreateSerializer(serializers.ModelSerializer):
     """Create/Update serializer with credential handling"""
+
     token = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     shared_with_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=False
+        child=serializers.IntegerField(), write_only=True, required=False
     )
 
     class Meta:
         model = AWXConnection
         fields = [
-            'id', 'name', 'description', 'url', 'auth_type', 'username',
-            'token', 'password', 'verify_ssl', 'timeout', 'is_public',
-            'shared_with_ids'
+            'id',
+            'name',
+            'description',
+            'url',
+            'auth_type',
+            'username',
+            'token',
+            'password',
+            'verify_ssl',
+            'timeout',
+            'is_public',
+            'shared_with_ids',
         ]
         read_only_fields = ['id']
 
@@ -161,35 +211,35 @@ class AWXConnectionCreateSerializer(serializers.ModelSerializer):
             # Token required only for create, or if explicitly changing auth_type
             if not is_update:
                 if 'token' not in data or not data.get('token'):
-                    raise serializers.ValidationError({
-                        'token': 'Token is required for token authentication'
-                    })
+                    raise serializers.ValidationError(
+                        {'token': 'Token is required for token authentication'}
+                    )
             elif is_update and self.instance.auth_type != auth_type:
                 # Switching to token auth - token required
                 if 'token' not in data or not data.get('token'):
-                    raise serializers.ValidationError({
-                        'token': 'Token is required when switching to token authentication'
-                    })
+                    raise serializers.ValidationError(
+                        {'token': 'Token is required when switching to token authentication'}
+                    )
         elif auth_type == AWXConnection.AUTH_TYPE_BASIC:
             if not is_update:
                 if 'username' not in data or not data.get('username'):
-                    raise serializers.ValidationError({
-                        'username': 'Username is required for basic authentication'
-                    })
+                    raise serializers.ValidationError(
+                        {'username': 'Username is required for basic authentication'}
+                    )
                 if 'password' not in data or not data.get('password'):
-                    raise serializers.ValidationError({
-                        'password': 'Password is required for basic authentication'
-                    })
+                    raise serializers.ValidationError(
+                        {'password': 'Password is required for basic authentication'}
+                    )
             elif is_update and self.instance.auth_type != auth_type:
                 # Switching to basic auth - credentials required
                 if 'username' not in data or not data.get('username'):
-                    raise serializers.ValidationError({
-                        'username': 'Username is required when switching to basic authentication'
-                    })
+                    raise serializers.ValidationError(
+                        {'username': 'Username is required when switching to basic authentication'}
+                    )
                 if 'password' not in data or not data.get('password'):
-                    raise serializers.ValidationError({
-                        'password': 'Password is required when switching to basic authentication'
-                    })
+                    raise serializers.ValidationError(
+                        {'password': 'Password is required when switching to basic authentication'}
+                    )
 
         return data
 
@@ -242,17 +292,27 @@ class AWXConnectionCreateSerializer(serializers.ModelSerializer):
 # Template Category Serializers
 # ===========================
 
+
 class TemplateCategorySerializer(serializers.ModelSerializer):
     """Serializer for template categories"""
+
     created_by = UserSerializer(read_only=True)
     template_count = serializers.SerializerMethodField()
 
     class Meta:
         model = TemplateCategory
         fields = [
-            'id', 'name', 'description', 'color', 'icon',
-            'display_order', 'is_system', 'template_count',
-            'created_by', 'created_at', 'updated_at'
+            'id',
+            'name',
+            'description',
+            'color',
+            'icon',
+            'display_order',
+            'is_system',
+            'template_count',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['id', 'is_system', 'created_by', 'created_at', 'updated_at']
 
@@ -267,16 +327,14 @@ class TemplateCategorySerializer(serializers.ModelSerializer):
         if instance and instance.is_system:
             # System categories cannot be renamed
             if 'name' in data and data['name'] != instance.name:
-                raise serializers.ValidationError({
-                    'name': 'System categories cannot be renamed'
-                })
+                raise serializers.ValidationError({'name': 'System categories cannot be renamed'})
 
         # Prevent name collision with 'Validation' for non-system categories
         if 'name' in data and data['name'].lower() == 'validation':
             if not instance or not instance.is_system:
-                raise serializers.ValidationError({
-                    'name': 'The name "Validation" is reserved for system use'
-                })
+                raise serializers.ValidationError(
+                    {'name': 'The name "Validation" is reserved for system use'}
+                )
 
         return data
 
@@ -292,8 +350,10 @@ class TemplateCategorySerializer(serializers.ModelSerializer):
 # Automation Template Serializers
 # ===========================
 
+
 class AutomationTemplateListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for template lists"""
+
     created_by = UserSerializer(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     awx_type_display = serializers.CharField(source='get_awx_type_display', read_only=True)
@@ -304,16 +364,35 @@ class AutomationTemplateListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationTemplate
         fields = [
-            'id', 'name', 'description', 'awx_type', 'awx_type_display',
-            'category', 'category_name', 'tags',
-            'execution_count', 'success_count',
-            'failure_count', 'success_rate', 'last_executed_at',
-            'created_by', 'is_public', 'created_at', 'updated_at',
-            'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'awx_type',
+            'awx_type_display',
+            'category',
+            'category_name',
+            'tags',
+            'execution_count',
+            'success_count',
+            'failure_count',
+            'success_rate',
+            'last_executed_at',
+            'created_by',
+            'is_public',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'execution_count', 'success_count',
-            'failure_count', 'last_executed_at', 'created_at', 'updated_at'
+            'id',
+            'created_by',
+            'execution_count',
+            'success_count',
+            'failure_count',
+            'last_executed_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_success_rate(self, obj):
@@ -336,6 +415,7 @@ class AutomationTemplateListSerializer(serializers.ModelSerializer):
             # Block deletion if there are in-flight requests for this template.
             # We don't want to pull the template out from under a running job.
             from .models import AutomationRequest
+
             has_active = AutomationRequest.objects.filter(
                 template=obj,
                 status__in=['pending', 'approved', 'executing'],
@@ -346,6 +426,7 @@ class AutomationTemplateListSerializer(serializers.ModelSerializer):
 
 class AutomationTemplateDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer with full schema"""
+
     created_by = UserSerializer(read_only=True)
     awx_connection_detail = AWXConnectionDetailSerializer(source='awx_connection', read_only=True)
     category_detail = serializers.SerializerMethodField()
@@ -356,20 +437,43 @@ class AutomationTemplateDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationTemplate
         fields = [
-            'id', 'name', 'description',
-            'awx_connection', 'awx_connection_detail',
-            'awx_type', 'awx_template_id', 'awx_template_name',
+            'id',
+            'name',
+            'description',
+            'awx_connection',
+            'awx_connection_detail',
+            'awx_type',
+            'awx_template_id',
+            'awx_template_name',
             'workflow_job_nodes',
-            'category', 'category_detail', 'tags',
-            'table_schemas', 'variable_mappings',
-            'execution_mode', 'requires_validation',
-            'execution_count', 'success_count', 'failure_count', 'success_rate',
-            'last_executed_at', 'created_by', 'is_public',
-            'created_at', 'updated_at', 'can_edit', 'can_delete'
+            'category',
+            'category_detail',
+            'tags',
+            'table_schemas',
+            'variable_mappings',
+            'execution_mode',
+            'requires_validation',
+            'execution_count',
+            'success_count',
+            'failure_count',
+            'success_rate',
+            'last_executed_at',
+            'created_by',
+            'is_public',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'execution_count', 'success_count',
-            'failure_count', 'last_executed_at', 'created_at', 'updated_at'
+            'id',
+            'created_by',
+            'execution_count',
+            'success_count',
+            'failure_count',
+            'last_executed_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_category_detail(self, obj):
@@ -377,7 +481,7 @@ class AutomationTemplateDetailSerializer(serializers.ModelSerializer):
             return {
                 'id': str(obj.category.id),
                 'name': obj.category.name,
-                'color': obj.category.color
+                'color': obj.category.color,
             }
         return None
 
@@ -399,6 +503,7 @@ class AutomationTemplateDetailSerializer(serializers.ModelSerializer):
             if not is_owner:
                 return False
             from .models import AutomationRequest
+
             has_active = AutomationRequest.objects.filter(
                 template=obj,
                 status__in=['pending', 'approved', 'executing'],
@@ -413,11 +518,21 @@ class AutomationTemplateCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationTemplate
         fields = [
-            'id', 'name', 'description',
-            'awx_connection', 'awx_type', 'awx_template_id', 'awx_template_name',
+            'id',
+            'name',
+            'description',
+            'awx_connection',
+            'awx_type',
+            'awx_template_id',
+            'awx_template_name',
             'workflow_job_nodes',
-            'category', 'tags', 'table_schemas', 'variable_mappings',
-            'is_public', 'execution_mode', 'requires_validation',
+            'category',
+            'tags',
+            'table_schemas',
+            'variable_mappings',
+            'is_public',
+            'execution_mode',
+            'requires_validation',
         ]
         read_only_fields = ['id']
 
@@ -431,11 +546,11 @@ class AutomationTemplateCreateSerializer(serializers.ModelSerializer):
         old saved templates might not have it.
         """
         if not isinstance(value, list):
-            raise serializers.ValidationError("table_schemas must be a list")
+            raise serializers.ValidationError('table_schemas must be a list')
 
         for idx, table in enumerate(value):
             if not isinstance(table, dict):
-                raise serializers.ValidationError("Each table must be an object")
+                raise serializers.ValidationError('Each table must be an object')
 
             if 'name' not in table and 'sheet_name' not in table:
                 raise serializers.ValidationError(f"Table {idx}: must have 'name' or 'sheet_name'")
@@ -447,16 +562,24 @@ class AutomationTemplateCreateSerializer(serializers.ModelSerializer):
                 table['sheet_name'] = table['name']
 
             if 'awx_variable_name' not in table:
-                table['awx_variable_name'] = table['name'].lower().replace(' ', '_').replace('-', '_')
+                table['awx_variable_name'] = (
+                    table['name'].lower().replace(' ', '_').replace('-', '_')
+                )
 
             if 'columns' not in table:
-                raise serializers.ValidationError(f"Table '{table.get('name', idx)}' must have 'columns'")
+                raise serializers.ValidationError(
+                    f"Table '{table.get('name', idx)}' must have 'columns'"
+                )
 
             for col in table['columns']:
                 if 'name' not in col:
-                    raise serializers.ValidationError(f"Each column in '{table.get('name', idx)}' must have 'name'")
+                    raise serializers.ValidationError(
+                        f"Each column in '{table.get('name', idx)}' must have 'name'"
+                    )
                 if 'type' not in col and 'field_type' not in col:
-                    raise serializers.ValidationError(f"Column '{col['name']}' must have 'type' or 'field_type'")
+                    raise serializers.ValidationError(
+                        f"Column '{col['name']}' must have 'type' or 'field_type'"
+                    )
 
                 # Normalize field_type to type
                 if 'field_type' in col and 'type' not in col:
@@ -469,8 +592,10 @@ class AutomationTemplateCreateSerializer(serializers.ModelSerializer):
 # Automation Request Serializers
 # ===========================
 
+
 class AutomationRequestListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for request lists"""
+
     template_name = serializers.CharField(source='template.name', read_only=True)
     template_category = serializers.CharField(source='template.category', read_only=True)
     requested_by = UserSerializer(read_only=True)
@@ -484,26 +609,45 @@ class AutomationRequestListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationRequest
         fields = [
-            'id', 'title', 'description', 'status',
-            'template', 'template_name', 'template_category',
-            'awx_connection', 'awx_connection_name',
-            'target_apic', 'target_apic_name',
-            'awx_credential_id', 'awx_credential_name',
+            'id',
+            'title',
+            'description',
+            'status',
+            'template',
+            'template_name',
+            'template_category',
+            'awx_connection',
+            'awx_connection_name',
+            'target_apic',
+            'target_apic_name',
+            'awx_credential_id',
+            'awx_credential_name',
             'input_data',
-            'requested_by', 'requested_at',
-            'awx_job_id', 'launch_error',
-            'check_mode', 'scheduled_for',
-            'approved_by', 'approved_at', 'rejection_reason',
-            'created_at', 'updated_at',
+            'requested_by',
+            'requested_at',
+            'awx_job_id',
+            'launch_error',
+            'check_mode',
+            'scheduled_for',
+            'approved_by',
+            'approved_at',
+            'rejection_reason',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'requested_by', 'requested_at',
-            'awx_job_id', 'created_at', 'updated_at',
+            'id',
+            'requested_by',
+            'requested_at',
+            'awx_job_id',
+            'created_at',
+            'updated_at',
         ]
 
 
 class AutomationRequestDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer with full data"""
+
     template = AutomationTemplateDetailSerializer(read_only=True)
     awx_connection = AWXConnectionDetailSerializer(read_only=True)
     requested_by = UserSerializer(read_only=True)
@@ -519,23 +663,44 @@ class AutomationRequestDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationRequest
         fields = [
-            'id', 'title', 'description', 'status',
-            'template', 'awx_connection', 'target_apic',
-            'awx_credential_id', 'awx_credential_name',
-            'input_data', 'ansible_extra_vars',
-            'requested_by', 'requested_at',
-            'awx_job_id', 'launch_error',
-            'check_mode', 'scheduled_for',
+            'id',
+            'title',
+            'description',
+            'status',
+            'template',
+            'awx_connection',
+            'target_apic',
+            'awx_credential_id',
+            'awx_credential_name',
+            'input_data',
+            'ansible_extra_vars',
+            'requested_by',
+            'requested_at',
+            'awx_job_id',
+            'launch_error',
+            'check_mode',
+            'scheduled_for',
             'template_snapshot',
-            'approved_by', 'approved_at', 'rejection_reason',
-            'can_execute', 'can_cancel', 'can_approve',
-            'created_at', 'updated_at',
+            'approved_by',
+            'approved_at',
+            'rejection_reason',
+            'can_execute',
+            'can_cancel',
+            'can_approve',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'requested_by', 'requested_at',
-            'ansible_extra_vars', 'awx_job_id',
-            'template_snapshot', 'approved_by', 'approved_at',
-            'created_at', 'updated_at',
+            'id',
+            'requested_by',
+            'requested_at',
+            'ansible_extra_vars',
+            'awx_job_id',
+            'template_snapshot',
+            'approved_by',
+            'approved_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_can_execute(self, obj):
@@ -590,10 +755,19 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationRequest
         fields = [
-            'id', 'title', 'description', 'template', 'awx_connection',
-            'target_apic', 'input_data', 'check_mode', 'status',
-            'awx_credential_id', 'awx_credential_name',
-            'idempotency_key', 'scheduled_for',
+            'id',
+            'title',
+            'description',
+            'template',
+            'awx_connection',
+            'target_apic',
+            'input_data',
+            'check_mode',
+            'status',
+            'awx_credential_id',
+            'awx_credential_name',
+            'idempotency_key',
+            'scheduled_for',
         ]
         read_only_fields = ['id']
 
@@ -603,9 +777,11 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
 
         # AWX Credential is required — it carries APIC connection info
         if not data.get('awx_credential_id'):
-            raise serializers.ValidationError({
-                'awx_credential_id': 'AWX Credential is required. Select a "Cisco ACI" credential.'
-            })
+            raise serializers.ValidationError(
+                {
+                    'awx_credential_id': 'AWX Credential is required. Select a "Cisco ACI" credential.'
+                }
+            )
 
         if template and template.table_schemas:
             input_data = _normalize_input_data(input_data, template.table_schemas)
@@ -631,6 +807,7 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
         template = validated_data.get('template')
         if template:
             from django.utils import timezone
+
             validated_data['template_snapshot'] = {
                 'table_schemas': template.table_schemas,
                 'variable_mappings': template.variable_mappings,
@@ -647,33 +824,60 @@ class AutomationRequestCreateSerializer(serializers.ModelSerializer):
 # Automation Execution Serializers
 # ===========================
 
+
 class AutomationExecutionListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for execution lists"""
-    automation_request_title = serializers.CharField(source='automation_request.title', read_only=True)
+
+    automation_request_title = serializers.CharField(
+        source='automation_request.title', read_only=True
+    )
     template_name = serializers.CharField(source='automation_request.template.name', read_only=True)
 
     class Meta:
         model = AutomationExecution
         fields = [
-            'id', 'automation_request', 'automation_request_title',
-            'template_name', 'awx_job_id', 'awx_job_url', 'status',
-            'progress_percentage', 'current_task', 'playbook_counts',
-            'started_at', 'finished_at', 'elapsed_seconds',
-            'relaunch_of', 'relaunch_count',
-            'created_at', 'updated_at'
+            'id',
+            'automation_request',
+            'automation_request_title',
+            'template_name',
+            'awx_job_id',
+            'awx_job_url',
+            'status',
+            'progress_percentage',
+            'current_task',
+            'playbook_counts',
+            'started_at',
+            'finished_at',
+            'elapsed_seconds',
+            'relaunch_of',
+            'relaunch_count',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'automation_request', 'automation_request_title',
-            'template_name', 'awx_job_id', 'awx_job_url', 'status',
-            'progress_percentage', 'current_task', 'playbook_counts',
-            'started_at', 'finished_at', 'elapsed_seconds',
-            'relaunch_of', 'relaunch_count',
-            'created_at', 'updated_at'
+            'id',
+            'automation_request',
+            'automation_request_title',
+            'template_name',
+            'awx_job_id',
+            'awx_job_url',
+            'status',
+            'progress_percentage',
+            'current_task',
+            'playbook_counts',
+            'started_at',
+            'finished_at',
+            'elapsed_seconds',
+            'relaunch_of',
+            'relaunch_count',
+            'created_at',
+            'updated_at',
         ]
 
 
 class AutomationExecutionDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer with full results"""
+
     automation_request = AutomationRequestDetailSerializer(read_only=True)
     awx_connection = AWXConnectionDetailSerializer(read_only=True)
     tasks = serializers.SerializerMethodField()
@@ -685,24 +889,50 @@ class AutomationExecutionDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AutomationExecution
         fields = [
-            'id', 'automation_request', 'awx_connection',
-            'awx_job_id', 'awx_job_url', 'status',
-            'progress_percentage', 'current_task',
-            'result_traceback', 'artifacts',  # result_stdout removed (use JobOutputChunk)
-            'playbook_counts', 'awx_job_data', 'execution_metadata',
-            'started_at', 'finished_at', 'elapsed_seconds',
-            'relaunch_of', 'relaunch_count', 'can_relaunch',
-            'created_at', 'updated_at'
+            'id',
+            'automation_request',
+            'awx_connection',
+            'awx_job_id',
+            'awx_job_url',
+            'status',
+            'progress_percentage',
+            'current_task',
+            'result_traceback',
+            'artifacts',  # result_stdout removed (use JobOutputChunk)
+            'playbook_counts',
+            'awx_job_data',
+            'execution_metadata',
+            'started_at',
+            'finished_at',
+            'elapsed_seconds',
+            'relaunch_of',
+            'relaunch_count',
+            'can_relaunch',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'automation_request', 'awx_connection',
-            'awx_job_id', 'awx_job_url', 'status',
-            'progress_percentage', 'current_task',
-            'result_traceback', 'artifacts',  # result_stdout removed (use JobOutputChunk)
-            'playbook_counts', 'awx_job_data', 'execution_metadata',
-            'started_at', 'finished_at', 'elapsed_seconds',
-            'relaunch_of', 'relaunch_count', 'can_relaunch',
-            'created_at', 'updated_at'
+            'id',
+            'automation_request',
+            'awx_connection',
+            'awx_job_id',
+            'awx_job_url',
+            'status',
+            'progress_percentage',
+            'current_task',
+            'result_traceback',
+            'artifacts',  # result_stdout removed (use JobOutputChunk)
+            'playbook_counts',
+            'awx_job_data',
+            'execution_metadata',
+            'started_at',
+            'finished_at',
+            'elapsed_seconds',
+            'relaunch_of',
+            'relaunch_count',
+            'can_relaunch',
+            'created_at',
+            'updated_at',
         ]
 
 
@@ -710,8 +940,10 @@ class AutomationExecutionDetailSerializer(serializers.ModelSerializer):
 # Column Template Serializers
 # ===========================
 
+
 class ColumnTemplateSerializer(serializers.ModelSerializer):
     """Column template serializer"""
+
     created_by = UserSerializer(read_only=True)
     shared_with = UserSerializer(many=True, read_only=True)
     can_edit = serializers.SerializerMethodField()
@@ -720,10 +952,19 @@ class ColumnTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ColumnTemplate
         fields = [
-            'id', 'name', 'description', 'column_data',
-            'scope', 'is_public', 'created_by', 'shared_with',
-            'usage_count', 'created_at', 'updated_at',
-            'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'column_data',
+            'scope',
+            'is_public',
+            'created_by',
+            'shared_with',
+            'usage_count',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = ['id', 'created_by', 'usage_count', 'created_at', 'updated_at']
 
@@ -746,25 +987,48 @@ class ColumnTemplateSerializer(serializers.ModelSerializer):
 # Automation Execution Serializers
 # ===========================
 
+
 class AutomationExecutionSerializer(serializers.ModelSerializer):
     """Serializer for automation execution monitoring."""
 
-    automation_request_title = serializers.CharField(source='automation_request.title', read_only=True)
+    automation_request_title = serializers.CharField(
+        source='automation_request.title', read_only=True
+    )
     template_name = serializers.CharField(source='automation_request.template.name', read_only=True)
 
     class Meta:
         model = AutomationExecution
         fields = [
-            'id', 'automation_request', 'automation_request_title',
-            'template_name', 'awx_connection', 'awx_job_id', 'awx_job_url',
-            'status', 'progress_percentage', 'current_task',
-            'result_traceback', 'artifacts', 'playbook_counts',  # result_stdout removed
-            'started_at', 'finished_at', 'elapsed_seconds',
-            'execution_mode', 'row_number', 'batch_number', 'row_range',
-            'execution_metadata', 'created_at', 'updated_at'
+            'id',
+            'automation_request',
+            'automation_request_title',
+            'template_name',
+            'awx_connection',
+            'awx_job_id',
+            'awx_job_url',
+            'status',
+            'progress_percentage',
+            'current_task',
+            'result_traceback',
+            'artifacts',
+            'playbook_counts',  # result_stdout removed
+            'started_at',
+            'finished_at',
+            'elapsed_seconds',
+            'execution_mode',
+            'row_number',
+            'batch_number',
+            'row_range',
+            'execution_metadata',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = [
-            'id', 'created_at', 'updated_at', 'automation_request_title', 'template_name'
+            'id',
+            'created_at',
+            'updated_at',
+            'automation_request_title',
+            'template_name',
         ]
 
 
@@ -772,8 +1036,10 @@ class AutomationExecutionSerializer(serializers.ModelSerializer):
 # Validation Serializers
 # ===========================
 
+
 class ValidationListSerializer(serializers.ModelSerializer):
     """Serializer for validation lists."""
+
     created_by = UserSerializer(read_only=True)
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
@@ -781,14 +1047,29 @@ class ValidationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ValidationList
         fields = [
-            'id', 'name', 'description', 'values', 'case_sensitive',
-            'error_message', 'error_message_title', 'created_by',
-            'is_public', 'usage_count', 'last_used_at',
-            'created_at', 'updated_at', 'can_edit', 'can_delete'
+            'id',
+            'name',
+            'description',
+            'values',
+            'case_sensitive',
+            'error_message',
+            'error_message_title',
+            'created_by',
+            'is_public',
+            'usage_count',
+            'last_used_at',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
         ]
         read_only_fields = [
-            'id', 'created_by', 'usage_count', 'last_used_at',
-            'created_at', 'updated_at'
+            'id',
+            'created_by',
+            'usage_count',
+            'last_used_at',
+            'created_at',
+            'updated_at',
         ]
 
     def get_can_edit(self, obj):
@@ -819,10 +1100,10 @@ class ValidationListSerializer(serializers.ModelSerializer):
     def validate_values(self, value):
         """Validate that values is a list of strings."""
         if not isinstance(value, list):
-            raise serializers.ValidationError("Values must be a list")
+            raise serializers.ValidationError('Values must be a list')
 
         if len(value) == 0:
-            raise serializers.ValidationError("Values list cannot be empty")
+            raise serializers.ValidationError('Values list cannot be empty')
 
         # Convert all values to strings
         return [str(v) for v in value]
@@ -847,18 +1128,24 @@ class ValidationListCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ValidationList
         fields = [
-            'id', 'name', 'description', 'values', 'case_sensitive',
-            'error_message', 'error_message_title', 'is_public'
+            'id',
+            'name',
+            'description',
+            'values',
+            'case_sensitive',
+            'error_message',
+            'error_message_title',
+            'is_public',
         ]
         read_only_fields = ['id']
 
     def validate_values(self, value):
         """Validate that values is a list of strings."""
         if not isinstance(value, list):
-            raise serializers.ValidationError("Values must be a list")
+            raise serializers.ValidationError('Values must be a list')
 
         if len(value) == 0:
-            raise serializers.ValidationError("Values list cannot be empty")
+            raise serializers.ValidationError('Values list cannot be empty')
 
         # Convert all values to strings
         return [str(v) for v in value]
@@ -874,30 +1161,34 @@ class ValidationListCreateSerializer(serializers.ModelSerializer):
 
 class ValidationUsageSerializer(serializers.ModelSerializer):
     """Serializer for validation usage tracking."""
+
     template_name = serializers.CharField(source='template.name', read_only=True)
     validation_list_name = serializers.CharField(
-        source='validation_list.name',
-        read_only=True,
-        allow_null=True
+        source='validation_list.name', read_only=True, allow_null=True
     )
     validation_query_name = serializers.CharField(
-        source='validation_query.name',
-        read_only=True,
-        allow_null=True
+        source='validation_query.name', read_only=True, allow_null=True
     )
     created_by_username = serializers.CharField(
-        source='created_by.username',
-        read_only=True,
-        allow_null=True
+        source='created_by.username', read_only=True, allow_null=True
     )
 
     class Meta:
         model = ValidationUsage
         fields = [
-            'id', 'template', 'template_name', 'sheet_name', 'column_name',
-            'validation_type', 'validation_list', 'validation_list_name',
-            'validation_query', 'validation_query_name',
-            'created_at', 'created_by', 'created_by_username'
+            'id',
+            'template',
+            'template_name',
+            'sheet_name',
+            'column_name',
+            'validation_type',
+            'validation_list',
+            'validation_list_name',
+            'validation_query',
+            'validation_query_name',
+            'created_at',
+            'created_by',
+            'created_by_username',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -909,22 +1200,22 @@ class ValidationUsageSerializer(serializers.ModelSerializer):
 
         if validation_type == 'static_list':
             if not validation_list:
-                raise serializers.ValidationError({
-                    'validation_list': 'Validation list is required for static_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_list': 'Validation list is required for static_list type'}
+                )
             if validation_query:
-                raise serializers.ValidationError({
-                    'validation_query': 'Cannot specify validation_query for static_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_query': 'Cannot specify validation_query for static_list type'}
+                )
         elif validation_type == 'query_list':
             if not validation_query:
-                raise serializers.ValidationError({
-                    'validation_query': 'Validation query is required for query_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_query': 'Validation query is required for query_list type'}
+                )
             if validation_list:
-                raise serializers.ValidationError({
-                    'validation_list': 'Cannot specify validation_list for query_list type'
-                })
+                raise serializers.ValidationError(
+                    {'validation_list': 'Cannot specify validation_list for query_list type'}
+                )
         elif validation_type == 'regex':
             # Regex validation doesn't use list or query
             if validation_list or validation_query:
@@ -971,8 +1262,7 @@ class ValidationUsageSerializer(serializers.ModelSerializer):
         if old_validation_query != new_validation_query:
             if old_validation_query:
                 old_validation_query.validation_usage_count = max(
-                    0,
-                    old_validation_query.validation_usage_count - 1
+                    0, old_validation_query.validation_usage_count - 1
                 )
                 old_validation_query.save(update_fields=['validation_usage_count'])
             if new_validation_query:

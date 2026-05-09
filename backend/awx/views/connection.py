@@ -54,6 +54,7 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
     connection. Audit logs capture create/update/delete so we have a history of
     who changed credentials.
     """
+
     permission_classes = [FabrikModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'url']
@@ -93,7 +94,7 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 'url': instance.url,
                 'auth_type': instance.auth_type,
             },
-            request=self.request
+            request=self.request,
         )
 
     def perform_update(self, serializer: BaseSerializer) -> None:
@@ -133,7 +134,7 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
             resource_name=updated_instance.name,
             description=f"AWX connection '{updated_instance.name}' updated",
             metadata={'changes': changes},
-            request=self.request
+            request=self.request,
         )
 
     def perform_destroy(self, instance: AWXConnection) -> None:
@@ -151,7 +152,7 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 'url': instance.url,
                 'request_count': instance.requests.count(),
             },
-            request=self.request
+            request=self.request,
         )
 
         instance.delete()
@@ -192,35 +193,32 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 metadata={
                     'success': success,
                     'version': metadata.get('version') if success else None,
-                    'error': error
+                    'error': error,
                 },
                 success=success,
                 error_message=error or '',
-                request=self.request
+                request=self.request,
             )
 
             if success:
-                return Response({
-                    'success': True,
-                    'message': 'Connection successful',
-                    'metadata': metadata
-                })
+                return Response(
+                    {'success': True, 'message': 'Connection successful', 'metadata': metadata}
+                )
             else:
-                return Response({
-                    'success': False,
-                    'error': error
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'success': False, 'error': error}, status=status.HTTP_400_BAD_REQUEST
+                )
 
         except Exception:
-            logger.exception(f"Error testing AWX connection {connection.id}")
+            logger.exception(f'Error testing AWX connection {connection.id}')
             connection.last_tested_at = timezone.now()
             connection.last_test_status = 'failed'
             connection.save()
 
-            return Response({
-                'success': False,
-                'error': 'Connection test failed due to an internal error'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'success': False, 'error': 'Connection test failed due to an internal error'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'])
     def templates(self, request: Request, pk: Any = None) -> Response:
@@ -236,22 +234,20 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
 
             # Get templates
             success, data, error = client.list_job_templates(
-                page=int(request.query_params.get('page', 1)),
-                page_size=_clamp_page_size(request)
+                page=int(request.query_params.get('page', 1)), page_size=_clamp_page_size(request)
             )
 
             if success:
                 return Response(data)
             else:
-                return Response({
-                    'error': error
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("AWX API request failed")
-            return Response({
-                'error': 'An internal error occurred'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('AWX API request failed')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='job-templates')
     def job_templates(self, request: Request, pk: Any = None) -> Response:
@@ -267,7 +263,7 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
             success, data, error = client.list_job_templates(
                 page=int(request.query_params.get('page', 1)),
                 page_size=_clamp_page_size(request),
-                name_filter=request.query_params.get('name')
+                name_filter=request.query_params.get('name'),
             )
 
             if success:
@@ -276,11 +272,16 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("AWX API request failed")
-            return Response({'error': 'An internal error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('AWX API request failed')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='job-templates/(?P<template_id>[0-9]+)')
-    def job_template_detail(self, request: Request, pk: Any = None, template_id: Any = None) -> Response:
+    def job_template_detail(
+        self, request: Request, pk: Any = None, template_id: Any = None
+    ) -> Response:
         """
         Get specific job template details
         GET /api/awx/connections/{id}/job-templates/{template_id}/
@@ -294,7 +295,9 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
 
             if success:
                 # Also fetch survey spec
-                survey_success, survey_data, survey_error = client.get_job_template_survey(int(template_id))
+                survey_success, survey_data, survey_error = client.get_job_template_survey(
+                    int(template_id)
+                )
                 if survey_success:
                     data['survey_spec'] = survey_data
 
@@ -303,8 +306,11 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("AWX API request failed")
-            return Response({'error': 'An internal error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('AWX API request failed')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='workflow-templates')
     def workflow_templates(self, request: Request, pk: Any = None) -> Response:
@@ -320,7 +326,7 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
             success, data, error = client.list_workflow_templates(
                 page=int(request.query_params.get('page', 1)),
                 page_size=_clamp_page_size(request),
-                name_filter=request.query_params.get('name')
+                name_filter=request.query_params.get('name'),
             )
 
             if success:
@@ -329,11 +335,16 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("AWX API request failed")
-            return Response({'error': 'An internal error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('AWX API request failed')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='workflow-templates/(?P<template_id>[0-9]+)')
-    def workflow_template_detail(self, request: Request, pk: Any = None, template_id: Any = None) -> Response:
+    def workflow_template_detail(
+        self, request: Request, pk: Any = None, template_id: Any = None
+    ) -> Response:
         """
         Get specific workflow template details with nodes
         GET /api/awx/connections/{id}/workflow-templates/{template_id}/
@@ -352,7 +363,9 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 if nodes_success:
                     data['workflow_nodes'] = nodes_data.get('results', [])
 
-                survey_success, survey_data, survey_error = client.get_workflow_template_survey(int(template_id))
+                survey_success, survey_data, survey_error = client.get_workflow_template_survey(
+                    int(template_id)
+                )
                 if survey_success:
                     data['survey_spec'] = survey_data
 
@@ -361,8 +374,11 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
                 return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("AWX API request failed")
-            return Response({'error': 'An internal error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('AWX API request failed')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='credentials')
     def credentials(self, request: Request, pk: Any = None) -> Response:
@@ -392,8 +408,11 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("Failed to list AWX credentials")
-            return Response({'error': 'An internal error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('Failed to list AWX credentials')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=['get'], url_path='credential-types')
     def credential_types(self, request: Request, pk: Any = None) -> Response:
@@ -417,5 +436,8 @@ class AWXConnectionViewSet(viewsets.ModelViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception:
-            logger.exception("Failed to list AWX credential types")
-            return Response({'error': 'An internal error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('Failed to list AWX credential types')
+            return Response(
+                {'error': 'An internal error occurred'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

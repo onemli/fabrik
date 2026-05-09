@@ -21,7 +21,6 @@ class VariableExtractorError(Exception):
 
 
 class VariableExtractor:
-
     @staticmethod
     def extract_from_survey_spec(survey_spec: dict) -> Tuple[List[str], Dict[str, dict]]:
         variables = []
@@ -60,7 +59,9 @@ class VariableExtractor:
                     # AWX stores choices as newline-separated string
                     choices_str = item['choices']
                     if isinstance(choices_str, str):
-                        var_meta['choices'] = [c.strip() for c in choices_str.split('\n') if c.strip()]
+                        var_meta['choices'] = [
+                            c.strip() for c in choices_str.split('\n') if c.strip()
+                        ]
                     else:
                         var_meta['choices'] = choices_str
 
@@ -70,12 +71,12 @@ class VariableExtractor:
 
                 metadata[var_name] = var_meta
 
-            logger.info(f"Extracted {len(variables)} variables from survey spec")
+            logger.info(f'Extracted {len(variables)} variables from survey spec')
             return variables, metadata
 
         except Exception as e:
-            logger.error(f"Error extracting variables from survey spec: {e}")
-            raise VariableExtractorError(f"Failed to extract variables from survey spec: {e}")
+            logger.error(f'Error extracting variables from survey spec: {e}')
+            raise VariableExtractorError(f'Failed to extract variables from survey spec: {e}')
 
     @staticmethod
     def _map_survey_type(awx_type: str) -> str:
@@ -105,10 +106,18 @@ class VariableExtractor:
 
             # Remove duplicates and Ansible built-in variables
             builtin_vars = {
-                'ansible_user', 'ansible_host', 'ansible_connection',
-                'inventory_hostname', 'hostvars', 'groups', 'group_names',
-                'ansible_facts', 'playbook_dir', 'role_path',
-                'item', 'ansible_loop'  # Loop variables
+                'ansible_user',
+                'ansible_host',
+                'ansible_connection',
+                'inventory_hostname',
+                'hostvars',
+                'groups',
+                'group_names',
+                'ansible_facts',
+                'playbook_dir',
+                'role_path',
+                'item',
+                'ansible_loop',  # Loop variables
             }
 
             # Filter out built-ins and split dotted variables (keep only base)
@@ -119,18 +128,16 @@ class VariableExtractor:
                 if base_var not in builtin_vars and base_var not in variables:
                     variables.append(base_var)
 
-            logger.info(f"Extracted {len(variables)} variables from Jinja2 template")
+            logger.info(f'Extracted {len(variables)} variables from Jinja2 template')
             return sorted(variables)
 
         except Exception as e:
-            logger.error(f"Error extracting Jinja2 variables: {e}")
-            raise VariableExtractorError(f"Failed to extract Jinja2 variables: {e}")
+            logger.error(f'Error extracting Jinja2 variables: {e}')
+            raise VariableExtractorError(f'Failed to extract Jinja2 variables: {e}')
 
     @staticmethod
     def auto_map_columns_to_variables(
-        column_names: List[str],
-        variable_names: List[str],
-        threshold: float = 0.6
+        column_names: List[str], variable_names: List[str], threshold: float = 0.6
     ) -> Dict[str, str]:
         # Fuzzy-matches column names to Ansible variable names (SequenceMatcher).
         mapping = {}
@@ -170,20 +177,20 @@ class VariableExtractor:
                     mapping[col_name] = best_match
                     logger.debug(f"Mapped '{col_name}' → '{best_match}' (score: {best_score:.2f})")
                 else:
-                    logger.warning(f"No good match found for column '{col_name}' (best score: {best_score:.2f})")
+                    logger.warning(
+                        f"No good match found for column '{col_name}' (best score: {best_score:.2f})"
+                    )
 
-            logger.info(f"Auto-mapped {len(mapping)}/{len(column_names)} columns to variables")
+            logger.info(f'Auto-mapped {len(mapping)}/{len(column_names)} columns to variables')
             return mapping
 
         except Exception as e:
-            logger.error(f"Error in auto-mapping: {e}")
-            raise VariableExtractorError(f"Failed to auto-map columns to variables: {e}")
+            logger.error(f'Error in auto-mapping: {e}')
+            raise VariableExtractorError(f'Failed to auto-map columns to variables: {e}')
 
     @staticmethod
     def generate_table_schema_from_survey(
-        survey_spec: dict,
-        table_name: str = "data",
-        display_name: str = "Data Configuration"
+        survey_spec: dict, table_name: str = 'data', display_name: str = 'Data Configuration'
     ) -> Dict:
         try:
             variables, metadata = VariableExtractor.extract_from_survey_spec(survey_spec)
@@ -217,26 +224,21 @@ class VariableExtractor:
 
                 columns.append(column)
 
-            schema = {
-                'table_name': table_name,
-                'display_name': display_name,
-                'columns': columns
-            }
+            schema = {'table_name': table_name, 'display_name': display_name, 'columns': columns}
 
             # Auto-generate variable mappings (1-to-1 since names match)
-            variable_mappings = {var: f"{{{{ {var} }}}}" for var in variables}
+            variable_mappings = {var: f'{{{{ {var} }}}}' for var in variables}
 
-            logger.info(f"Generated table schema with {len(columns)} columns")
+            logger.info(f'Generated table schema with {len(columns)} columns')
             return schema, variable_mappings
 
         except Exception as e:
-            logger.error(f"Error generating table schema from survey: {e}")
-            raise VariableExtractorError(f"Failed to generate table schema: {e}")
+            logger.error(f'Error generating table schema from survey: {e}')
+            raise VariableExtractorError(f'Failed to generate table schema: {e}')
 
     @staticmethod
     def validate_mapping(
-        variable_mappings: Dict[str, str],
-        detected_variables: List[str]
+        variable_mappings: Dict[str, str], detected_variables: List[str]
     ) -> Tuple[bool, List[str]]:
         try:
             # Extract variable names from mappings
@@ -251,15 +253,15 @@ class VariableExtractor:
             missing = [var for var in detected_variables if var not in mapped_vars]
 
             if missing:
-                logger.warning(f"Unmapped variables: {missing}")
+                logger.warning(f'Unmapped variables: {missing}')
                 return False, missing
 
-            logger.info("All variables are properly mapped")
+            logger.info('All variables are properly mapped')
             return True, []
 
         except Exception as e:
-            logger.error(f"Error validating mapping: {e}")
-            return False, [f"Validation error: {e}"]
+            logger.error(f'Error validating mapping: {e}')
+            return False, [f'Validation error: {e}']
 
 
 # Convenience instance

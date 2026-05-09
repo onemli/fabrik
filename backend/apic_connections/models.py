@@ -21,7 +21,7 @@ class APICConnection(models.Model):
     name = models.CharField(
         max_length=100,
         validators=[MinLengthValidator(3)],
-        help_text='Friendly name for this APIC connection'
+        help_text='Friendly name for this APIC connection',
     )
     description = models.TextField(blank=True, null=True)
 
@@ -29,7 +29,7 @@ class APICConnection(models.Model):
     url = models.URLField(
         max_length=255,
         validators=[URLValidator()],
-        help_text='APIC URL (e.g., https://sandboxapicdc.cisco.com)'
+        help_text='APIC URL (e.g., https://sandboxapicdc.cisco.com)',
     )
     username = models.CharField(max_length=100)
     encrypted_password = models.BinaryField(help_text='Encrypted password')
@@ -39,19 +39,10 @@ class APICConnection(models.Model):
     timeout = models.IntegerField(default=30, help_text='Request timeout in seconds')
 
     # Ownership
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='apic_connections'
-    )
-    shared_with = models.ManyToManyField(
-        User,
-        blank=True,
-        related_name='shared_apic_connections'
-    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='apic_connections')
+    shared_with = models.ManyToManyField(User, blank=True, related_name='shared_apic_connections')
     is_public = models.BooleanField(
-        default=False,
-        help_text='Allow all users to use this connection'
+        default=False, help_text='Allow all users to use this connection'
     )
 
     # Status
@@ -74,7 +65,7 @@ class APICConnection(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.url})"
+        return f'{self.name} ({self.url})'
 
     def set_password(self, raw_password: str):
         """Encrypt and store password"""
@@ -91,7 +82,9 @@ class APICConnection(models.Model):
             encrypted_bytes = bytes(self.encrypted_password)
             return cipher.decrypt(encrypted_bytes).decode()
         except InvalidToken:
-            raise ValidationError('Failed to decrypt password - the encryption key may have changed or the password is corrupted')
+            raise ValidationError(
+                'Failed to decrypt password - the encryption key may have changed or the password is corrupted'
+            )
         except Exception as e:
             raise ValidationError(f'Error decrypting password: {str(e)}')
 
@@ -101,15 +94,15 @@ class APICConnection(models.Model):
 
         # Ensure encrypted_password is not empty
         if not self.encrypted_password:
-            raise ValidationError({
-                'encrypted_password': 'Password must be set using set_password() method'
-            })
+            raise ValidationError(
+                {'encrypted_password': 'Password must be set using set_password() method'}
+            )
 
     def can_be_accessed_by(self, user: User) -> bool:
         """Check if user can access this connection"""
         return (
-            self.created_by == user or
-            self.shared_with.filter(id=user.id).exists() or
-            self.is_public or
-            user.is_staff
+            self.created_by == user
+            or self.shared_with.filter(id=user.id).exists()
+            or self.is_public
+            or user.is_staff
         )

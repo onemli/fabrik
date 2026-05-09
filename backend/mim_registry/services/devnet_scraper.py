@@ -31,6 +31,7 @@ def _resolve_proxy_url() -> Optional[str]:
             return value
     return None
 
+
 from .version_resolver import build_url, fallback_versions_for
 
 logger = logging.getLogger(__name__)
@@ -190,7 +191,7 @@ class DevNetScraper:
                     logger.info('DevNetScraper: cancel detected, stopping at job %d', chunk_start)
                     break
 
-                chunk = jobs_list[chunk_start:chunk_start + self._flush_every]
+                chunk = jobs_list[chunk_start : chunk_start + self._flush_every]
                 results = await asyncio.gather(
                     *(fetch_one(j) for j in chunk),
                     return_exceptions=False,
@@ -301,7 +302,9 @@ class DevNetScraper:
                         except (ValueError, aiohttp.ContentTypeError) as e:
                             raise _Failed(resp.status, f'invalid JSON body: {e}') from e
                         if not isinstance(payload, dict):
-                            raise _Failed(resp.status, f'expected JSON object, got {type(payload).__name__}')
+                            raise _Failed(
+                                resp.status, f'expected JSON object, got {type(payload).__name__}'
+                            )
                         etag = resp.headers.get('ETag', '').strip('"')[:64]
                         return payload, etag, resp.status
 
@@ -352,6 +355,7 @@ class DevNetScraper:
 # Internal exception types (private to this module)
 # ---------------------------------------------------------------------------
 
+
 class _NotFound(Exception):
     def __init__(self, status: int) -> None:
         super().__init__(f'not found: status {status}')
@@ -369,9 +373,10 @@ class _Failed(Exception):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _exp_backoff(attempt: int) -> float:
     """1s, 2s, 4s, 8s — capped at 16s with jitter."""
-    base = min(2 ** attempt, 16)
+    base = min(2**attempt, 16)
     return base + random.uniform(0, 0.5)
 
 

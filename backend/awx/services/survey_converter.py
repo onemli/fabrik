@@ -22,7 +22,6 @@ class SurveyConversionError(Exception):
 
 
 class SurveyToSchemaConverter:
-
     # AWX survey type → Fabrik column type mapping
     TYPE_MAPPING = {
         'text': 'text',
@@ -38,22 +37,19 @@ class SurveyToSchemaConverter:
         pass
 
     def convert(
-        self,
-        survey_spec: Dict[str, Any],
-        template_type: str,
-        template_name: str = None
+        self, survey_spec: Dict[str, Any], template_type: str, template_name: str = None
     ) -> List[Dict[str, Any]]:
         # Converts AWX survey spec fields into Fabrik table schema columns
         try:
             if not survey_spec:
-                raise SurveyConversionError("Survey spec is empty")
+                raise SurveyConversionError('Survey spec is empty')
 
             if 'spec' not in survey_spec:
                 raise SurveyConversionError("Survey spec missing 'spec' field")
 
             survey_fields = survey_spec.get('spec', [])
             if not survey_fields:
-                raise SurveyConversionError("Survey spec has no fields")
+                raise SurveyConversionError('Survey spec has no fields')
 
             # Convert each field to column definition
             columns = []
@@ -62,11 +58,11 @@ class SurveyToSchemaConverter:
                     column = self.convert_field(field)
                     columns.append(column)
                 except Exception as e:
-                    logger.warning(f"Failed to convert field {field.get('variable')}: {str(e)}")
+                    logger.warning(f'Failed to convert field {field.get("variable")}: {str(e)}')
                     # Continue with other fields
 
             if not columns:
-                raise SurveyConversionError("No valid columns converted from survey")
+                raise SurveyConversionError('No valid columns converted from survey')
 
             # Create schema
             sheet_name = template_name or survey_spec.get('name', 'Data')
@@ -74,7 +70,7 @@ class SurveyToSchemaConverter:
                 'sheet_name': self._sanitize_sheet_name(sheet_name),
                 'columns': columns,
                 'min_rows': 1,
-                'max_rows': 100  # Default limit
+                'max_rows': 100,  # Default limit
             }
 
             # For job templates, return single schema
@@ -84,14 +80,14 @@ class SurveyToSchemaConverter:
         except SurveyConversionError:
             raise
         except Exception as e:
-            logger.exception(f"Error converting survey spec: {str(e)}")
-            raise SurveyConversionError(f"Conversion failed: {str(e)}")
+            logger.exception(f'Error converting survey spec: {str(e)}')
+            raise SurveyConversionError(f'Conversion failed: {str(e)}')
 
     def convert_field(self, field: Dict[str, Any]) -> Dict[str, Any]:
         # Extract basic info
         variable_name = field.get('variable', field.get('question_name', ''))
         if not variable_name:
-            raise ValueError("Field missing variable/question_name")
+            raise ValueError('Field missing variable/question_name')
 
         awx_type = field.get('type', 'text')
         fabrik_type = self.TYPE_MAPPING.get(awx_type, 'text')
@@ -111,7 +107,7 @@ class SurveyToSchemaConverter:
 
         # Add placeholder
         if fabrik_type in ['text', 'textarea', 'password']:
-            column['placeholder'] = f"Enter {column['display_name']}"
+            column['placeholder'] = f'Enter {column["display_name"]}'
 
         # Type-specific conversions
         if fabrik_type == 'number':
@@ -139,9 +135,7 @@ class SurveyToSchemaConverter:
         # Generate validation regex if min/max present
         if 'min' in column or 'max' in column:
             validation_pattern = self.generate_number_validation_regex(
-                column.get('min'),
-                column.get('max'),
-                field.get('type') == 'integer'
+                column.get('min'), column.get('max'), field.get('type') == 'integer'
             )
             if validation_pattern:
                 column['validation'] = validation_pattern
@@ -161,8 +155,7 @@ class SurveyToSchemaConverter:
 
         # Generate validation regex
         validation_pattern = self.generate_text_validation_regex(
-            column.get('min_length'),
-            column.get('max_length')
+            column.get('min_length'), column.get('max_length')
         )
         if validation_pattern:
             column['validation'] = validation_pattern
@@ -185,20 +178,18 @@ class SurveyToSchemaConverter:
             logger.warning(f"Select field '{column['name']}' has no choices")
 
     def generate_text_validation_regex(
-        self,
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None
+        self, min_length: Optional[int] = None, max_length: Optional[int] = None
     ) -> Optional[str]:
         if min_length is None and max_length is None:
             return None
 
         # Basic pattern: alphanumeric, spaces, dashes, underscores
         if min_length is not None and max_length is not None:
-            return f"^[a-zA-Z0-9 _-]{{{min_length},{max_length}}}$"
+            return f'^[a-zA-Z0-9 _-]{{{min_length},{max_length}}}$'
         elif min_length is not None:
-            return f"^[a-zA-Z0-9 _-]{{{min_length},}}$"
+            return f'^[a-zA-Z0-9 _-]{{{min_length},}}$'
         elif max_length is not None:
-            return f"^[a-zA-Z0-9 _-]{{1,{max_length}}}$"
+            return f'^[a-zA-Z0-9 _-]{{1,{max_length}}}$'
 
         return None
 
@@ -206,7 +197,7 @@ class SurveyToSchemaConverter:
         self,
         min_value: Optional[float] = None,
         max_value: Optional[float] = None,
-        is_integer: bool = False
+        is_integer: bool = False,
     ) -> Optional[str]:
         # Regex is for format validation only; complex min/max checks happen in backend
         if is_integer:
@@ -227,7 +218,7 @@ class SurveyToSchemaConverter:
 
         # Ensure not empty
         if not sanitized:
-            sanitized = "Sheet1"
+            sanitized = 'Sheet1'
 
         return sanitized
 
@@ -235,7 +226,7 @@ class SurveyToSchemaConverter:
         errors = []
 
         if not survey_spec:
-            errors.append("Survey spec is empty")
+            errors.append('Survey spec is empty')
             return False, errors
 
         if 'spec' not in survey_spec:
@@ -248,13 +239,13 @@ class SurveyToSchemaConverter:
             return False, errors
 
         if not spec_fields:
-            errors.append("Survey has no fields")
+            errors.append('Survey has no fields')
             return False, errors
 
         # Validate each field
         for i, field in enumerate(spec_fields):
             if not isinstance(field, dict):
-                errors.append(f"Field {i}: Must be a dict")
+                errors.append(f'Field {i}: Must be a dict')
                 continue
 
             # Check required fields

@@ -14,6 +14,7 @@ class QueriesConfig(AppConfig):
 
     def ready(self):
         import queries.signals  # Import signals when app is ready
+
         try:
             import queries.tasks  # Import Celery tasks  # noqa: F401
         except ImportError:

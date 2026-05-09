@@ -25,7 +25,9 @@ def get_classes(request) -> Response:
     try:
         limit = min(int(request.GET.get('limit', 100)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
     classes = mim_service.get_all_classes(limit=limit)
     return Response(classes)
 
@@ -77,13 +79,12 @@ def search_classes(request) -> Response:
     try:
         limit = min(int(request.GET.get('limit', 50)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     if not search_term:
-        return Response(
-            {'error': 'Search term required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'error': 'Search term required'}, status=status.HTTP_400_BAD_REQUEST)
 
     results = mim_service.search_classes(search_term, limit=limit)
     return Response(results)
@@ -104,7 +105,9 @@ def get_class_hierarchy(request, class_name: str) -> Response:
     try:
         depth = int(request.GET.get('depth', 3))
     except (ValueError, TypeError):
-        return Response({'error': 'depth must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'depth must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
     hierarchy = mim_service.get_class_hierarchy(class_name, depth=depth)
     return Response(hierarchy)
 
@@ -116,10 +119,7 @@ def get_related_classes(request, class_name: str) -> Response:
     class_data = mim_service.get_class_by_name(class_name)
 
     if not class_data:
-        return Response(
-            {'error': 'Class not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({'error': 'Class not found'}, status=status.HTTP_404_NOT_FOUND)
 
     related = mim_service.get_related_classes(class_name)
     return Response(related)
@@ -154,14 +154,16 @@ def enhanced_search_classes(request):
     try:
         limit = min(int(request.GET.get('limit', 50)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
     package_filter = request.GET.get('package', None)
 
     # Faz 2.1 — allow empty q when a package is selected (browse mode)
     if not search_term and not package_filter:
         return Response(
             {'error': 'Search term required (or pick a package to browse)'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     results = mim_service.enhanced_search_classes(
@@ -187,6 +189,7 @@ def trending_classes(request):
     """
     from datetime import timedelta
     from django.db.models import Sum
+
     try:
         limit = min(int(request.GET.get('limit', 10)), 50)
     except (ValueError, TypeError):
@@ -207,15 +210,17 @@ def trending_classes(request):
         .annotate(total=Sum('use_count'))
         .order_by('-total')[:limit]
     )
-    return Response([
-        {
-            'className': r['class_name'],
-            'label': r['label'],
-            'classPkg': r['class_pkg'],
-            'usageScore': r['total'] or 0,
-        }
-        for r in rows
-    ])
+    return Response(
+        [
+            {
+                'className': r['class_name'],
+                'label': r['label'],
+                'classPkg': r['class_pkg'],
+                'usageScore': r['total'] or 0,
+            }
+            for r in rows
+        ]
+    )
 
 
 @api_view(['GET'])
@@ -235,7 +240,9 @@ def classes_by_property(request):
     try:
         limit = min(int(request.GET.get('limit', 50)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
     package_filter = request.GET.get('package') or None
     results = mim_service.search_classes_by_property(
         term,
@@ -272,7 +279,9 @@ def get_top_packages(request):
     try:
         limit = min(int(request.GET.get('limit', 20)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
     packages = mim_service.get_top_packages(limit=limit)
     return Response(packages)
 
@@ -294,7 +303,9 @@ def search_child_classes(request, parent_class):
     try:
         limit = min(int(request.GET.get('limit', 100)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     # Empty `q` is the "list all children of this parent" case (used by the
     # class browser to populate the full set up-front). Reject only when the
@@ -302,7 +313,7 @@ def search_child_classes(request, parent_class):
     if search_term and len(search_term) < 2:
         return Response(
             {'error': 'Search query must be at least 2 characters'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     results = mim_service.search_child_classes(parent_class, search_term, limit=limit)
@@ -357,7 +368,9 @@ class RecentClassViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = RecentClass.objects.filter(user=self.request.user)
         try:
-            limit = min(int(self.request.query_params.get('limit', self.DEFAULT_LIMIT)), self.MAX_LIMIT)
+            limit = min(
+                int(self.request.query_params.get('limit', self.DEFAULT_LIMIT)), self.MAX_LIMIT
+            )
         except (TypeError, ValueError):
             limit = self.DEFAULT_LIMIT
         return queryset.order_by('-use_count', '-last_used_at')[:limit]
@@ -385,7 +398,9 @@ class RecentClassViewSet(viewsets.ModelViewSet):
             )
             obj.refresh_from_db()
         out = self.get_serializer(obj)
-        return Response(out.data, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
+        return Response(
+            out.data, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED
+        )
 
 
 class TableTemplateViewSet(viewsets.ModelViewSet):
@@ -461,9 +476,7 @@ class UserTablePreferenceViewSet(viewsets.ModelViewSet):
 
         # Update existing or create new
         UserTablePreference.objects.update_or_create(
-            user=self.request.user,
-            class_name=class_name,
-            defaults=serializer.validated_data
+            user=self.request.user, class_name=class_name, defaults=serializer.validated_data
         )
 
     @action(detail=False, methods=['get'], url_path='by-class/(?P<class_name>[^/.]+)')
@@ -481,6 +494,7 @@ class UserTablePreferenceViewSet(viewsets.ModelViewSet):
 # ========================================================================
 # MODEL EXPLORER ENDPOINTS
 # ========================================================================
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -508,12 +522,14 @@ def universal_search(request):
     try:
         limit = min(int(request.GET.get('limit', 20)), 200)
     except (ValueError, TypeError):
-        return Response({'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'limit must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     if not search_query or len(search_query) < 2:
         return Response(
             {'error': 'Search query must be at least 2 characters'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     results = mim_service.universal_search(search_query, limit=limit)
@@ -537,7 +553,9 @@ def get_explorer_tree(request):
     try:
         max_depth = min(int(request.GET.get('depth', 3)), 10)
     except (ValueError, TypeError):
-        return Response({'error': 'depth must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'depth must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     tree = mim_service.get_class_tree(root_class=root_class, max_depth=max_depth)
     return Response(tree)
@@ -562,18 +580,14 @@ def get_explorer_class_detail(request, class_name):
 
     if not class_data:
         return Response(
-            {'error': f'Class {class_name} not found'},
-            status=status.HTTP_404_NOT_FOUND
+            {'error': f'Class {class_name} not found'}, status=status.HTTP_404_NOT_FOUND
         )
 
     # Get relationships (parents, children, properties, RN mappings)
     relationships = mim_service.get_all_relationships(class_name)
 
     # Combine data
-    result = {
-        **class_data,
-        **relationships
-    }
+    result = {**class_data, **relationships}
 
     return Response(result)
 
@@ -599,8 +613,7 @@ def get_explorer_relationships(request, class_name):
 
     if not class_data:
         return Response(
-            {'error': f'Class {class_name} not found'},
-            status=status.HTTP_404_NOT_FOUND
+            {'error': f'Class {class_name} not found'}, status=status.HTTP_404_NOT_FOUND
         )
 
     # Get pagination parameters
@@ -618,9 +631,7 @@ def get_explorer_relationships(request, class_name):
 
     # Get relationships with pagination
     relationships = mim_service.get_all_relationships(
-        class_name,
-        children_limit=limit,
-        children_offset=offset
+        class_name, children_limit=limit, children_offset=offset
     )
 
     return Response(relationships)
@@ -677,8 +688,7 @@ def get_class_insights(request, class_name):
 
     if not class_data:
         return Response(
-            {'error': f'Class {class_name} not found'},
-            status=status.HTTP_404_NOT_FOUND
+            {'error': f'Class {class_name} not found'}, status=status.HTTP_404_NOT_FOUND
         )
 
     insights = mim_service.get_class_insights(class_name)
@@ -748,15 +758,19 @@ def suggest_classes(request):
     # Check AI is enabled
     try:
         from queries.models import AIQueryBuilderSettings
+
         settings = AIQueryBuilderSettings.get_settings()
     except Exception:
         return Response({'error': 'AI not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     if not settings.enabled:
-        return Response({'error': 'AI is not enabled in settings'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {'error': 'AI is not enabled in settings'}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
     # Check daily AI quota
     from users.quota_service import QuotaService
+
     allowed, msg = QuotaService.check_daily_execution(request.user, 'ai')
     if not allowed:
         return Response({'detail': msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
@@ -767,7 +781,7 @@ def suggest_classes(request):
         if not mim_service.get_class_by_name(parent_class):
             return Response(
                 {'error': f'Parent class {parent_class!r} not found in MIM'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
         children = mim_service.get_class_children(parent_class)
         valid_children = {c['className'] for c in children}
@@ -789,6 +803,7 @@ def suggest_classes(request):
     # falling back to global Ollama only if no per-user provider exists.
     try:
         from queries.services.multi_provider_client import get_client_for_user
+
         client = get_client_for_user(request.user)
         raw = client.generate(
             prompt=prompt,
@@ -829,6 +844,7 @@ def suggest_classes(request):
 
     # Log AI usage for quota tracking
     from audit.services import AuditService
+
     AuditService.log(
         user=request.user,
         action='ai_query',

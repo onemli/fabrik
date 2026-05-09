@@ -1,14 +1,11 @@
 """
 Integration tests for SavedQuery ViewSet CRUD operations
 """
+
 import pytest
 from rest_framework import status
 from queries.models import SavedQuery
-from tests.factories import (
-    UserFactory,
-    SavedQueryFactory,
-    CategoryFactory
-)
+from tests.factories import UserFactory, SavedQueryFactory, CategoryFactory
 
 
 @pytest.mark.integration
@@ -96,7 +93,9 @@ class TestSavedQueryViewSetList:
         SavedQueryFactory.create_batch(3, created_by=user, is_template=False)
 
         # my_queries=true scopes to this user so pre-existing fixture templates don't interfere
-        response = authenticated_client.get('/api/queries/saved-queries/?is_template=true&my_queries=true')
+        response = authenticated_client.get(
+            '/api/queries/saved-queries/?is_template=true&my_queries=true'
+        )
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) == 2
@@ -148,9 +147,7 @@ class TestSavedQueryViewSetUpdate:
 
         data = {'name': 'New Name', 'description': 'Updated'}
         response = authenticated_client.patch(
-            f'/api/queries/saved-queries/{query.id}/',
-            data,
-            format='json'
+            f'/api/queries/saved-queries/{query.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -165,9 +162,7 @@ class TestSavedQueryViewSetUpdate:
 
         data = {'name': 'Hacked Name'}
         response = authenticated_client.patch(
-            f'/api/queries/saved-queries/{query.id}/',
-            data,
-            format='json'
+            f'/api/queries/saved-queries/{query.id}/', data, format='json'
         )
 
         assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND]
@@ -179,9 +174,7 @@ class TestSavedQueryViewSetUpdate:
 
         data = {'name': 'Admin Updated'}
         response = admin_client.patch(
-            f'/api/queries/saved-queries/{query.id}/',
-            data,
-            format='json'
+            f'/api/queries/saved-queries/{query.id}/', data, format='json'
         )
 
         # Admin should be able to update OR should get proper error

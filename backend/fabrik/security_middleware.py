@@ -30,8 +30,7 @@ class SecurityHeadersMiddleware:
 
         # Disable unnecessary browser features
         response['Permissions-Policy'] = (
-            'camera=(), microphone=(), geolocation=(), '
-            'payment=(), usb=(), bluetooth=()'
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()'
         )
 
         # Remove server identification

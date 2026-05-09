@@ -27,12 +27,15 @@ def ldap_status(request):
     is_enabled = getattr(settings, 'LDAP_ENABLED', False)
 
     if not is_enabled:
-        return Response({
-            'enabled': False,
-            'message': 'LDAP is not enabled. Set LDAP_ENABLED=true in .env and restart.',
-        })
+        return Response(
+            {
+                'enabled': False,
+                'message': 'LDAP is not enabled. Set LDAP_ENABLED=true in .env and restart.',
+            }
+        )
 
     import os
+
     server_uri = os.getenv('LDAP_SERVER_URI', '')
     bind_dn = os.getenv('LDAP_BIND_DN', '')
     user_dn = os.getenv('LDAP_USER_DN', '')
@@ -42,11 +45,13 @@ def ldap_status(request):
     group_mappings = []
     flag_map = getattr(settings, 'AUTH_LDAP_USER_FLAGS_BY_GROUP', {})
     for flag, ldap_group in flag_map.items():
-        group_mappings.append({
-            'django_flag': flag,
-            'ldap_group': ldap_group,
-            'description': _flag_description(flag),
-        })
+        group_mappings.append(
+            {
+                'django_flag': flag,
+                'ldap_group': ldap_group,
+                'description': _flag_description(flag),
+            }
+        )
 
     # Attribute mapping
     attr_map = getattr(settings, 'AUTH_LDAP_USER_ATTR_MAP', {})
@@ -55,19 +60,21 @@ def ldap_status(request):
     mirror_groups = getattr(settings, 'AUTH_LDAP_MIRROR_GROUPS', False)
     always_update = getattr(settings, 'AUTH_LDAP_ALWAYS_UPDATE_USER', False)
 
-    return Response({
-        'enabled': True,
-        'server': {
-            'uri': server_uri,
-            'bind_dn': bind_dn,
-            'user_search_base': user_dn,
-            'group_search_base': group_dn,
-        },
-        'group_mappings': group_mappings,
-        'attribute_map': attr_map,
-        'mirror_groups': mirror_groups,
-        'always_update_user': always_update,
-    })
+    return Response(
+        {
+            'enabled': True,
+            'server': {
+                'uri': server_uri,
+                'bind_dn': bind_dn,
+                'user_search_base': user_dn,
+                'group_search_base': group_dn,
+            },
+            'group_mappings': group_mappings,
+            'attribute_map': attr_map,
+            'mirror_groups': mirror_groups,
+            'always_update_user': always_update,
+        }
+    )
 
 
 @api_view(['POST'])
@@ -94,19 +101,24 @@ def ldap_test_connection(request):
 
         # Count users and groups
         import os
+
         user_dn = os.getenv('LDAP_USER_DN', '')
         group_dn = os.getenv('LDAP_GROUP_DN', '')
 
         user_results = conn.search_s(user_dn, ldap_lib.SCOPE_SUBTREE, '(uid=*)')
-        group_results = conn.search_s(group_dn, ldap_lib.SCOPE_SUBTREE, '(objectClass=groupOfNames)')
+        group_results = conn.search_s(
+            group_dn, ldap_lib.SCOPE_SUBTREE, '(objectClass=groupOfNames)'
+        )
         conn.unbind_s()
 
-        return Response({
-            'success': True,
-            'server_uri': server_uri,
-            'user_count': len(user_results),
-            'group_count': len(group_results),
-        })
+        return Response(
+            {
+                'success': True,
+                'server_uri': server_uri,
+                'user_count': len(user_results),
+                'group_count': len(group_results),
+            }
+        )
 
     except ImportError:
         return Response(
@@ -114,7 +126,7 @@ def ldap_test_connection(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     except Exception as e:
-        logger.warning(f"LDAP connection test failed: {e}")
+        logger.warning(f'LDAP connection test failed: {e}')
         return Response(
             {'success': False, 'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST,
@@ -146,13 +158,24 @@ def ldap_users(request):
         conn.simple_bind_s(bind_dn, bind_password)
 
         # Fetch users
-        user_attrs = ['uid', 'cn', 'givenName', 'sn', 'mail', 'title',
-                       'departmentNumber', 'employeeNumber', 'telephoneNumber',
-                       'physicalDeliveryOfficeName']
+        user_attrs = [
+            'uid',
+            'cn',
+            'givenName',
+            'sn',
+            'mail',
+            'title',
+            'departmentNumber',
+            'employeeNumber',
+            'telephoneNumber',
+            'physicalDeliveryOfficeName',
+        ]
         user_results = conn.search_s(user_dn, ldap_lib.SCOPE_SUBTREE, '(uid=*)', user_attrs)
 
         # Fetch groups and build membership map
-        group_results = conn.search_s(group_dn, ldap_lib.SCOPE_SUBTREE, '(objectClass=groupOfNames)', ['cn', 'member'])
+        group_results = conn.search_s(
+            group_dn, ldap_lib.SCOPE_SUBTREE, '(objectClass=groupOfNames)', ['cn', 'member']
+        )
         conn.unbind_s()
 
         # Build dn → groups map
@@ -160,7 +183,9 @@ def ldap_users(request):
         for group_dn_entry, group_attrs in group_results:
             group_name = _decode_attr(group_attrs, 'cn')
             for member_dn in group_attrs.get('member', []):
-                member_dn_str = member_dn.decode('utf-8') if isinstance(member_dn, bytes) else member_dn
+                member_dn_str = (
+                    member_dn.decode('utf-8') if isinstance(member_dn, bytes) else member_dn
+                )
                 dn_groups.setdefault(member_dn_str, []).append(group_name)
 
         # Build user list
@@ -170,27 +195,31 @@ def ldap_users(request):
             # Check if user exists in Django
             django_user = User.objects.filter(username=uid).first()
 
-            users.append({
-                'dn': dn,
-                'uid': uid,
-                'cn': _decode_attr(attrs, 'cn'),
-                'first_name': _decode_attr(attrs, 'givenName'),
-                'last_name': _decode_attr(attrs, 'sn'),
-                'email': _decode_attr(attrs, 'mail'),
-                'title': _decode_attr(attrs, 'title'),
-                'department': _decode_attr(attrs, 'departmentNumber'),
-                'employee_id': _decode_attr(attrs, 'employeeNumber'),
-                'phone': _decode_attr(attrs, 'telephoneNumber'),
-                'office': _decode_attr(attrs, 'physicalDeliveryOfficeName'),
-                'ldap_groups': dn_groups.get(dn, []),
-                'synced_to_django': django_user is not None,
-                'django_last_login': django_user.last_login.isoformat() if django_user and django_user.last_login else None,
-            })
+            users.append(
+                {
+                    'dn': dn,
+                    'uid': uid,
+                    'cn': _decode_attr(attrs, 'cn'),
+                    'first_name': _decode_attr(attrs, 'givenName'),
+                    'last_name': _decode_attr(attrs, 'sn'),
+                    'email': _decode_attr(attrs, 'mail'),
+                    'title': _decode_attr(attrs, 'title'),
+                    'department': _decode_attr(attrs, 'departmentNumber'),
+                    'employee_id': _decode_attr(attrs, 'employeeNumber'),
+                    'phone': _decode_attr(attrs, 'telephoneNumber'),
+                    'office': _decode_attr(attrs, 'physicalDeliveryOfficeName'),
+                    'ldap_groups': dn_groups.get(dn, []),
+                    'synced_to_django': django_user is not None,
+                    'django_last_login': django_user.last_login.isoformat()
+                    if django_user and django_user.last_login
+                    else None,
+                }
+            )
 
         return Response({'users': users})
 
     except Exception as e:
-        logger.warning(f"LDAP user listing failed: {e}")
+        logger.warning(f'LDAP user listing failed: {e}')
         return Response(
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -221,9 +250,10 @@ def ldap_groups(request):
         conn.simple_bind_s(bind_dn, bind_password)
 
         group_results = conn.search_s(
-            group_base, ldap_lib.SCOPE_SUBTREE,
+            group_base,
+            ldap_lib.SCOPE_SUBTREE,
             '(objectClass=groupOfNames)',
-            ['cn', 'description', 'member']
+            ['cn', 'description', 'member'],
         )
         conn.unbind_s()
 
@@ -242,19 +272,21 @@ def ldap_groups(request):
                 if m_str.startswith('uid='):
                     member_uids.append(m_str.split(',')[0].split('=')[1])
 
-            groups.append({
-                'dn': dn,
-                'cn': cn,
-                'description': _decode_attr(attrs, 'description'),
-                'member_count': len(members),
-                'members': member_uids,
-                'django_flag': flag_by_dn.get(dn),
-            })
+            groups.append(
+                {
+                    'dn': dn,
+                    'cn': cn,
+                    'description': _decode_attr(attrs, 'description'),
+                    'member_count': len(members),
+                    'members': member_uids,
+                    'django_flag': flag_by_dn.get(dn),
+                }
+            )
 
         return Response({'groups': groups})
 
     except Exception as e:
-        logger.warning(f"LDAP group listing failed: {e}")
+        logger.warning(f'LDAP group listing failed: {e}')
         return Response(
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,

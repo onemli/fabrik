@@ -1,4 +1,5 @@
 """APIC Connection model factories"""
+
 import factory
 from factory.django import DjangoModelFactory
 from apic_connections.models import APICConnection
@@ -45,11 +46,13 @@ class APICConnectionFactory(DjangoModelFactory):
 
 class PublicAPICConnectionFactory(APICConnectionFactory):
     """Factory for creating public APIC connections"""
+
     is_public = True
 
 
 class CiscoSandboxAPICFactory(APICConnectionFactory):
     """Factory for creating Cisco sandbox APIC connection"""
+
     name = 'Cisco Sandbox APIC'
     url = 'https://sandboxapicdc.cisco.com'
     username = 'admin'

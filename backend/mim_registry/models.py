@@ -38,8 +38,8 @@ class MIMRegistryConfig(models.Model):
     devnet_request_delay_ms = models.PositiveIntegerField(
         default=100,
         help_text='Per-request fixed delay in ms (politeness floor). Cisco DevNet '
-                  'is CDN-served (CloudFront/S3) and tolerates aggressive pulls; '
-                  '100ms × 10 parallel ≈ 1000 req/s which has tested fine.',
+        'is CDN-served (CloudFront/S3) and tolerates aggressive pulls; '
+        '100ms × 10 parallel ≈ 1000 req/s which has tested fine.',
     )
     devnet_max_retries = models.PositiveSmallIntegerField(
         default=3,

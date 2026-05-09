@@ -2,6 +2,7 @@
 Unit tests for APIC Connection Model
 Tests password encryption, access control, and validation
 """
+
 import pytest
 from django.core.exceptions import ValidationError
 from apic_connections.models import APICConnection
@@ -56,7 +57,7 @@ class TestAPICConnectionModel:
             name='Test Connection',
             url='https://test.example.com',
             username='admin',
-            created_by=user
+            created_by=user,
         )
 
         with pytest.raises(ValidationError):
@@ -66,9 +67,7 @@ class TestAPICConnectionModel:
         """Test string representation"""
         user = UserFactory()
         connection = APICConnectionFactory(
-            name='Production APIC',
-            url='https://apic.example.com',
-            created_by=user
+            name='Production APIC', url='https://apic.example.com', created_by=user
         )
 
         assert str(connection) == 'Production APIC (https://apic.example.com)'
@@ -90,10 +89,7 @@ class TestAPICConnectionAccess:
         """Test that shared user can access connection"""
         creator = UserFactory()
         other_user = UserFactory()
-        connection = APICConnectionFactory(
-            created_by=creator,
-            shared_with=[other_user]
-        )
+        connection = APICConnectionFactory(created_by=creator, shared_with=[other_user])
 
         assert connection.can_be_accessed_by(other_user) is True
 
@@ -101,10 +97,7 @@ class TestAPICConnectionAccess:
         """Test that public connection can be accessed by any user"""
         creator = UserFactory()
         any_user = UserFactory()
-        connection = APICConnectionFactory(
-            created_by=creator,
-            is_public=True
-        )
+        connection = APICConnectionFactory(created_by=creator, is_public=True)
 
         assert connection.can_be_accessed_by(any_user) is True
 
@@ -120,10 +113,7 @@ class TestAPICConnectionAccess:
         """Test that regular user cannot access private connection"""
         creator = UserFactory()
         other_user = UserFactory()
-        connection = APICConnectionFactory(
-            created_by=creator,
-            is_public=False
-        )
+        connection = APICConnectionFactory(created_by=creator, is_public=False)
 
         assert connection.can_be_accessed_by(other_user) is False
 
@@ -142,7 +132,7 @@ class TestAPICConnectionValidation:
                 name='ab',  # Too short (min 3)
                 url='https://test.example.com',
                 username='admin',
-                created_by=user
+                created_by=user,
             )
             connection.full_clean()
 
@@ -153,10 +143,7 @@ class TestAPICConnectionValidation:
         # Invalid URL should raise error
         with pytest.raises(ValidationError):
             connection = APICConnection(
-                name='Test Connection',
-                url='not-a-valid-url',
-                username='admin',
-                created_by=user
+                name='Test Connection', url='not-a-valid-url', username='admin', created_by=user
             )
             connection.full_clean()
 

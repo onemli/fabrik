@@ -33,7 +33,8 @@ def make_user(username):
 
 def make_connection(user):
     conn = AWXConnection.objects.create(
-        name='AWX', url='https://awx.test',
+        name='AWX',
+        url='https://awx.test',
         auth_type=AWXConnection.AUTH_TYPE_TOKEN,
         created_by=user,
     )
@@ -55,13 +56,15 @@ def make_template(user, conn, cat=None, name='T', is_public=False):
         awx_connection=conn,
         category=cat,
         execution_mode='bulk',
-        table_schemas=[{
-            'name': 'Sheet1',
-            'awx_variable_name': 'sheet1',
-            'columns': [
-                {'name': 'tenant_name', 'type': 'text', 'required': True},
-            ],
-        }],
+        table_schemas=[
+            {
+                'name': 'Sheet1',
+                'awx_variable_name': 'sheet1',
+                'columns': [
+                    {'name': 'tenant_name', 'type': 'text', 'required': True},
+                ],
+            }
+        ],
         variable_mappings={'tenant_name': 'tenant'},
         created_by=user,
         is_public=is_public,
@@ -72,11 +75,24 @@ CAT_LIST = '/api/awx/categories/'
 TMPL_LIST = '/api/awx/templates/'
 
 
-def cat_detail(pk): return f'/api/awx/categories/{pk}/'
-def tmpl_detail(pk): return f'/api/awx/templates/{pk}/'
-def validate_data_url(pk): return f'/api/awx/templates/{pk}/validate_data/'
-def validate_input_url(pk): return f'/api/awx/templates/{pk}/validate-input/'
-def validate_sheets_url(pk): return f'/api/awx/templates/{pk}/validate-sheets/'
+def cat_detail(pk):
+    return f'/api/awx/categories/{pk}/'
+
+
+def tmpl_detail(pk):
+    return f'/api/awx/templates/{pk}/'
+
+
+def validate_data_url(pk):
+    return f'/api/awx/templates/{pk}/validate_data/'
+
+
+def validate_input_url(pk):
+    return f'/api/awx/templates/{pk}/validate-input/'
+
+
+def validate_sheets_url(pk):
+    return f'/api/awx/templates/{pk}/validate-sheets/'
 
 
 VALIDATION_STATUS_BASE = '/api/awx/templates/validation-status/'
@@ -84,8 +100,8 @@ VALIDATION_STATUS_BASE = '/api/awx/templates/validation-status/'
 
 # ── TemplateCategoryViewSet ───────────────────────────────────────────────────
 
-class TemplateCategoryAuthTests(APITestCase):
 
+class TemplateCategoryAuthTests(APITestCase):
     def test_list_requires_auth(self):
         resp = self.client.get(CAT_LIST)
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -96,7 +112,6 @@ class TemplateCategoryAuthTests(APITestCase):
 
 
 class TemplateCategoryCRUDTests(APITestCase):
-
     def setUp(self):
         self.user = make_user('cat_user')
         self.other = make_user('cat_other')
@@ -130,9 +145,7 @@ class TemplateCategoryCRUDTests(APITestCase):
         self.assertFalse(TemplateCategory.objects.filter(pk=cat.pk).exists())
 
     def test_cannot_delete_system_category(self):
-        cat = TemplateCategory.objects.create(
-            name='System', created_by=self.user, is_system=True
-        )
+        cat = TemplateCategory.objects.create(name='System', created_by=self.user, is_system=True)
         resp = self.client.delete(cat_detail(cat.pk))
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(TemplateCategory.objects.filter(pk=cat.pk).exists())
@@ -149,8 +162,8 @@ class TemplateCategoryCRUDTests(APITestCase):
 
 # ── AutomationTemplateViewSet ─────────────────────────────────────────────────
 
-class TemplateAuthTests(APITestCase):
 
+class TemplateAuthTests(APITestCase):
     def test_list_requires_auth(self):
         resp = self.client.get(TMPL_LIST)
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -161,7 +174,6 @@ class TemplateAuthTests(APITestCase):
 
 
 class TemplateCRUDTests(APITestCase):
-
     def setUp(self):
         self.user = make_user('tmpl_user')
         self.other = make_user('tmpl_other')
@@ -246,8 +258,8 @@ class TemplateCRUDTests(APITestCase):
 
 # ── validate_data action ──────────────────────────────────────────────────────
 
-class TemplateValidateDataTests(APITestCase):
 
+class TemplateValidateDataTests(APITestCase):
     def setUp(self):
         self.user = make_user('val_user')
         self.conn = make_connection(self.user)
@@ -259,7 +271,7 @@ class TemplateValidateDataTests(APITestCase):
         resp = self.client.post(
             validate_data_url(self.tmpl.pk),
             {'input_data': [{'tenant_name': 'prod'}]},
-            format='json'
+            format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertTrue(resp.data['valid'])
@@ -269,36 +281,37 @@ class TemplateValidateDataTests(APITestCase):
         """validate_input_data() checks validation_mode (regex/static_list/query_list)."""
         # Update template to have a regex-validated column
         from awx.models import AutomationTemplate
+
         AutomationTemplate.objects.filter(pk=self.tmpl.pk).update(
-            table_schemas=[{
-                'name': 'Sheet1',
-                'awx_variable_name': 'sheet1',
-                'columns': [{
-                    'name': 'tenant_name',
-                    'type': 'text',
-                    'required': True,
-                    'validation_mode': 'regex',
-                    'validation': r'^[a-z]+$',
-                }],
-            }]
+            table_schemas=[
+                {
+                    'name': 'Sheet1',
+                    'awx_variable_name': 'sheet1',
+                    'columns': [
+                        {
+                            'name': 'tenant_name',
+                            'type': 'text',
+                            'required': True,
+                            'validation_mode': 'regex',
+                            'validation': r'^[a-z]+$',
+                        }
+                    ],
+                }
+            ]
         )
         self.tmpl.refresh_from_db()
 
         resp = self.client.post(
             validate_data_url(self.tmpl.pk),
             {'input_data': [{'tenant_name': 'INVALID 123'}]},
-            format='json'
+            format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertFalse(resp.data['valid'])
         self.assertTrue(len(resp.data['errors']) > 0)
 
     def test_empty_input_returns_valid(self):
-        resp = self.client.post(
-            validate_data_url(self.tmpl.pk),
-            {'input_data': {}},
-            format='json'
-        )
+        resp = self.client.post(validate_data_url(self.tmpl.pk), {'input_data': {}}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertTrue(resp.data['valid'])
 
@@ -307,17 +320,15 @@ class TemplateValidateDataTests(APITestCase):
         other_conn = make_connection(other)
         private_tmpl = make_template(other, other_conn, is_public=False)
         resp = auth_client(self.user).post(
-            validate_data_url(private_tmpl.pk),
-            {'input_data': {}},
-            format='json'
+            validate_data_url(private_tmpl.pk), {'input_data': {}}, format='json'
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
 
 # ── validate_input async action ───────────────────────────────────────────────
 
-class TemplateValidateInputAsyncTests(APITestCase):
 
+class TemplateValidateInputAsyncTests(APITestCase):
     def setUp(self):
         self.user = make_user('async_user')
         self.conn = make_connection(self.user)
@@ -333,7 +344,7 @@ class TemplateValidateInputAsyncTests(APITestCase):
         resp = self.client.post(
             validate_input_url(self.tmpl.pk),
             {'input_data': [{'tenant_name': 'prod'}]},
-            format='json'
+            format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(resp.data['task_id'], 'task-uuid-123')
@@ -346,19 +357,15 @@ class TemplateValidateInputAsyncTests(APITestCase):
         mock_result.id = 'task-abc'
         mock_task.delay.return_value = mock_result
 
-        resp = self.client.post(
-            validate_input_url(self.tmpl.pk),
-            {'input_data': []},
-            format='json'
-        )
+        resp = self.client.post(validate_input_url(self.tmpl.pk), {'input_data': []}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         self.assertIn('polling_interval', resp.data)
 
 
 # ── validate_sheets action ────────────────────────────────────────────────────
 
-class TemplateValidateSheetsTests(APITestCase):
 
+class TemplateValidateSheetsTests(APITestCase):
     def setUp(self):
         self.user = make_user('sheets_user')
         self.conn = make_connection(self.user)
@@ -366,11 +373,7 @@ class TemplateValidateSheetsTests(APITestCase):
         self.client = auth_client(self.user)
 
     def test_empty_sheets_returns_valid(self):
-        resp = self.client.post(
-            validate_sheets_url(self.tmpl.pk),
-            {'sheets': {}},
-            format='json'
-        )
+        resp = self.client.post(validate_sheets_url(self.tmpl.pk), {'sheets': {}}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertTrue(resp.data['is_valid'])
         self.assertEqual(resp.data['total_errors'], 0)
@@ -379,7 +382,7 @@ class TemplateValidateSheetsTests(APITestCase):
         resp = self.client.post(
             validate_sheets_url(self.tmpl.pk),
             {'sheets': {'Sheet1': [{'tenant_name': 'prod'}]}},
-            format='json'
+            format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn('is_valid', resp.data)
@@ -390,7 +393,7 @@ class TemplateValidateSheetsTests(APITestCase):
         resp = self.client.post(
             validate_sheets_url(self.tmpl.pk),
             {'sheets': {'Sheet1': [{'tenant_name': ''}]}},
-            format='json'
+            format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertFalse(resp.data['is_valid'])
@@ -400,9 +403,5 @@ class TemplateValidateSheetsTests(APITestCase):
         other = make_user('sheets_other')
         other_conn = make_connection(other)
         private = make_template(other, other_conn, is_public=False)
-        resp = self.client.post(
-            validate_sheets_url(private.pk),
-            {'sheets': {}},
-            format='json'
-        )
+        resp = self.client.post(validate_sheets_url(private.pk), {'sheets': {}}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)

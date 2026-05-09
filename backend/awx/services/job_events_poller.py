@@ -31,10 +31,10 @@ from awx.models import AutomationExecution
 logger = logging.getLogger(__name__)
 
 # ── Redis key configuration ────────────────────────────────────────────────────
-CURSOR_KEY_PREFIX = 'awx:stream:cursor:'      # Stores last_counter per execution
-KEEPALIVE_KEY_PREFIX = 'awx:stream:alive:'    # Heartbeat for watchdog detection
-CURSOR_TTL = 7200       # 2 hours — longer than any realistic job
-KEEPALIVE_TTL = 30      # 30 seconds — watchdog checks this; poller updates every poll cycle
+CURSOR_KEY_PREFIX = 'awx:stream:cursor:'  # Stores last_counter per execution
+KEEPALIVE_KEY_PREFIX = 'awx:stream:alive:'  # Heartbeat for watchdog detection
+CURSOR_TTL = 7200  # 2 hours — longer than any realistic job
+KEEPALIVE_TTL = 30  # 30 seconds — watchdog checks this; poller updates every poll cycle
 HEARTBEAT_INTERVAL = 5.0  # seconds between WS heartbeats to frontend
 
 
@@ -71,7 +71,7 @@ class JobEventsPoller:
             self.awx_job_id = self.execution.awx_job_id
 
             if not self.awx_job_id:
-                raise ValueError(f"Execution {execution_id} has no AWX job ID")
+                raise ValueError(f'Execution {execution_id} has no AWX job ID')
 
             awx_connection = self.execution.awx_connection
             self.awx_client = AWXClient.for_connection(awx_connection)
@@ -79,22 +79,22 @@ class JobEventsPoller:
             try:
                 self.publisher = get_event_publisher()
             except Exception as pub_err:
-                logger.warning(f"Event publisher unavailable (non-critical): {pub_err}")
+                logger.warning(f'Event publisher unavailable (non-critical): {pub_err}')
                 self.publisher = None
 
             # Restore cursor from Redis for restart recovery
             self.last_counter = self._load_cursor()
 
             logger.info(
-                f"Poller initialized: execution={execution_id}, job={self.awx_job_id}, "
-                f"cursor={self.last_counter}, interval={poll_interval}s"
+                f'Poller initialized: execution={execution_id}, job={self.awx_job_id}, '
+                f'cursor={self.last_counter}, interval={poll_interval}s'
             )
 
         except AutomationExecution.DoesNotExist:
-            logger.error(f"Execution not found: {execution_id}")
+            logger.error(f'Execution not found: {execution_id}')
             raise
         except Exception as e:
-            logger.exception(f"Failed to initialize poller: {e}")
+            logger.exception(f'Failed to initialize poller: {e}')
             raise
 
     # ── Redis helpers ──────────────────────────────────────────────────────────
@@ -103,6 +103,7 @@ class JobEventsPoller:
         """Get Django cache backend; returns None if unavailable."""
         try:
             from django.core.cache import cache
+
             return cache
         except Exception:
             return None
@@ -116,10 +117,10 @@ class JobEventsPoller:
             val = cache.get(f'{CURSOR_KEY_PREFIX}{self.execution_id}')
             if val is not None:
                 counter = int(val)
-                logger.info(f"Restored cursor={counter} for execution {self.execution_id}")
+                logger.info(f'Restored cursor={counter} for execution {self.execution_id}')
                 return counter
         except Exception as e:
-            logger.debug(f"Cursor load failed (non-critical): {e}")
+            logger.debug(f'Cursor load failed (non-critical): {e}')
         return 0
 
     def _save_cursor(self):
@@ -134,7 +135,7 @@ class JobEventsPoller:
                 timeout=CURSOR_TTL,
             )
         except Exception as e:
-            logger.debug(f"Cursor save failed (non-critical): {e}")
+            logger.debug(f'Cursor save failed (non-critical): {e}')
 
     def _update_keepalive(self):
         """Refresh keepalive key so watchdog knows we're alive."""
@@ -173,7 +174,7 @@ class JobEventsPoller:
         - Saves cursor to Redis after each successful fetch
         - Stops cleanly on: job finished, MAX_AWX_ERRORS reached, KeyboardInterrupt, fatal error
         """
-        logger.info(f"Starting poller for execution {self.execution_id}")
+        logger.info(f'Starting poller for execution {self.execution_id}')
 
         consecutive_loop_errors = 0
         last_heartbeat_time = time.time()
@@ -191,18 +192,16 @@ class JobEventsPoller:
                         if self._consecutive_awx_errors >= self.MAX_AWX_ERRORS:
                             # AWX unreachable for too long — give up
                             logger.error(
-                                f"Stopping poller for {self.execution_id}: "
-                                f"{self._consecutive_awx_errors} consecutive AWX errors"
+                                f'Stopping poller for {self.execution_id}: '
+                                f'{self._consecutive_awx_errors} consecutive AWX errors'
                             )
                         else:
                             # Job cleanly finished — do a final fetch to capture trailing events
-                            logger.info(
-                                f"Job {self.awx_job_id} finished; doing final event fetch"
-                            )
+                            logger.info(f'Job {self.awx_job_id} finished; doing final event fetch')
                             self._fetch_and_publish_events()
                             self._save_cursor()
                             logger.info(
-                                f"Poller finished cleanly for execution {self.execution_id}"
+                                f'Poller finished cleanly for execution {self.execution_id}'
                             )
                         break
 
@@ -212,8 +211,8 @@ class JobEventsPoller:
 
                     if events_count > 0:
                         logger.debug(
-                            f"Processed {events_count} events "
-                            f"(job={self.awx_job_id}, counter={self.last_counter})"
+                            f'Processed {events_count} events '
+                            f'(job={self.awx_job_id}, counter={self.last_counter})'
                         )
 
                     consecutive_loop_errors = 0
@@ -229,20 +228,20 @@ class JobEventsPoller:
                 except Exception as e:
                     consecutive_loop_errors += 1
                     logger.exception(
-                        f"Error in polling loop (attempt {consecutive_loop_errors}): {e}"
+                        f'Error in polling loop (attempt {consecutive_loop_errors}): {e}'
                     )
                     # Exponential backoff with jitter
                     backoff = min(
-                        self.poll_interval * (self.BACKOFF_BASE ** consecutive_loop_errors),
+                        self.poll_interval * (self.BACKOFF_BASE**consecutive_loop_errors),
                         self.MAX_BACKOFF,
                     )
                     jitter = backoff * self.JITTER_FRACTION * random.random()
                     time.sleep(backoff + jitter)
 
         except KeyboardInterrupt:
-            logger.info(f"Poller interrupted for execution {self.execution_id}")
+            logger.info(f'Poller interrupted for execution {self.execution_id}')
         except Exception as e:
-            logger.exception(f"Fatal error in poller for {self.execution_id}: {e}")
+            logger.exception(f'Fatal error in poller for {self.execution_id}: {e}')
         finally:
             self.stop()
             self._clear_redis_keys()
@@ -250,7 +249,7 @@ class JobEventsPoller:
     def stop(self):
         """Signal polling loop to stop."""
         self.should_stop = True
-        logger.info(f"Poller stopped for execution {self.execution_id}")
+        logger.info(f'Poller stopped for execution {self.execution_id}')
 
     # ── AWX interaction ────────────────────────────────────────────────────────
 
@@ -267,7 +266,7 @@ class JobEventsPoller:
             False → job finished cleanly, OR error limit exceeded
         """
         try:
-            url = f"{self.awx_client.base_url}/api/v2/jobs/{self.awx_job_id}/"
+            url = f'{self.awx_client.base_url}/api/v2/jobs/{self.awx_job_id}/'
             response = self.awx_client.session.get(
                 url,
                 verify=self.awx_client.verify_ssl,
@@ -287,8 +286,8 @@ class JobEventsPoller:
         except Exception as e:
             self._consecutive_awx_errors += 1
             logger.warning(
-                f"AWX connectivity error {self._consecutive_awx_errors}/{self.MAX_AWX_ERRORS} "
-                f"for job {self.awx_job_id}: {e}"
+                f'AWX connectivity error {self._consecutive_awx_errors}/{self.MAX_AWX_ERRORS} '
+                f'for job {self.awx_job_id}: {e}'
             )
 
             if self._consecutive_awx_errors >= self.MAX_AWX_ERRORS:
@@ -313,9 +312,7 @@ class JobEventsPoller:
         current_cursor = self.last_counter
 
         try:
-            base_url = (
-                f"{self.awx_client.base_url}/api/v2/jobs/{self.awx_job_id}/job_events/"
-            )
+            base_url = f'{self.awx_client.base_url}/api/v2/jobs/{self.awx_job_id}/job_events/'
 
             while True:
                 params = {
@@ -352,7 +349,7 @@ class JobEventsPoller:
                 # (next iteration uses updated current_cursor, so we get the next page)
 
         except Exception as e:
-            logger.exception(f"Failed to fetch job events: {e}")
+            logger.exception(f'Failed to fetch job events: {e}')
 
         return total_events
 
@@ -390,23 +387,21 @@ class JobEventsPoller:
                     event_payload,
                 )
             except Exception as ws_err:
-                logger.debug(f"WS emit failed (non-critical): {ws_err}")
+                logger.debug(f'WS emit failed (non-critical): {ws_err}')
 
             # 3. RabbitMQ (graceful degradation) ──────────────────────────
             if self.publisher:
-                routing_key = f"job.output.{self.awx_job_id}"
+                routing_key = f'job.output.{self.awx_job_id}'
                 success, error = self.publisher.publish_event(
                     routing_key=routing_key,
                     event_data=event_payload,
-                    correlation_id=(
-                        f"job-output-{self.awx_job_id}-{event_payload['counter']}"
-                    ),
+                    correlation_id=(f'job-output-{self.awx_job_id}-{event_payload["counter"]}'),
                 )
                 if not success:
-                    logger.debug(f"RabbitMQ publish failed (non-critical): {error}")
+                    logger.debug(f'RabbitMQ publish failed (non-critical): {error}')
 
         except Exception as e:
-            logger.exception(f"Error publishing event counter={event.get('counter')}: {e}")
+            logger.exception(f'Error publishing event counter={event.get("counter")}: {e}')
 
     def _save_to_db(self, event: Dict[str, Any]):
         """
@@ -459,7 +454,7 @@ class JobEventsPoller:
         except Exception as e:
             # DB write failures are non-critical for real-time display
             # (WS still works); log at debug to avoid log spam
-            logger.debug(f"DB save failed for counter={event.get('counter')} (non-critical): {e}")
+            logger.debug(f'DB save failed for counter={event.get("counter")} (non-critical): {e}')
 
     def _publish_heartbeat(self):
         """
@@ -482,7 +477,7 @@ class JobEventsPoller:
                 },
             )
         except Exception as e:
-            logger.debug(f"Heartbeat emit failed (non-critical): {e}")
+            logger.debug(f'Heartbeat emit failed (non-critical): {e}')
 
 
 def start_job_output_streaming(execution_id: str, poll_interval: float = 0.5):
@@ -497,5 +492,5 @@ def start_job_output_streaming(execution_id: str, poll_interval: float = 0.5):
         poller = JobEventsPoller(execution_id, poll_interval=poll_interval)
         poller.start()
     except Exception as e:
-        logger.exception(f"Failed to start job output streaming: {e}")
+        logger.exception(f'Failed to start job output streaming: {e}')
         raise

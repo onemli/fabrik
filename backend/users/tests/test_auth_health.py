@@ -6,6 +6,7 @@ Tests cover:
   - GET /api/auth/quota-usage/ — returns quota + usage for authenticated user
   - Unauthenticated access is denied
 """
+
 from django.test import TestCase
 from django.contrib.auth.models import User, Group
 from rest_framework.test import APIClient
@@ -20,8 +21,7 @@ class AuthHealthEndpointTest(TestCase):
     def setUp(self):
         self.admin_group = Group.objects.create(name='Admin')
         self.admin = User.objects.create_user(
-            username='healthadmin', email='ha@test.com',
-            password='admin123!', is_superuser=True
+            username='healthadmin', email='ha@test.com', password='admin123!', is_superuser=True
         )
         self.admin.groups.add(self.admin_group)
 
@@ -102,8 +102,7 @@ class GroupQuotaCRUDTest(TestCase):
     def setUp(self):
         self.admin_group = Group.objects.create(name='Admin')
         self.admin = User.objects.create_user(
-            username='quotacrudadmin', email='qca@test.com',
-            password='admin123!', is_superuser=True
+            username='quotacrudadmin', email='qca@test.com', password='admin123!', is_superuser=True
         )
         self.admin.groups.add(self.admin_group)
         self.target_group = Group.objects.create(name='TargetGroup')

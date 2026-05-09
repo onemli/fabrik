@@ -3,6 +3,7 @@ Group Management Tests
 
 Tests for admin-only group management endpoints
 """
+
 from django.test import TestCase
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
@@ -20,19 +21,13 @@ class GroupViewSetTest(TestCase):
 
         # Create admin user
         self.admin_user = User.objects.create_user(
-            username='admin',
-            email='admin@test.com',
-            password='admin123',
-            is_active=True
+            username='admin', email='admin@test.com', password='admin123', is_active=True
         )
         self.admin_user.groups.add(self.admin_group)
 
         # Create regular user
         self.regular_user = User.objects.create_user(
-            username='regular',
-            email='regular@test.com',
-            password='regular123',
-            is_active=True
+            username='regular', email='regular@test.com', password='regular123', is_active=True
         )
 
         # Create viewer group
@@ -40,21 +35,15 @@ class GroupViewSetTest(TestCase):
 
         # Create some permissions
         content_type = ContentType.objects.get_for_model(User)
-        self.perm_add_user = Permission.objects.get(
-            codename='add_user',
-            content_type=content_type
-        )
+        self.perm_add_user = Permission.objects.get(codename='add_user', content_type=content_type)
         self.perm_change_user = Permission.objects.get(
-            codename='change_user',
-            content_type=content_type
+            codename='change_user', content_type=content_type
         )
         self.perm_delete_user = Permission.objects.get(
-            codename='delete_user',
-            content_type=content_type
+            codename='delete_user', content_type=content_type
         )
         self.perm_view_user = Permission.objects.get(
-            codename='view_user',
-            content_type=content_type
+            codename='view_user', content_type=content_type
         )
 
         self.client = APIClient()
@@ -80,7 +69,7 @@ class GroupViewSetTest(TestCase):
 
         data = {
             'name': 'Editor',
-            'permission_ids': [self.perm_add_user.id, self.perm_change_user.id]
+            'permission_ids': [self.perm_add_user.id, self.perm_change_user.id],
         }
 
         response = self.client.post('/api/auth/groups/', data, format='json')
@@ -112,10 +101,12 @@ class GroupViewSetTest(TestCase):
 
         data = {
             'name': 'Viewer Updated',
-            'permission_ids': [self.perm_view_user.id, self.perm_change_user.id]
+            'permission_ids': [self.perm_view_user.id, self.perm_change_user.id],
         }
 
-        response = self.client.patch(f'/api/auth/groups/{self.viewer_group.id}/', data, format='json')
+        response = self.client.patch(
+            f'/api/auth/groups/{self.viewer_group.id}/', data, format='json'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -145,14 +136,10 @@ class GroupViewSetTest(TestCase):
         """CRITICAL: Admin can add permissions to group"""
         self.client.force_authenticate(user=self.admin_user)
 
-        data = {
-            'permission_ids': [self.perm_add_user.id, self.perm_change_user.id]
-        }
+        data = {'permission_ids': [self.perm_add_user.id, self.perm_change_user.id]}
 
         response = self.client.post(
-            f'/api/auth/groups/{self.viewer_group.id}/add_permissions/',
-            data,
-            format='json'
+            f'/api/auth/groups/{self.viewer_group.id}/add_permissions/', data, format='json'
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -168,14 +155,10 @@ class GroupViewSetTest(TestCase):
         self.viewer_group.permissions.add(self.perm_view_user, self.perm_change_user)
 
         # Then remove one
-        data = {
-            'permission_ids': [self.perm_change_user.id]
-        }
+        data = {'permission_ids': [self.perm_change_user.id]}
 
         response = self.client.post(
-            f'/api/auth/groups/{self.viewer_group.id}/remove_permissions/',
-            data,
-            format='json'
+            f'/api/auth/groups/{self.viewer_group.id}/remove_permissions/', data, format='json'
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -207,19 +190,13 @@ class PermissionViewSetTest(TestCase):
 
         # Create admin user
         self.admin_user = User.objects.create_user(
-            username='admin',
-            email='admin@test.com',
-            password='admin123',
-            is_active=True
+            username='admin', email='admin@test.com', password='admin123', is_active=True
         )
         self.admin_user.groups.add(self.admin_group)
 
         # Create regular user
         self.regular_user = User.objects.create_user(
-            username='regular',
-            email='regular@test.com',
-            password='regular123',
-            is_active=True
+            username='regular', email='regular@test.com', password='regular123', is_active=True
         )
 
         self.client = APIClient()

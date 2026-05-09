@@ -1,6 +1,7 @@
 """
 Integration tests for User Management ViewSet
 """
+
 import pytest
 from rest_framework import status
 from django.contrib.auth.models import Group
@@ -48,11 +49,7 @@ class TestUserManagementViewSet:
 
     def test_create_user_as_non_admin_forbidden(self, authenticated_client, user):
         """Test creating user as non-admin is forbidden"""
-        data = {
-            'username': 'newuser',
-            'email': 'newuser@example.com',
-            'password': 'newpassword123'
-        }
+        data = {'username': 'newuser', 'email': 'newuser@example.com', 'password': 'newpassword123'}
 
         response = authenticated_client.post('/api/auth/management/', data, format='json')
 
@@ -64,15 +61,10 @@ class TestUserManagementViewSet:
         user.groups.add(admin_group)
 
         target_user = UserFactory()
-        data = {
-            'first_name': 'Updated',
-            'last_name': 'Name'
-        }
+        data = {'first_name': 'Updated', 'last_name': 'Name'}
 
         response = authenticated_client.patch(
-            f'/api/auth/management/{target_user.id}/',
-            data,
-            format='json'
+            f'/api/auth/management/{target_user.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -269,9 +261,7 @@ class TestGroupViewSet:
         data = {'name': 'New Name'}
 
         response = authenticated_client.patch(
-            f'/api/auth/groups/{test_group.id}/',
-            data,
-            format='json'
+            f'/api/auth/groups/{test_group.id}/', data, format='json'
         )
 
         assert response.status_code == status.HTTP_200_OK

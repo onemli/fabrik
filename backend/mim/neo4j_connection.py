@@ -22,8 +22,7 @@ class Neo4jConnection:
     def __init__(self):
         if self._driver is None:
             self._driver = GraphDatabase.driver(
-                settings.NEO4J_URI,
-                auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
+                settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
             )
 
     @property
@@ -44,9 +43,7 @@ class Neo4jConnection:
     def execute_write(self, query, parameters=None):
         """Write transaction"""
         with self._driver.session() as session:
-            return session.write_transaction(
-                lambda tx: tx.run(query, parameters or {}).consume()
-            )
+            return session.write_transaction(lambda tx: tx.run(query, parameters or {}).consume())
 
 
 # Global instance

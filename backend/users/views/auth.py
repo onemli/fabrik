@@ -28,11 +28,13 @@ from ..throttles import (
 from audit.services import AuditService
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 class UserRegistrationView(generics.CreateAPIView):
     from django.contrib.auth.models import User
+
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     throttle_classes = [RegistrationRateThrottle]
@@ -66,7 +68,9 @@ class PasswordChangeView(generics.UpdateAPIView):
     def update(self, request, *args, **kwargs) -> Response:
         if getattr(request.user, 'profile', None) and request.user.profile.auth_source == 'ldap':
             return Response(
-                {'detail': 'Password is managed by your LDAP directory. Contact your system administrator.'},
+                {
+                    'detail': 'Password is managed by your LDAP directory. Contact your system administrator.'
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = self.get_serializer(data=request.data)
@@ -79,14 +83,16 @@ class PasswordChangeView(generics.UpdateAPIView):
 @permission_classes([IsAuthenticated])
 def user_stats(request) -> Response:
     user = request.user
-    return Response({
-        'username': user.username,
-        'email': user.email,
-        'date_joined': user.date_joined,
-        'query_count': user.created_queries.count(),
-        'favorite_count': user.favorite_queries.count(),
-        'shared_query_count': user.shared_queries.count(),
-    })
+    return Response(
+        {
+            'username': user.username,
+            'email': user.email,
+            'date_joined': user.date_joined,
+            'query_count': user.created_queries.count(),
+            'favorite_count': user.favorite_queries.count(),
+            'shared_query_count': user.shared_queries.count(),
+        }
+    )
 
 
 class UserPreferencesView(generics.RetrieveUpdateAPIView):
@@ -108,6 +114,7 @@ class SecureLoginView(TokenObtainPairView):
     If MFA is enabled, returns 202 with mfa_required=true (no tokens).
     Frontend then calls /mfa-login/ with username + password + totp_code.
     """
+
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request, *args, **kwargs):
@@ -116,14 +123,17 @@ class SecureLoginView(TokenObtainPairView):
         # Check lockout
         try:
             from django.contrib.auth.models import User as DjangoUser
+
             user_obj = DjangoUser.objects.select_related('profile').get(username=username)
             profile = user_obj.profile
 
             if profile.locked_until and profile.locked_until > timezone.now():
                 remaining = int((profile.locked_until - timezone.now()).total_seconds() / 60) + 1
                 return Response(
-                    {'detail': f'Account is temporarily locked. Try again in {remaining} minute(s).'},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                    {
+                        'detail': f'Account is temporarily locked. Try again in {remaining} minute(s).'
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
         except Exception:
             logger.warning("Failed to check lockout status for user '%s'", username, exc_info=True)
@@ -146,12 +156,16 @@ class SecureLoginView(TokenObtainPairView):
     def _check_mfa_required(self, username: str) -> Optional[Response]:
         try:
             from django.contrib.auth.models import User as DjangoUser
+
             user_obj = DjangoUser.objects.select_related('profile').get(username=username)
             if user_obj.profile.totp_enabled:
-                return Response({
-                    'mfa_required': True,
-                    'message': 'MFA verification required.',
-                }, status=status.HTTP_202_ACCEPTED)
+                return Response(
+                    {
+                        'mfa_required': True,
+                        'message': 'MFA verification required.',
+                    },
+                    status=status.HTTP_202_ACCEPTED,
+                )
         except Exception:
             logger.warning("Failed to check MFA status for user '%s'", username, exc_info=True)
         return None
@@ -159,6 +173,7 @@ class SecureLoginView(TokenObtainPairView):
     def _handle_successful_login(self, username: str) -> None:
         try:
             from django.contrib.auth.models import User as DjangoUser
+
             user_obj = DjangoUser.objects.select_related('profile').get(username=username)
             profile = user_obj.profile
             profile.failed_login_attempts = 0
@@ -170,6 +185,7 @@ class SecureLoginView(TokenObtainPairView):
     def _handle_failed_login(self, username: str) -> None:
         try:
             from django.contrib.auth.models import User as DjangoUser
+
             user_obj = DjangoUser.objects.select_related('profile').get(username=username)
             profile = user_obj.profile
             profile.failed_login_attempts += 1
@@ -185,6 +201,7 @@ class SecureLoginView(TokenObtainPairView):
 
 class MFALoginView(APIView):
     """Second step of MFA login — validates TOTP or backup code, returns JWT."""
+
     permission_classes = [AllowAny]
     throttle_classes = [MFARateThrottle]
 
@@ -198,6 +215,7 @@ class MFALoginView(APIView):
         backup_code = serializer.validated_data.get('backup_code', '')
 
         from django.contrib.auth import authenticate
+
         user = authenticate(request, username=username, password=password)
         if user is None:
             return Response({'error': 'Invalid credentials.'}, status=400)
@@ -219,6 +237,7 @@ class MFALoginView(APIView):
             return Response({'error': 'Invalid verification code.'}, status=400)
 
         from rest_framework_simplejwt.tokens import RefreshToken
+
         refresh = RefreshToken.for_user(user)
 
         AuditService.log(
@@ -232,10 +251,12 @@ class MFALoginView(APIView):
             request=request,
         )
 
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-        })
+        return Response(
+            {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        )
 
 
 LDAP_LOGIN_TIMEOUT_SECONDS = 5
@@ -245,11 +266,13 @@ class LDAPLoginView(APIView):
     """Dedicated LDAP login endpoint. Authenticates against the LDAP server
     explicitly, so a slow/down LDAP server never affects the normal /login/
     endpoint. Returns JWT tokens on success, supports MFA."""
+
     permission_classes = [AllowAny]
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         from django.conf import settings
+
         if not getattr(settings, 'LDAP_ENABLED', False):
             return Response(
                 {'detail': 'LDAP authentication is not enabled.'},
@@ -268,6 +291,7 @@ class LDAPLoginView(APIView):
         # Authenticate via LDAPBackend explicitly
         try:
             from django_auth_ldap.backend import LDAPBackend
+
             backend = LDAPBackend()
             user = backend.authenticate(request, username=username, password=password)
         except Exception:
@@ -286,6 +310,7 @@ class LDAPLoginView(APIView):
         # Tag user as LDAP-sourced so password reset/change is blocked
         try:
             from ..models import UserProfile
+
             profile = user.profile
             if profile.auth_source != UserProfile.AUTH_SOURCE_LDAP:
                 profile.auth_source = UserProfile.AUTH_SOURCE_LDAP
@@ -296,15 +321,19 @@ class LDAPLoginView(APIView):
         # Check MFA
         try:
             if user.profile.totp_enabled:
-                return Response({
-                    'mfa_required': True,
-                    'message': 'MFA verification required.',
-                }, status=status.HTTP_202_ACCEPTED)
+                return Response(
+                    {
+                        'mfa_required': True,
+                        'message': 'MFA verification required.',
+                    },
+                    status=status.HTTP_202_ACCEPTED,
+                )
         except Exception:
             pass
 
         # Issue JWT tokens
         from rest_framework_simplejwt.tokens import RefreshToken
+
         refresh = RefreshToken.for_user(user)
 
         AuditService.log(
@@ -318,10 +347,12 @@ class LDAPLoginView(APIView):
             request=request,
         )
 
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-        })
+        return Response(
+            {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        )
 
 
 class SessionTimeoutView(APIView):

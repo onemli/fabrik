@@ -15,6 +15,7 @@ from .services import AuditService
 # USER MANAGEMENT SIGNALS
 # ============================================================
 
+
 @receiver(post_save, sender=User)
 def log_user_save(sender: type, instance: User, created: bool, **kwargs) -> None:
     """Log user creation or update."""
@@ -33,7 +34,7 @@ def log_user_save(sender: type, instance: User, created: bool, **kwargs) -> None
                 'last_name': instance.last_name,
                 'is_staff': instance.is_staff,
                 'is_superuser': instance.is_superuser,
-            }
+            },
         )
     else:
         if hasattr(instance, '_pre_save_state'):
@@ -47,6 +48,7 @@ def log_user_save(sender: type, instance: User, created: bool, **kwargs) -> None
 
             if changes:
                 from .middleware import get_current_user
+
                 current_user = get_current_user()
 
                 AuditService.log(
@@ -57,7 +59,7 @@ def log_user_save(sender: type, instance: User, created: bool, **kwargs) -> None
                     resource_id=instance.id,
                     resource_name=instance.username,
                     description=f"User '{instance.username}' updated",
-                    metadata={'changes': changes}
+                    metadata={'changes': changes},
                 )
 
 
@@ -65,6 +67,7 @@ def log_user_save(sender: type, instance: User, created: bool, **kwargs) -> None
 def log_user_delete(sender: type, instance: User, **kwargs) -> None:
     """Log user deletion."""
     from .middleware import get_current_user
+
     current_user = get_current_user()
 
     AuditService.log(
@@ -78,7 +81,7 @@ def log_user_delete(sender: type, instance: User, **kwargs) -> None:
         metadata={
             'deleted_user_email': instance.email,
             'deleted_user_groups': [g.name for g in instance.groups.all()],
-        }
+        },
     )
 
 
@@ -86,10 +89,12 @@ def log_user_delete(sender: type, instance: User, **kwargs) -> None:
 # GROUP & PERMISSION SIGNALS
 # ============================================================
 
+
 @receiver(post_save, sender=Group)
 def log_group_save(sender: type, instance: Group, created: bool, **kwargs) -> None:
     """Log group creation or update."""
     from .middleware import get_current_user
+
     current_user = get_current_user()
 
     if created:
@@ -108,6 +113,7 @@ def log_group_save(sender: type, instance: Group, created: bool, **kwargs) -> No
 def log_group_delete(sender: type, instance: Group, **kwargs) -> None:
     """Log group deletion."""
     from .middleware import get_current_user
+
     current_user = get_current_user()
 
     AuditService.log(
@@ -121,13 +127,14 @@ def log_group_delete(sender: type, instance: Group, **kwargs) -> None:
         metadata={
             'permissions_count': instance.permissions.count(),
             'users_count': instance.user_set.count(),
-        }
+        },
     )
 
 
 # ============================================================
 # AUTHENTICATION SIGNALS
 # ============================================================
+
 
 @receiver(user_logged_in)
 def log_user_login(sender: type, request, user: User, **kwargs) -> None:
@@ -137,7 +144,7 @@ def log_user_login(sender: type, request, user: User, **kwargs) -> None:
         action='login_success',
         category='login_logout',
         description=f"User '{user.username}' logged in",
-        request=request
+        request=request,
     )
 
     if request:
@@ -156,7 +163,7 @@ def log_user_login(sender: type, request, user: User, **kwargs) -> None:
             ip_address=ip_address,
             user_agent=user_agent,
             user=user,
-            session_key=session_key
+            session_key=session_key,
         )
 
 
@@ -169,7 +176,7 @@ def log_user_logout(sender: type, request, user: User, **kwargs) -> None:
             action='logout',
             category='login_logout',
             description=f"User '{user.username}' logged out",
-            request=request
+            request=request,
         )
 
 
@@ -191,7 +198,7 @@ def log_login_failed(sender: type, credentials: dict, request, **kwargs) -> None
             success=False,
             ip_address=ip_address,
             user_agent=user_agent,
-            failure_reason='Invalid credentials'
+            failure_reason='Invalid credentials',
         )
 
         AuditService.log(
@@ -200,5 +207,5 @@ def log_login_failed(sender: type, credentials: dict, request, **kwargs) -> None
             category='login_logout',
             description=f"Failed login attempt for username '{username}'",
             request=request,
-            success=False
+            success=False,
         )

@@ -16,6 +16,7 @@ from queries.services.pipeline_executor import PipelineStage, PipelineExecutor
 # Helpers
 # ======================================================================
 
+
 def _class_node(node_id, class_name, filters=None):
     """Build a minimal classNode for flow_data"""
     return {
@@ -56,8 +57,9 @@ def _normal_edge(edge_id, source, target):
     }
 
 
-def _pipeline_edge(edge_id, source, target, inject_as='filter_values',
-                    extract_field='dn', inject_property=None):
+def _pipeline_edge(
+    edge_id, source, target, inject_as='filter_values', extract_field='dn', inject_property=None
+):
     data = {
         'edgeType': 'pipeline',
         'injectAs': inject_as,
@@ -89,10 +91,7 @@ def _make_executor(flow_data):
 def _apic_response(class_name, items):
     return {
         'totalCount': str(len(items)),
-        'imdata': [
-            {class_name: {'attributes': attrs}}
-            for attrs in items
-        ],
+        'imdata': [{class_name: {'attributes': attrs}} for attrs in items],
     }
 
 
@@ -100,9 +99,9 @@ def _apic_response(class_name, items):
 # PipelineStage
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestPipelineStage:
-
     def test_finds_class_name(self):
         nodes = [_class_node('n1', 'fvTenant'), _output_node('n2')]
         stage = PipelineStage(index=0, nodes=nodes, edges=[])
@@ -118,10 +117,7 @@ class TestPipelineStage:
         assert stage.inject_mode == 'filter_values'
 
     def test_inject_mode_from_config(self):
-        stage = PipelineStage(
-            index=0, nodes=[], edges=[],
-            inject_config={'injectAs': 'dn_scope'}
-        )
+        stage = PipelineStage(index=0, nodes=[], edges=[], inject_config={'injectAs': 'dn_scope'})
         assert stage.inject_mode == 'dn_scope'
 
     def test_extract_field_default(self):
@@ -129,10 +125,7 @@ class TestPipelineStage:
         assert stage.extract_field == 'dn'
 
     def test_extract_field_from_config(self):
-        stage = PipelineStage(
-            index=0, nodes=[], edges=[],
-            inject_config={'extractField': 'name'}
-        )
+        stage = PipelineStage(index=0, nodes=[], edges=[], inject_config={'extractField': 'name'})
         assert stage.extract_field == 'name'
 
     def test_inject_property_default_none(self):
@@ -141,8 +134,7 @@ class TestPipelineStage:
 
     def test_inject_property_from_config(self):
         stage = PipelineStage(
-            index=0, nodes=[], edges=[],
-            inject_config={'injectProperty': 'fvTenant.name'}
+            index=0, nodes=[], edges=[], inject_config={'injectProperty': 'fvTenant.name'}
         )
         assert stage.inject_property == 'fvTenant.name'
 
@@ -151,9 +143,9 @@ class TestPipelineStage:
 # _parse_pipeline_stages
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestParsePipelineStages:
-
     def test_no_pipeline_edges_single_stage(self):
         """No pipeline edges → entire canvas is one stage"""
         flow_data = {
@@ -267,10 +259,14 @@ class TestParsePipelineStages:
                 _class_node('n2', 'fvBD'),
             ],
             'edges': [
-                _pipeline_edge('pe1', 'n1', 'n2',
-                               inject_as='iterate',
-                               extract_field='name',
-                               inject_property='fvBD.name'),
+                _pipeline_edge(
+                    'pe1',
+                    'n1',
+                    'n2',
+                    inject_as='iterate',
+                    extract_field='name',
+                    inject_property='fvBD.name',
+                ),
             ],
         }
         executor = _make_executor(flow_data)
@@ -284,25 +280,31 @@ class TestParsePipelineStages:
 # _extract_values
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestExtractValues:
-
     def _executor(self):
         return _make_executor({'nodes': [], 'edges': []})
 
     def test_extract_dn_from_apic_response(self):
-        result = _apic_response('fvTenant', [
-            {'dn': 'uni/tn-prod', 'name': 'prod'},
-            {'dn': 'uni/tn-dev', 'name': 'dev'},
-        ])
+        result = _apic_response(
+            'fvTenant',
+            [
+                {'dn': 'uni/tn-prod', 'name': 'prod'},
+                {'dn': 'uni/tn-dev', 'name': 'dev'},
+            ],
+        )
         values = self._executor()._extract_values(result, 'dn')
         assert values == ['uni/tn-prod', 'uni/tn-dev']
 
     def test_extract_name_from_apic_response(self):
-        result = _apic_response('fvTenant', [
-            {'dn': 'uni/tn-prod', 'name': 'prod'},
-            {'dn': 'uni/tn-dev', 'name': 'dev'},
-        ])
+        result = _apic_response(
+            'fvTenant',
+            [
+                {'dn': 'uni/tn-prod', 'name': 'prod'},
+                {'dn': 'uni/tn-dev', 'name': 'dev'},
+            ],
+        )
         values = self._executor()._extract_values(result, 'name')
         assert values == ['prod', 'dev']
 
@@ -318,11 +320,14 @@ class TestExtractValues:
         assert values == ['prod', 'dev']
 
     def test_deduplication_preserves_order(self):
-        result = _apic_response('fvTenant', [
-            {'dn': 'uni/tn-prod', 'name': 'prod'},
-            {'dn': 'uni/tn-prod', 'name': 'prod'},
-            {'dn': 'uni/tn-dev', 'name': 'dev'},
-        ])
+        result = _apic_response(
+            'fvTenant',
+            [
+                {'dn': 'uni/tn-prod', 'name': 'prod'},
+                {'dn': 'uni/tn-prod', 'name': 'prod'},
+                {'dn': 'uni/tn-dev', 'name': 'dev'},
+            ],
+        )
         values = self._executor()._extract_values(result, 'dn')
         assert values == ['uni/tn-prod', 'uni/tn-dev']
 
@@ -340,9 +345,9 @@ class TestExtractValues:
 # _extract_field_from_item
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestExtractFieldFromItem:
-
     def _executor(self):
         return _make_executor({'nodes': [], 'edges': []})
 
@@ -381,9 +386,9 @@ class TestExtractFieldFromItem:
 # _count_results
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestCountResults:
-
     def _executor(self):
         return _make_executor({'nodes': [], 'edges': []})
 
@@ -412,9 +417,9 @@ class TestCountResults:
 # _apply_stage_postprocessors
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestApplyStagePostprocessors:
-
     def _executor(self):
         return _make_executor({'nodes': [], 'edges': []})
 
@@ -437,10 +442,13 @@ class TestApplyStagePostprocessors:
             ],
             edges=[],
         )
-        result = _apic_response('fvTenant', [
-            {'dn': 'uni/tn-prod', 'name': 'prod'},
-            {'dn': 'uni/tn-dev', 'name': 'dev'},
-        ])
+        result = _apic_response(
+            'fvTenant',
+            [
+                {'dn': 'uni/tn-prod', 'name': 'prod'},
+                {'dn': 'uni/tn-dev', 'name': 'dev'},
+            ],
+        )
         output = self._executor()._apply_stage_postprocessors(stage, result)
         assert output == ['prod', 'dev']
 
@@ -480,18 +488,16 @@ class TestApplyStagePostprocessors:
 # _inject_value_into_nodes
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestInjectValueIntoNodes:
-
     def _executor(self):
         return _make_executor({'nodes': [], 'edges': []})
 
     def test_adds_synthetic_filter_node(self):
         nodes = [_class_node('n1', 'fvTenant')]
         stage = PipelineStage(index=0, nodes=nodes, edges=[])
-        modified = self._executor()._inject_value_into_nodes(
-            nodes, 'uni/tn-prod', stage
-        )
+        modified = self._executor()._inject_value_into_nodes(nodes, 'uni/tn-prod', stage)
         assert len(modified) == 2
         synth = modified[1]
         assert synth['type'] == 'filterNode'
@@ -501,20 +507,15 @@ class TestInjectValueIntoNodes:
     def test_uses_inject_property(self):
         nodes = [_class_node('n1', 'fvTenant')]
         stage = PipelineStage(
-            index=0, nodes=nodes, edges=[],
-            inject_config={'injectProperty': 'name'}
+            index=0, nodes=nodes, edges=[], inject_config={'injectProperty': 'name'}
         )
-        modified = self._executor()._inject_value_into_nodes(
-            nodes, 'prod', stage
-        )
+        modified = self._executor()._inject_value_into_nodes(nodes, 'prod', stage)
         assert modified[1]['data']['property'] == 'name'
 
     def test_default_inject_property_is_dn(self):
         nodes = [_class_node('n1', 'fvTenant')]
         stage = PipelineStage(index=0, nodes=nodes, edges=[])
-        modified = self._executor()._inject_value_into_nodes(
-            nodes, 'uni/tn-prod', stage
-        )
+        modified = self._executor()._inject_value_into_nodes(nodes, 'uni/tn-prod', stage)
         assert modified[1]['data']['property'] == 'dn'
 
     def test_does_not_mutate_original_nodes(self):
@@ -526,9 +527,7 @@ class TestInjectValueIntoNodes:
     def test_no_class_node_returns_unchanged(self):
         nodes = [_output_node('n1')]
         stage = PipelineStage(index=0, nodes=nodes, edges=[])
-        modified = self._executor()._inject_value_into_nodes(
-            nodes, 'val', stage
-        )
+        modified = self._executor()._inject_value_into_nodes(nodes, 'val', stage)
         # No class node found → just returns modified copy without adding filter
         assert len(modified) == 1
 
@@ -537,9 +536,9 @@ class TestInjectValueIntoNodes:
 # execute() integration (mocked APIC)
 # ======================================================================
 
+
 @pytest.mark.unit
 class TestPipelineExecuteIntegration:
-
     @patch('queries.services.pipeline_executor.ChainIterationResult')
     @patch('channels.layers.get_channel_layer', return_value=None)
     def test_single_stage_execution(self, mock_channel, mock_iter_result):
@@ -549,14 +548,18 @@ class TestPipelineExecuteIntegration:
             'edges': [],
         }
         executor = _make_executor(flow_data)
-        apic_result = _apic_response('fvTenant', [
-            {'dn': 'uni/tn-prod', 'name': 'prod'},
-        ])
+        apic_result = _apic_response(
+            'fvTenant',
+            [
+                {'dn': 'uni/tn-prod', 'name': 'prod'},
+            ],
+        )
         executor.apic_client.execute_query.return_value = (True, apic_result, None)
 
-        with patch('queries.services.optimizer.QueryIntent') as mock_intent, \
-             patch('queries.services.optimizer.QueryExecutor') as mock_executor_cls:
-
+        with (
+            patch('queries.services.optimizer.QueryIntent') as mock_intent,
+            patch('queries.services.optimizer.QueryExecutor') as mock_executor_cls,
+        ):
             mock_qe = MagicMock()
             mock_qe.execute.return_value = ('/api/class/fvTenant.json', {})
             mock_executor_cls.return_value = mock_qe
@@ -579,9 +582,10 @@ class TestPipelineExecuteIntegration:
         executor = _make_executor(flow_data)
         executor.apic_client.execute_query.return_value = (False, None, 'Connection refused')
 
-        with patch('queries.services.optimizer.QueryIntent') as mock_intent, \
-             patch('queries.services.optimizer.QueryExecutor') as mock_executor_cls:
-
+        with (
+            patch('queries.services.optimizer.QueryIntent') as mock_intent,
+            patch('queries.services.optimizer.QueryExecutor') as mock_executor_cls,
+        ):
             mock_qe = MagicMock()
             mock_qe.execute.return_value = ('/api/class/fvTenant.json', {})
             mock_executor_cls.return_value = mock_qe
@@ -597,12 +601,9 @@ class TestPipelineExecuteIntegration:
     def test_max_stages_exceeded_raises(self, mock_channel, mock_iter_result):
         """Pipeline with too many stages should raise"""
         nodes = [_class_node(f'n{i}', f'class{i}') for i in range(11)]
-        edges = [
-            _pipeline_edge(f'pe{i}', f'n{i}', f'n{i+1}')
-            for i in range(10)
-        ]
+        edges = [_pipeline_edge(f'pe{i}', f'n{i}', f'n{i + 1}') for i in range(10)]
         executor = _make_executor({'nodes': nodes, 'edges': edges})
-        with pytest.raises(ValueError, match="exceeds maximum"):
+        with pytest.raises(ValueError, match='exceeds maximum'):
             executor.execute()
 
     @patch('queries.services.pipeline_executor.ChainIterationResult')

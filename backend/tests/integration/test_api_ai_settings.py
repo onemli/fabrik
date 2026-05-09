@@ -92,6 +92,7 @@ class TestAISettingsViewSet:
     @patch('requests.get')
     def test_test_connection_timeout(self, mock_get, authenticated_client):
         import requests as http_requests
+
         mock_get.side_effect = http_requests.Timeout()
 
         response = authenticated_client.post(
@@ -105,6 +106,7 @@ class TestAISettingsViewSet:
     @patch('requests.get')
     def test_test_connection_refused(self, mock_get, authenticated_client):
         import requests as http_requests
+
         mock_get.side_effect = http_requests.ConnectionError()
 
         response = authenticated_client.post(
@@ -182,7 +184,11 @@ class TestUserAIProviderViewSet:
     def test_create_then_list_returns_provider(self, authenticated_client):
         authenticated_client.post(
             '/api/ai/provider/',
-            {'provider': 'groq', 'api_key': 'gsk_testkey123', 'model_name': 'llama-3.3-70b-versatile'},
+            {
+                'provider': 'groq',
+                'api_key': 'gsk_testkey123',
+                'model_name': 'llama-3.3-70b-versatile',
+            },
             format='json',
         )
         response = authenticated_client.get('/api/ai/provider/')
@@ -254,9 +260,13 @@ class TestUserAIProviderViewSet:
         user_b = User.objects.create_user(username='iso_user_b', password='pass')
 
         client_a = APIClient()
-        client_a.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user_a).access_token}')
+        client_a.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user_a).access_token}'
+        )
         client_b = APIClient()
-        client_b.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user_b).access_token}')
+        client_b.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user_b).access_token}'
+        )
 
         client_a.post(
             '/api/ai/provider/',

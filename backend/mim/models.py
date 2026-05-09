@@ -20,7 +20,7 @@ class FavoriteClass(models.Model):
         on_delete=models.CASCADE,
         related_name='favorite_classes',
         null=True,  # Temporary: Allow null for development without auth
-        blank=True  # TODO: Remove when authentication is implemented
+        blank=True,  # TODO: Remove when authentication is implemented
     )
 
     # Class information
@@ -44,8 +44,8 @@ class FavoriteClass(models.Model):
         ]
 
     def __str__(self):
-        username = self.user.username if self.user else "Anonymous"
-        return f"{username} - {self.class_name}"
+        username = self.user.username if self.user else 'Anonymous'
+        return f'{username} - {self.class_name}'
 
 
 class RecentClass(models.Model):
@@ -81,8 +81,8 @@ class RecentClass(models.Model):
         ]
 
     def __str__(self):
-        username = self.user.username if self.user else "Anonymous"
-        return f"{username} - {self.class_name} (×{self.use_count})"
+        username = self.user.username if self.user else 'Anonymous'
+        return f'{username} - {self.class_name} (×{self.use_count})'
 
 
 class TableTemplate(models.Model):
@@ -97,11 +97,7 @@ class TableTemplate(models.Model):
     """
 
     user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='table_templates',
-        null=True,
-        blank=True
+        User, on_delete=models.CASCADE, related_name='table_templates', null=True, blank=True
     )
 
     # Template identification
@@ -118,7 +114,9 @@ class TableTemplate(models.Model):
 
     # Default filters and sorting
     default_filters = models.JSONField(default=list, blank=True)
-    default_sorting = models.JSONField(default=list, blank=True)  # [{"field": "name", "direction": "asc"}]
+    default_sorting = models.JSONField(
+        default=list, blank=True
+    )  # [{"field": "name", "direction": "asc"}]
 
     # Metadata
     is_default = models.BooleanField(default=False)  # User's default for this class
@@ -134,8 +132,8 @@ class TableTemplate(models.Model):
         ]
 
     def __str__(self):
-        username = self.user.username if self.user else "Anonymous"
-        return f"{username} - {self.template_name} ({self.class_name})"
+        username = self.user.username if self.user else 'Anonymous'
+        return f'{username} - {self.template_name} ({self.class_name})'
 
 
 class UserTablePreference(models.Model):
@@ -149,20 +147,16 @@ class UserTablePreference(models.Model):
     """
 
     user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='table_preferences',
-        null=True,
-        blank=True
+        User, on_delete=models.CASCADE, related_name='table_preferences', null=True, blank=True
     )
 
     class_name = models.CharField(max_length=255, db_index=True)
 
     # User's customizations
     visible_columns = models.JSONField(default=list)  # List of visible column fields
-    column_order = models.JSONField(default=list)     # Ordered list of column fields
-    hidden_columns = models.JSONField(default=list)   # Always hidden for this user
-    always_visible = models.JSONField(default=list)   # Always visible (locked)
+    column_order = models.JSONField(default=list)  # Ordered list of column fields
+    hidden_columns = models.JSONField(default=list)  # Always hidden for this user
+    always_visible = models.JSONField(default=list)  # Always visible (locked)
 
     # Preferences
     auto_hide_empty = models.BooleanField(default=True)
@@ -173,7 +167,7 @@ class UserTablePreference(models.Model):
             ('inline-summary', 'Inline Summary'),
             ('inline-expanded', 'Inline Expanded'),
             ('modal', 'Modal View'),
-        ]
+        ],
     )
     max_inline_children = models.IntegerField(default=3)
 
@@ -188,5 +182,5 @@ class UserTablePreference(models.Model):
         ]
 
     def __str__(self):
-        username = self.user.username if self.user else "Anonymous"
-        return f"{username} - Preferences for {self.class_name}"
+        username = self.user.username if self.user else 'Anonymous'
+        return f'{username} - Preferences for {self.class_name}'

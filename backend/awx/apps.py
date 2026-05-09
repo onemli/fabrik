@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class AwxConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
-    name = "awx"
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'awx'
 
     def ready(self):
         """Import Celery tasks and validate encryption key on startup."""
@@ -29,21 +29,23 @@ class AwxConfig(AppConfig):
     def _validate_encryption_key():
         """Validate that ENCRYPTION_KEY is set and is a valid Fernet key."""
         import os
+
         key = os.environ.get('ENCRYPTION_KEY', '')
         if not key:
             logger.warning(
-                "ENCRYPTION_KEY is not set. Encrypted fields (AWX tokens, APIC passwords) "
-                "will not work. Set ENCRYPTION_KEY in your .env file."
+                'ENCRYPTION_KEY is not set. Encrypted fields (AWX tokens, APIC passwords) '
+                'will not work. Set ENCRYPTION_KEY in your .env file.'
             )
             return
 
         try:
             from cryptography.fernet import Fernet
+
             # Fernet() raises ValueError if the key is not valid base64-encoded 32-byte key
             Fernet(key.encode() if isinstance(key, str) else key)
         except Exception as e:
             logger.error(
-                "ENCRYPTION_KEY is invalid (%s). Encrypted fields will fail at runtime. "
-                "Generate a valid key with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"",
+                'ENCRYPTION_KEY is invalid (%s). Encrypted fields will fail at runtime. '
+                'Generate a valid key with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"',
                 type(e).__name__,
             )

@@ -111,7 +111,8 @@ def run_devnet_import(self, run_id: str):
     # Orphan-cleanup: any in_progress jobs from a previous worker death go back
     # to pending so we re-process them.
     MIMImportJob.objects.filter(
-        run_id=run_id, state=MIMImportJob.STATE_IN_PROGRESS,
+        run_id=run_id,
+        state=MIMImportJob.STATE_IN_PROGRESS,
     ).update(state=MIMImportJob.STATE_PENDING)
 
     tmp_dir = _TMP_ROOT / str(run_id)
@@ -163,13 +164,19 @@ def _phase_download(run: MIMImportRun, run_id: str, tmp_dir: Path, emit) -> bool
         return True
 
     MIMImportRun.objects.filter(id=run_id).update(phase=MIMImportRun.PHASE_DOWNLOADING)
-    emit('mim_progress', phase=MIMImportRun.PHASE_DOWNLOADING, done=0,
-         total=run.total_classes,
-         message=f'Downloading {len(pending_jobs):,} classes from Cisco DevNet…')
+    emit(
+        'mim_progress',
+        phase=MIMImportRun.PHASE_DOWNLOADING,
+        done=0,
+        total=run.total_classes,
+        message=f'Downloading {len(pending_jobs):,} classes from Cisco DevNet…',
+    )
 
     last_emit = {'t': 0.0}
 
-    def write_payload_to_file(job_id: int, qualified_name: str, payload: dict, source_version: str) -> str:
+    def write_payload_to_file(
+        job_id: int, qualified_name: str, payload: dict, source_version: str
+    ) -> str:
         safe_name = qualified_name.replace(':', '__').replace('/', '_')
         path = tmp_dir / f'{safe_name}.json.gz'
         with gzip.open(path, 'wt', encoding='utf-8') as fh:
@@ -182,7 +189,9 @@ def _phase_download(run: MIMImportRun, run_id: str, tmp_dir: Path, emit) -> bool
             for r in results:
                 if r.state == 'done' and isinstance(r.payload, dict) and r.payload:
                     qualified_name, _ = next(iter(r.payload.items()))
-                    tmp_path = write_payload_to_file(r.job_id, qualified_name, r.payload, r.source_version)
+                    tmp_path = write_payload_to_file(
+                        r.job_id, qualified_name, r.payload, r.source_version
+                    )
                     MIMImportJob.objects.filter(id=r.job_id).update(
                         state=MIMImportJob.STATE_DONE,
                         source_version=r.source_version,
@@ -218,18 +227,23 @@ def _phase_download(run: MIMImportRun, run_id: str, tmp_dir: Path, emit) -> bool
         if now - last_emit['t'] < _PROGRESS_THROTTLE_S:
             return
         last_emit['t'] = now
-        emit('mim_progress',
-             phase=MIMImportRun.PHASE_DOWNLOADING,
-             done=done_count,
-             total=run.total_classes,
-             fallback_count=stats.fallback_used,
-             not_found_count=stats.not_found,
-             failed_count=stats.failed,
-             message=f'Downloading {done_count:,}/{run.total_classes:,} from Cisco DevNet…')
+        emit(
+            'mim_progress',
+            phase=MIMImportRun.PHASE_DOWNLOADING,
+            done=done_count,
+            total=run.total_classes,
+            fallback_count=stats.fallback_used,
+            not_found_count=stats.not_found,
+            failed_count=stats.failed,
+            message=f'Downloading {done_count:,}/{run.total_classes:,} from Cisco DevNet…',
+        )
 
     def cancel_check() -> bool:
-        return bool(MIMImportRun.objects.filter(id=run_id)
-                    .values_list('cancel_requested', flat=True).first())
+        return bool(
+            MIMImportRun.objects.filter(id=run_id)
+            .values_list('cancel_requested', flat=True)
+            .first()
+        )
 
     _run_async_scrape(
         version_chain=version_chain,
@@ -261,9 +275,13 @@ def _phase_import(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoad
     Returns False if cancellation was requested mid-flight.
     """
     MIMImportRun.objects.filter(id=run_id).update(phase=MIMImportRun.PHASE_IMPORTING)
-    emit('mim_progress', phase=MIMImportRun.PHASE_IMPORTING, done=0,
-         total=run.total_classes,
-         message='Wiping Neo4j and creating indexes…')
+    emit(
+        'mim_progress',
+        phase=MIMImportRun.PHASE_IMPORTING,
+        done=0,
+        total=run.total_classes,
+        message='Wiping Neo4j and creating indexes…',
+    )
 
     loader.prepare_for_streaming(version_key=run.version_key, total_classes=run.total_classes)
 
@@ -275,15 +293,18 @@ def _phase_import(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoad
     last_emit = {'t': 0.0}
 
     def cancel_check() -> bool:
-        return bool(MIMImportRun.objects.filter(id=run_id)
-                    .values_list('cancel_requested', flat=True).first())
+        return bool(
+            MIMImportRun.objects.filter(id=run_id)
+            .values_list('cancel_requested', flat=True)
+            .first()
+        )
 
     # Pull tmp paths from Postgres so we work in deterministic order and can
     # update job rows atomically. (Walking the dir would lose us the FK.)
     done_jobs = list(
-        MIMImportJob.objects
-        .filter(run_id=run_id, state=MIMImportJob.STATE_DONE, tmp_path__gt='')
-        .values_list('id', 'tmp_path')
+        MIMImportJob.objects.filter(
+            run_id=run_id, state=MIMImportJob.STATE_DONE, tmp_path__gt=''
+        ).values_list('id', 'tmp_path')
     )
     total_done = len(done_jobs)
     if total_done == 0:
@@ -301,9 +322,13 @@ def _phase_import(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoad
         now = time.monotonic()
         if now - last_emit['t'] >= _PROGRESS_THROTTLE_S:
             last_emit['t'] = now
-            emit('mim_progress', phase=MIMImportRun.PHASE_IMPORTING,
-                 done=processed, total=total_done * 2,
-                 message=f'Step 1/2: writing classes ({processed:,}/{total_done:,})')
+            emit(
+                'mim_progress',
+                phase=MIMImportRun.PHASE_IMPORTING,
+                done=processed,
+                total=total_done * 2,
+                message=f'Step 1/2: writing classes ({processed:,}/{total_done:,})',
+            )
 
     # ---- pass 2: relationships, deleting each tmp file after use ----
     last_emit['t'] = 0.0
@@ -328,9 +353,13 @@ def _phase_import(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoad
         now = time.monotonic()
         if now - last_emit['t'] >= _PROGRESS_THROTTLE_S:
             last_emit['t'] = now
-            emit('mim_progress', phase=MIMImportRun.PHASE_IMPORTING,
-                 done=total_done + processed, total=total_done * 2,
-                 message=f'Step 2/2: indexing relationships ({processed:,}/{total_done:,})')
+            emit(
+                'mim_progress',
+                phase=MIMImportRun.PHASE_IMPORTING,
+                done=total_done + processed,
+                total=total_done * 2,
+                message=f'Step 2/2: indexing relationships ({processed:,}/{total_done:,})',
+            )
 
     return True
 
@@ -340,14 +369,23 @@ def _phase_import(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoad
 # ---------------------------------------------------------------------------
 
 
-def _phase_finalize(run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoaderV2, emit) -> dict:
+def _phase_finalize(
+    run: MIMImportRun, run_id: str, tmp_dir: Path, loader: MIMLoaderV2, emit
+) -> dict:
     MIMImportRun.objects.filter(id=run_id).update(phase=MIMImportRun.PHASE_FINALIZING)
-    emit('mim_progress', phase=MIMImportRun.PHASE_FINALIZING,
-         done=run.total_classes, total=run.total_classes,
-         message='Building search indexes and finalizing…')
+    emit(
+        'mim_progress',
+        phase=MIMImportRun.PHASE_FINALIZING,
+        done=run.total_classes,
+        total=run.total_classes,
+        message='Building search indexes and finalizing…',
+    )
 
     final_summary = MIMImportRun.objects.values(
-        'completed_count', 'fallback_count', 'not_found_count', 'failed_count',
+        'completed_count',
+        'fallback_count',
+        'not_found_count',
+        'failed_count',
     ).get(id=run_id)
 
     loader.create_fulltext_indexes()
@@ -397,7 +435,8 @@ def _finalize_cancelled(run_id: str, emit) -> dict:
         finished_at=dj_timezone.now(),
     )
     MIMImportJob.objects.filter(
-        run_id=run_id, state=MIMImportJob.STATE_IN_PROGRESS,
+        run_id=run_id,
+        state=MIMImportJob.STATE_IN_PROGRESS,
     ).update(state=MIMImportJob.STATE_PENDING)
     emit('mim_status', status='cancelled')
     return {'state': 'cancelled'}
@@ -411,7 +450,8 @@ def _finalize_cancelled(run_id: str, emit) -> dict:
 def _resolve_version_chain(requested_key: str) -> list[ScraperVersionSpec]:
     """Build the ScraperVersionSpec list ordered by the requested fallback chain."""
     requested = DevNetVersion.objects.filter(
-        version_key=requested_key, is_supported=True,
+        version_key=requested_key,
+        is_supported=True,
     ).first()
     if not requested:
         return []
@@ -419,23 +459,25 @@ def _resolve_version_chain(requested_key: str) -> list[ScraperVersionSpec]:
     if chain_keys[0] != requested_key:
         chain_keys = [requested_key] + [k for k in chain_keys if k != requested_key]
     available = {
-        v.version_key: v for v in DevNetVersion.objects.filter(
-            version_key__in=chain_keys, is_supported=True,
+        v.version_key: v
+        for v in DevNetVersion.objects.filter(
+            version_key__in=chain_keys,
+            is_supported=True,
         )
     }
     return [
         ScraperVersionSpec(version_key=k, url_template=available[k].url_template)
-        for k in chain_keys if k in available
+        for k in chain_keys
+        if k in available
     ]
 
 
 def _load_pending_jobs(run_id: str) -> list[ScraperJob]:
     """Fetch pending jobs as ScraperJob dataclasses, marking them in_progress."""
     rows = list(
-        MIMImportJob.objects
-        .filter(run_id=run_id, state=MIMImportJob.STATE_PENDING)
-        .values('id', 'class_pkg', 'class_name', 'qualified_name',
-                'http_etag', 'attempted_versions')
+        MIMImportJob.objects.filter(run_id=run_id, state=MIMImportJob.STATE_PENDING).values(
+            'id', 'class_pkg', 'class_name', 'qualified_name', 'http_etag', 'attempted_versions'
+        )
     )
     if rows:
         MIMImportJob.objects.filter(id__in=[r['id'] for r in rows]).update(
@@ -457,7 +499,7 @@ def _load_pending_jobs(run_id: str) -> list[ScraperJob]:
 
 def _chunks(seq: list, size: int) -> Iterable[list]:
     for i in range(0, len(seq), size):
-        yield seq[i:i + size]
+        yield seq[i : i + size]
 
 
 def _load_payloads(chunk: list[tuple[int, str]]) -> list[dict]:
@@ -481,11 +523,13 @@ def _load_payloads(chunk: list[tuple[int, str]]) -> list[dict]:
         qualified_name, class_data = next(iter(payload.items()))
         if not isinstance(class_data, dict):
             continue
-        out.append({
-            'qualified_name': qualified_name,
-            'class_data': class_data,
-            'source_version': '',
-        })
+        out.append(
+            {
+                'qualified_name': qualified_name,
+                'class_data': class_data,
+                'source_version': '',
+            }
+        )
     return out
 
 
