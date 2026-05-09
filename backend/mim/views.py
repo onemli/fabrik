@@ -2,6 +2,8 @@
 # All data comes from Neo4j via mim_service; these views just handle HTTP
 # parameter parsing and serialization.
 
+import logging
+
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import status, viewsets
@@ -16,6 +18,8 @@ from .serializers import (
     TableTemplateSerializer,
     UserTablePreferenceSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -827,8 +831,9 @@ def suggest_classes(request):
                 candidates = []
         if not isinstance(candidates, list):
             candidates = []
-    except Exception as exc:
-        return Response({'error': f'LLM call failed: {exc}'}, status=status.HTTP_502_BAD_GATEWAY)
+    except Exception:
+        logger.exception('LLM call failed')
+        return Response({'error': 'LLM call failed.'}, status=status.HTTP_502_BAD_GATEWAY)
 
     # Validate each candidate against MIM — this is the hallucination guard
     suggestions = []
