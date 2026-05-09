@@ -172,10 +172,12 @@ export function EventDetailDialog({ event, onClose }: EventDetailDialogProps) {
                 <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
               </Button>
             </div>
+            {/* eslint-disable no-restricted-syntax -- SECURITY: stdoutHtml is the output of ansiToHtml (Anser with use_classes:true, XML escape on); the fallback is a hand-written constant with no interpolation. */}
             <pre
               className="text-xs font-mono whitespace-pre-wrap break-all p-3 rounded border bg-muted/20"
               dangerouslySetInnerHTML={{ __html: stdoutHtml || '<span class="text-muted-foreground italic">(no stdout)</span>' }}
             />
+            {/* eslint-enable no-restricted-syntax */}
           </TabsContent>
 
           <TabsContent value="raw" className="flex-1 min-h-0 overflow-auto mt-3">

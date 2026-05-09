@@ -30,6 +30,10 @@ module.exports = {
         selector: "CallExpression[callee.property.name='toLocaleTimeString']",
         message: 'Use formatTime() from useFormatters() or TimezoneContext instead.',
       },
+      {
+        selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+        message: "dangerouslySetInnerHTML bypasses React's HTML escaping. If the input is genuinely safe, add // eslint-disable-next-line no-restricted-syntax with a // SECURITY: comment explaining why.",
+      },
     ],
   },
 }

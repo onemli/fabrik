@@ -98,8 +98,10 @@ function RawRow({ event, onClick }: { event: JobEvent; onClick: () => void }) {
       onClick={onClick}
       className="px-3 py-0.5 cursor-pointer hover:bg-muted/30 font-mono text-xs leading-snug whitespace-pre-wrap break-all"
     >
+      {/* eslint-disable-next-line no-restricted-syntax -- SECURITY: ansiToHtml runs Anser with use_classes:true, which XML-escapes the input before emitting class-based spans. */}
       {html && <span dangerouslySetInnerHTML={{ __html: html }} />}
       {stderrHtml && (
+        // eslint-disable-next-line no-restricted-syntax -- SECURITY: same as above — stderr goes through the same Anser escape path.
         <span className="ansi-red-fg" dangerouslySetInnerHTML={{ __html: stderrHtml }} />
       )}
     </div>

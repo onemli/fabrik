@@ -68,10 +68,12 @@ export function JsonViewer({ data, className = '' }: JsonViewerProps) {
           font-style: italic;
         }
       `}</style>
+      {/* eslint-disable no-restricted-syntax -- SECURITY: colorizedJson starts from escapeHtml(JSON.stringify(...)), so any &<> in the data are neutralized before the regex steps add their own <span> wrappers. */}
       <pre
         className={`text-xs font-mono ${className}`}
         dangerouslySetInnerHTML={{ __html: colorizedJson }}
       />
+      {/* eslint-enable no-restricted-syntax */}
     </>
   )
 }

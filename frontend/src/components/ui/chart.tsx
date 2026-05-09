@@ -75,6 +75,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   }
 
   return (
+    /* eslint-disable no-restricted-syntax -- SECURITY: the CSS string is composed entirely from THEMES (a static map) and the developer-supplied chart config; no user-controlled values reach this template. */
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
@@ -95,6 +96,7 @@ ${colorConfig
           .join("\n"),
       }}
     />
+    /* eslint-enable no-restricted-syntax */
   )
 }
 

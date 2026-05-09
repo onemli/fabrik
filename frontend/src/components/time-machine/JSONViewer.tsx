@@ -30,10 +30,12 @@ export default function JSONViewer({ data }: JSONViewerProps) {
 
   return (
     <pre className="text-xs p-6 m-0 bg-background/40 font-mono">
+      {/* eslint-disable no-restricted-syntax -- SECURITY: formattedJSON starts from escapeHtml(JSON.stringify(...)), so any &<> in the data are neutralized before the regex steps add their own <span> wrappers. */}
       <code
         className="text-foreground 70"
         dangerouslySetInnerHTML={{ __html: formattedJSON }}
       />
+      {/* eslint-enable no-restricted-syntax */}
     </pre>
   )
 }
