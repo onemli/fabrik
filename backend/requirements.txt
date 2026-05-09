@@ -44,7 +44,7 @@ jsonpath-ng
 # Optional: Install only if LDAP_ENABLED=true
 # Install with: pip install django-auth-ldap python-ldap
 django-auth-ldap==4.6.0
-python-ldap==3.4.4
+python-ldap==3.4.5
 python-dateutil
 
 # MFA / TOTP

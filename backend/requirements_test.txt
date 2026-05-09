@@ -28,6 +28,6 @@ websockets==12.0
 
 # Code Quality
 flake8==7.0.0
-black==24.1.1
+black==24.10.0
 isort==5.13.2
 mypy==1.8.0

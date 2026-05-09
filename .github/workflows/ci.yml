@@ -81,6 +81,13 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt -r requirements_test.txt
 
+      - name: Audit dependencies for known CVEs
+        working-directory: backend
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit
+
       - name: Django system check
         working-directory: backend
         run: python manage.py check --deploy 2>&1 | grep -v "WARNINGS" || true
