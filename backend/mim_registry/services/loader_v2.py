@@ -737,10 +737,10 @@ class MIMLoaderV2:
         for stmt in statements:
             try:
                 self._execute(stmt)
-            except Exception as e:
+            except Exception:
                 # Index creation on existing Neo4j can warn rather than fail;
                 # don't abort the whole import over index hygiene.
-                logger.warning(f'Index creation warning: {e}')
+                logger.exception('Index creation warning')
 
     def _execute(self, query: str, parameters: Optional[dict] = None) -> list:
         with self._driver.session() as session:

@@ -280,11 +280,11 @@ class TimeMachineService:
                 'has_changes': has_changes,
             }
 
-        except Exception as e:
-            logger.error(f'Failed to capture Time Machine snapshot: {e}')
+        except Exception:
+            logger.exception('Failed to capture Time Machine snapshot')
             return {
                 'success': False,
-                'error': str(e),
+                'error': 'Failed to capture snapshot.',
             }
 
     def list_queries_with_snapshots(self, user_id: int) -> List[Dict]:
@@ -488,8 +488,8 @@ class TimeMachineService:
                 'identical': False,
             }
 
-        except QueryExecutionSnapshot.DoesNotExist as e:
-            logger.error(f'Snapshot not found: {e}')
+        except QueryExecutionSnapshot.DoesNotExist:
+            logger.exception('Snapshot not found')
             return {'error': 'Snapshot not found'}
 
     def get_heatmap_data(

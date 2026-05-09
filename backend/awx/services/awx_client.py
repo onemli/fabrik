@@ -90,7 +90,7 @@ class AWXClient:
         else:
             raise ValueError("Either 'token' or 'username'+'password' must be provided")
 
-        logger.info(f'AWX Client configured for {self.base_url}')
+        logger.info('AWX Client configured for %s', self.base_url)
 
     def test_connection(self) -> Tuple[bool, Optional[str], Optional[Dict]]:
         if not self.base_url or (not self.token and not self.session.auth):
@@ -120,7 +120,7 @@ class AWXClient:
                 error_msg = f'Auth check failed: HTTP {me_resp.status_code}'
                 return False, error_msg, None
 
-            logger.info(f'AWX connection test successful: {self.base_url}')
+            logger.info('AWX connection test successful: %s', self.base_url)
             return (
                 True,
                 None,
@@ -131,21 +131,21 @@ class AWXClient:
                 },
             )
 
-        except requests.exceptions.SSLError as e:
+        except requests.exceptions.SSLError:
             error_msg = 'SSL certificate verification failed. Try disabling SSL verification.'
-            logger.error(f'AWX SSL Error: {str(e)}')
+            logger.exception('AWX SSL error')
             return False, error_msg, None
-        except requests.exceptions.ConnectionError as e:
+        except requests.exceptions.ConnectionError:
             error_msg = 'Connection refused - check URL and network connectivity'
-            logger.error(f'AWX Connection Error: {str(e)}')
+            logger.exception('AWX connection error')
             return False, error_msg, None
         except requests.exceptions.Timeout:
             error_msg = 'Request timeout - AWX is not responding'
-            logger.error(f'AWX Timeout: {self.base_url}')
+            logger.error('AWX Timeout: %s', self.base_url)
             return False, error_msg, None
         except Exception as e:
-            error_msg = f'Unexpected error: {str(e)}'
-            logger.exception(f'AWX unexpected error: {error_msg}')
+            error_msg = f'Unexpected error ({type(e).__name__}).'
+            logger.exception('AWX unexpected error: %s', error_msg)
             return False, error_msg, None
 
     def list_job_templates(
@@ -168,8 +168,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}: {response.text[:200]}'
 
         except Exception as e:
-            logger.exception(f'Error listing job templates: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error listing job templates')
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_job_template(self, template_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -184,8 +184,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting job template {template_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting job template %s', template_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_job_template_survey(self, template_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -196,14 +196,14 @@ class AWXClient:
                 return True, response.json(), None
             elif response.status_code == 404:
                 # Survey doesn't exist for this template
-                logger.info(f'No survey spec found for job template {template_id}')
+                logger.info('No survey spec found for job template %s', template_id)
                 return True, {}, None  # Empty survey is valid
             else:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting survey spec for template {template_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting survey spec for template %s', template_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_project(self, project_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -218,8 +218,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting project {project_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting project %s', project_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def launch_job(
         self,
@@ -248,7 +248,7 @@ class AWXClient:
             if credentials:
                 payload['credentials'] = credentials
 
-            logger.info(f'Launching job template {job_template_id}')
+            logger.info('Launching job template %s', job_template_id)
 
             response = self.session.post(
                 url, json=payload, verify=self.verify_ssl, timeout=self.timeout
@@ -256,7 +256,7 @@ class AWXClient:
 
             if response.status_code in [200, 201]:
                 job_data = response.json()
-                logger.info(f'Job launched successfully: {job_data.get("id")}')
+                logger.info('Job launched successfully: %s', job_data.get('id'))
                 return True, job_data, None
             else:
                 error_msg = f'Launch failed: HTTP {response.status_code} - {response.text[:500]}'
@@ -264,7 +264,7 @@ class AWXClient:
                 return False, None, error_msg
 
         except Exception as e:
-            error_msg = f'Exception during job launch: {str(e)}'
+            error_msg = f'Exception during job launch ({type(e).__name__}).'
             logger.exception(error_msg)
             return False, None, error_msg
 
@@ -281,8 +281,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting job status for {job_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting job status for %s', job_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_job_stdout(self, job_id: int, format: str = 'txt') -> Tuple[bool, str, Optional[str]]:
         try:
@@ -302,28 +302,28 @@ class AWXClient:
                 return False, '', f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting stdout for job {job_id}: {str(e)}')
-            return False, '', str(e)
+            logger.exception('Error getting stdout for job %s', job_id)
+            return False, '', f'AWX request failed ({type(e).__name__}).'
 
     def cancel_job(self, job_id: int) -> Tuple[bool, Optional[str]]:
         try:
             url = f'{self.base_url}/api/v2/jobs/{job_id}/cancel/'
 
-            logger.info(f'Cancelling job {job_id}')
+            logger.info('Cancelling job %s', job_id)
 
             response = self.session.post(url, verify=self.verify_ssl, timeout=self.timeout)
 
             if response.status_code in [200, 202]:
-                logger.info(f'Job {job_id} cancelled successfully')
+                logger.info('Job %s cancelled successfully', job_id)
                 return True, None
             else:
                 error_msg = f'HTTP {response.status_code}: {response.text[:200]}'
-                logger.error(f'Failed to cancel job {job_id}: {error_msg}')
+                logger.error('Failed to cancel job %s: %s', job_id, error_msg)
                 return False, error_msg
 
         except Exception as e:
-            error_msg = str(e)
-            logger.exception(f'Error cancelling job {job_id}: {error_msg}')
+            error_msg = f'AWX request failed ({type(e).__name__}).'
+            logger.exception('Error cancelling job %s: %s', job_id, error_msg)
             return False, error_msg
 
     def relaunch_job(
@@ -349,7 +349,7 @@ class AWXClient:
                 return False, {}, error_msg
 
         except Exception as e:
-            error_msg = str(e)
+            error_msg = f'AWX request failed ({type(e).__name__}).'
             logger.exception('Error relaunching job %s: %s', job_id, error_msg)
             return False, {}, error_msg
 
@@ -384,8 +384,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error listing credentials: {e}')
-            return False, None, str(e)
+            logger.exception('Error listing credentials')
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def list_credential_types(
         self,
@@ -409,8 +409,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error listing credential types: {e}')
-            return False, None, str(e)
+            logger.exception('Error listing credential types')
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def list_inventories(
         self, page: int = 1, page_size: int = 50
@@ -429,8 +429,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error listing inventories: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error listing inventories')
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_job_events(
         self, job_id: int, event_type: str = None
@@ -452,8 +452,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting job events for {job_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting job events for %s', job_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def list_workflow_templates(
         self, page: int = 1, page_size: int = 50, name_filter: str = None
@@ -475,8 +475,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}: {response.text[:200]}'
 
         except Exception as e:
-            logger.exception(f'Error listing workflow templates: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error listing workflow templates')
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_workflow_template(self, template_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -491,8 +491,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting workflow template {template_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting workflow template %s', template_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_workflow_nodes(self, workflow_template_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -507,8 +507,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting workflow nodes for {workflow_template_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting workflow nodes for %s', workflow_template_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_workflow_template_survey(self, template_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -519,16 +519,14 @@ class AWXClient:
                 return True, response.json(), None
             elif response.status_code == 404:
                 # Survey doesn't exist for this workflow template
-                logger.info(f'No survey spec found for workflow template {template_id}')
+                logger.info('No survey spec found for workflow template %s', template_id)
                 return True, {}, None  # Empty survey is valid
             else:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(
-                f'Error getting survey spec for workflow template {template_id}: {str(e)}'
-            )
-            return False, None, str(e)
+            logger.exception('Error getting survey spec for workflow template %s', template_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def list_workflow_nodes(self, workflow_template_id: int) -> Tuple[bool, list, Optional[str]]:
         """List all nodes attached to a workflow_job_template, paginating until exhausted.
@@ -554,8 +552,8 @@ class AWXClient:
                 next_url = nxt
             return True, results, None
         except Exception as e:
-            logger.exception(f'Error listing workflow nodes for {workflow_template_id}: {e}')
-            return False, [], str(e)
+            logger.exception('Error listing workflow nodes for %s', workflow_template_id)
+            return False, [], f'AWX request failed ({type(e).__name__}).'
 
     def list_node_credentials(self, node_id: int) -> Tuple[bool, list, Optional[str]]:
         """List credentials currently associated with a workflow_job_template_node."""
@@ -569,8 +567,8 @@ class AWXClient:
                 return False, [], f'HTTP {r.status_code}: {r.text[:200]}'
             return True, r.json().get('results') or [], None
         except Exception as e:
-            logger.exception(f'Error listing credentials for node {node_id}: {e}')
-            return False, [], str(e)
+            logger.exception('Error listing credentials for node %s', node_id)
+            return False, [], f'AWX request failed ({type(e).__name__}).'
 
     def associate_node_credential(
         self, node_id: int, credential_id: int
@@ -588,8 +586,8 @@ class AWXClient:
                 return True, {}, None
             return False, {}, f'HTTP {r.status_code}: {r.text[:200]}'
         except Exception as e:
-            logger.exception(f'Error associating cred {credential_id} on node {node_id}: {e}')
-            return False, {}, str(e)
+            logger.exception('Error associating cred %s on node %s', credential_id, node_id)
+            return False, {}, f'AWX request failed ({type(e).__name__}).'
 
     def disassociate_node_credential(
         self, node_id: int, credential_id: int
@@ -607,8 +605,8 @@ class AWXClient:
                 return True, {}, None
             return False, {}, f'HTTP {r.status_code}: {r.text[:200]}'
         except Exception as e:
-            logger.exception(f'Error disassociating cred {credential_id} from node {node_id}: {e}')
-            return False, {}, str(e)
+            logger.exception('Error disassociating cred %s from node %s', credential_id, node_id)
+            return False, {}, f'AWX request failed ({type(e).__name__}).'
 
     def get_credential(self, credential_id: int) -> Tuple[bool, dict, Optional[str]]:
         """Fetch a credential's metadata (used to read its credential_type)."""
@@ -619,8 +617,8 @@ class AWXClient:
                 return True, r.json(), None
             return False, {}, f'HTTP {r.status_code}: {r.text[:200]}'
         except Exception as e:
-            logger.exception(f'Error fetching credential {credential_id}: {e}')
-            return False, {}, str(e)
+            logger.exception('Error fetching credential %s', credential_id)
+            return False, {}, f'AWX request failed ({type(e).__name__}).'
 
     def launch_workflow(
         self,
@@ -643,7 +641,7 @@ class AWXClient:
                 payload['extra_vars'] = payload.get('extra_vars', {})
                 payload['extra_vars']['ansible_check_mode'] = True
 
-            logger.info(f'Launching workflow template {workflow_template_id}')
+            logger.info('Launching workflow template %s', workflow_template_id)
 
             response = self.session.post(
                 url, json=payload, verify=self.verify_ssl, timeout=self.timeout
@@ -651,7 +649,7 @@ class AWXClient:
 
             if response.status_code in [200, 201]:
                 workflow_job_data = response.json()
-                logger.info(f'Workflow launched successfully: {workflow_job_data.get("id")}')
+                logger.info('Workflow launched successfully: %s', workflow_job_data.get('id'))
                 return True, workflow_job_data, None
             else:
                 error_msg = f'Launch failed: HTTP {response.status_code} - {response.text[:500]}'
@@ -659,7 +657,7 @@ class AWXClient:
                 return False, None, error_msg
 
         except Exception as e:
-            error_msg = f'Exception during workflow launch: {str(e)}'
+            error_msg = f'Exception during workflow launch ({type(e).__name__}).'
             logger.exception(error_msg)
             return False, None, error_msg
 
@@ -676,8 +674,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting workflow job status for {workflow_job_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting workflow job status for %s', workflow_job_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     def get_workflow_job_nodes(self, workflow_job_id: int) -> Tuple[bool, Any, Optional[str]]:
         try:
@@ -692,8 +690,8 @@ class AWXClient:
                 return False, None, f'HTTP {response.status_code}'
 
         except Exception as e:
-            logger.exception(f'Error getting workflow job nodes for {workflow_job_id}: {str(e)}')
-            return False, None, str(e)
+            logger.exception('Error getting workflow job nodes for %s', workflow_job_id)
+            return False, None, f'AWX request failed ({type(e).__name__}).'
 
     # ── Ephemeral workflow template lifecycle ─────────────────────────────────
     #
@@ -725,8 +723,8 @@ class AWXClient:
                 return True, response.json(), None
             return False, {}, f'HTTP {response.status_code}: {response.text[:200]}'
         except Exception as e:
-            logger.exception(f'Error copying workflow template {source_id}: {e}')
-            return False, {}, str(e)
+            logger.exception('Error copying workflow template %s', source_id)
+            return False, {}, f'AWX request failed ({type(e).__name__}).'
 
     def delete_workflow_template(self, template_id: int) -> Tuple[bool, Optional[str]]:
         """Delete a workflow_job_template. 404 is treated as success (idempotent)."""
@@ -743,8 +741,8 @@ class AWXClient:
                 return True, None
             return False, f'HTTP {response.status_code}: {response.text[:200]}'
         except Exception as e:
-            logger.exception(f'Error deleting workflow template {template_id}: {e}')
-            return False, str(e)
+            logger.exception('Error deleting workflow template %s', template_id)
+            return False, f'AWX request failed ({type(e).__name__}).'
 
     def list_workflow_templates_by_prefix(
         self,
@@ -778,25 +776,25 @@ class AWXClient:
             return True, results, None
         except Exception as e:
             logger.exception(f"Error listing workflow templates by prefix '{prefix}': {e}")
-            return False, [], str(e)
+            return False, [], f'AWX request failed ({type(e).__name__}).'
 
     def cancel_workflow_job(self, workflow_job_id: int) -> Tuple[bool, Optional[str]]:
         try:
             url = f'{self.base_url}/api/v2/workflow_jobs/{workflow_job_id}/cancel/'
 
-            logger.info(f'Cancelling workflow job {workflow_job_id}')
+            logger.info('Cancelling workflow job %s', workflow_job_id)
 
             response = self.session.post(url, verify=self.verify_ssl, timeout=self.timeout)
 
             if response.status_code in [200, 202]:
-                logger.info(f'Workflow job {workflow_job_id} cancelled successfully')
+                logger.info('Workflow job %s cancelled successfully', workflow_job_id)
                 return True, None
             else:
                 error_msg = f'HTTP {response.status_code}: {response.text[:200]}'
-                logger.error(f'Failed to cancel workflow job {workflow_job_id}: {error_msg}')
+                logger.error('Failed to cancel workflow job %s: %s', workflow_job_id, error_msg)
                 return False, error_msg
 
         except Exception as e:
-            error_msg = str(e)
-            logger.exception(f'Error cancelling workflow job {workflow_job_id}: {error_msg}')
+            error_msg = f'AWX request failed ({type(e).__name__}).'
+            logger.exception('Error cancelling workflow job %s: %s', workflow_job_id, error_msg)
             return False, error_msg

@@ -893,7 +893,10 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f'[_generate_preview_query] QueryExecutor failed, using fallback: {e}')
+            logger.warning(
+                '[_generate_preview_query] QueryExecutor failed, using fallback: %s',
+                type(e).__name__,
+            )
             return self._generate_preview_query_fallback(flow_data, preview_node_id)
 
     def _generate_preview_query_fallback(self, flow_data, preview_node_id):

@@ -359,8 +359,8 @@ class QueryIntent:
             try:
                 rn = build_rn(class_name, {property_name: value})
                 dn_parts.append(rn)
-            except ValueError as e:
-                logger.warning(f'Cannot build RN for {class_name}: {e}')
+            except ValueError:
+                logger.exception('Cannot build RN for %s', class_name)
                 return None
 
         return '/'.join(dn_parts) if len(dn_parts) > 1 else None
@@ -424,8 +424,8 @@ class QueryIntent:
             try:
                 rn = build_rn(class_name, {property_name: value})
                 dn_parts.append(rn)
-            except ValueError as e:
-                logger.warning(f'Cannot build RN for {class_name}: {e}')
+            except ValueError:
+                logger.exception('Cannot build RN for %s', class_name)
                 return None
 
         partial_dn = '/'.join(dn_parts) if len(dn_parts) > 1 else None
