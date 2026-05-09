@@ -16,7 +16,7 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     document.title = 'Fabrik — Verify Email'
-    return () => { document.title = 'Fabrik' }
+    return () => { document.title = 'Fabrik — The fabric, finally legible.' }
   }, [])
 
   useEffect(() => {

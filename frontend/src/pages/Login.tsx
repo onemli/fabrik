@@ -69,7 +69,7 @@ export default function Login() {
     document.title = 'Fabrik — Sign In'
     return () => {
       clearError()
-      document.title = 'Fabrik'
+      document.title = 'Fabrik — The fabric, finally legible.'
     }
   }, [clearError])
 

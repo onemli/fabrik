@@ -23,7 +23,7 @@ export default function ResetPassword() {
 
   useEffect(() => {
     document.title = 'Fabrik — New Password'
-    return () => { document.title = 'Fabrik' }
+    return () => { document.title = 'Fabrik — The fabric, finally legible.' }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {

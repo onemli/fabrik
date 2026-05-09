@@ -9,7 +9,7 @@ export const BRAND_NAME = 'Fabrik'
 
 /** Headline shown beside the logo on auth screens. Short, declarative,
  * plays on "fabric" → "Fabrik" while signalling the product value. */
-export const BRAND_TAGLINE = 'The Fabric, Finally Legible.'
+export const BRAND_TAGLINE = 'The fabric, finally legible.'
 
 /** One-sentence support line that follows the tagline. Spells out the
  * concrete capabilities so a first-time visitor knows what Fabrik does

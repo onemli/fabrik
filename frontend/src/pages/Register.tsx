@@ -39,7 +39,7 @@ export default function Register() {
     document.title = 'Fabrik — Create Account'
     return () => {
       clearError()
-      document.title = 'Fabrik'
+      document.title = 'Fabrik — The fabric, finally legible.'
     }
   }, [clearError])
 

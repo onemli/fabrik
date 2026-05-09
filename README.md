@@ -5,9 +5,9 @@
   <img src="frontend/src/assets/fabrik_light.svg" alt="Fabrik" width="220">
 </picture>
 
-# The Fabric, Finally Legible.
+# The fabric, finally legible.
 
-**Visualise, query, and automate your Cisco ACI fabric — without writing API calls.**
+**Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/onemli/fabrik/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/onemli/fabrik?style=flat-square&color=0ea5e9&label=release)](https://github.com/onemli/fabrik/releases)

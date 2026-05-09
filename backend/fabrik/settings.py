@@ -205,7 +205,7 @@ for _scope, _default in _rate_limit_defaults.items():
 SPECTACULAR_SETTINGS = {
     'TITLE': 'FABRIK API',
     'VERSION': '1.0.1',
-    'DESCRIPTION': 'FABRIK Network Management Platform — Cisco ACI query builder, AWX automation, and Time Machine.',
+    'DESCRIPTION': 'Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.',
     'SCHEMA_PATH_PREFIX': '/api/',
     'SERVE_INCLUDE_SCHEMA': False,
 }

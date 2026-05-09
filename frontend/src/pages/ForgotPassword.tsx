@@ -28,7 +28,7 @@ export default function ForgotPassword() {
 
   useEffect(() => {
     document.title = 'Fabrik — Reset Password'
-    return () => { document.title = 'Fabrik' }
+    return () => { document.title = 'Fabrik — The fabric, finally legible.' }
   }, [])
 
   const handleEmailReset = async (e: React.FormEvent) => {
