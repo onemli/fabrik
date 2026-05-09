@@ -68,7 +68,7 @@ class APICClient:
         except requests.exceptions.Timeout:
             return False, f'Request timed out after {self.timeout} seconds.'
         except Exception as e:
-            return False, f'Unexpected error: {str(e)}'
+            return False, f'APIC login failed ({type(e).__name__}).'
 
     def is_token_valid(self) -> bool:
         """Check if current token is still valid"""
@@ -134,9 +134,9 @@ class APICClient:
         except requests.exceptions.Timeout:
             return False, None, f'Request timed out after {self.timeout} seconds.'
         except requests.exceptions.RequestException as e:
-            return False, None, f'Request error: {str(e)}'
+            return False, None, f'APIC request failed ({type(e).__name__}).'
         except Exception as e:
-            return False, None, f'Unexpected error: {str(e)}'
+            return False, None, f'APIC request failed ({type(e).__name__}).'
 
     def test_connection(self) -> Tuple[bool, Optional[str]]:
         """

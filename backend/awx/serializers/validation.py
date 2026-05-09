@@ -290,7 +290,10 @@ class RegexPatternSerializer(serializers.ModelSerializer):
         try:
             re.compile(value)
         except re.error as exc:
-            raise serializers.ValidationError(f'Invalid regex: {exc}')
+            # exc.msg is the curated parser message (e.g.
+            # "unterminated subpattern at position 5") — that's exactly
+            # what helps the user fix their pattern.
+            raise serializers.ValidationError(f'Invalid regex: {exc.msg}')
         return value
 
     def validate_name(self, value):
@@ -322,7 +325,10 @@ class RegexPatternCreateSerializer(serializers.ModelSerializer):
         try:
             re.compile(value)
         except re.error as exc:
-            raise serializers.ValidationError(f'Invalid regex: {exc}')
+            # exc.msg is the curated parser message (e.g.
+            # "unterminated subpattern at position 5") — that's exactly
+            # what helps the user fix their pattern.
+            raise serializers.ValidationError(f'Invalid regex: {exc.msg}')
         return value
 
     def validate_name(self, value):
