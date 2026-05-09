@@ -167,6 +167,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'fabrik.exception_handler.fabrik_exception_handler',
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
@@ -523,20 +524,32 @@ AWX_JOB_SYNC_INTERVAL = int(os.getenv('AWX_JOB_SYNC_INTERVAL', '10'))  # seconds
 # Validation Polling (Admin configurable)
 AWX_VALIDATION_POLLING_INTERVAL = int(os.getenv('AWX_VALIDATION_POLLING_INTERVAL', '2'))  # seconds
 
-# Logging Configuration (optional: detailed LDAP logs)
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[%(asctime)s] %(levelname)s %(name)s [%(funcName)s:%(lineno)d] %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'fabrik': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
 if LDAP_ENABLED and os.getenv('LDAP_DEBUG', 'false').lower() == 'true':
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-            },
-        },
-        'loggers': {
-            'django_auth_ldap': {
-                'handlers': ['console'],
-                'level': 'DEBUG',
-            },
-        },
+    LOGGING['loggers']['django_auth_ldap'] = {
+        'handlers': ['console'],
+        'level': 'DEBUG',
     }
