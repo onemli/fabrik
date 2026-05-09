@@ -1,0 +1,10 @@
+# Commits listed here are skipped by `git blame` so authorship walks past
+# mechanical reformatting and lands on the commit that actually changed
+# meaning. Enable locally with:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub's web blame view already respects this file automatically.
+
+# 2026-05-09 — initial ruff format pass over backend/
+c02553bb2d30ccd5ddca31583c1237beb738e8da
