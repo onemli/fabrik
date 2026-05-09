@@ -5,6 +5,8 @@
 # is_public connections are visible to all users; private ones are visible only
 # to the owner and admins.
 
+import logging
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -23,6 +25,8 @@ from .serializers import (
 )
 from .apic_client import APICClient
 from audit.services import AuditService
+
+logger = logging.getLogger(__name__)
 
 
 class APICConnectionViewSet(viewsets.ModelViewSet):
@@ -183,13 +187,16 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
         try:
             password = connection.get_password()
         except Exception as e:
-            error_msg = f'Failed to decrypt password: {str(e)}'
+            # Log the underlying error server-side; the DB column and the
+            # response only carry a sanitised message so the stored credential
+            # error and stack info don't surface to the client.
+            logger.exception('APIC connection %s: password decryption failed', connection.id)
+            user_message = 'Failed to decrypt the stored password.'
             connection.last_tested_at = timezone.now()
             connection.last_test_status = False
-            connection.last_test_message = error_msg
+            connection.last_test_message = user_message
             connection.save()
 
-            # Audit log for password decryption failure
             AuditService.log(
                 user=request.user,
                 action='apic_connection_test_password_error',
@@ -198,14 +205,14 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 resource_id=connection.id,
                 resource_name=connection.name,
                 description=f"APIC connection test failed: Password decryption error for '{connection.name}'",
-                metadata={'url': connection.url},
+                metadata={'url': connection.url, 'exception': type(e).__name__},
                 success=False,
-                error_message=error_msg,
+                error_message=str(e),
                 request=request,
             )
 
             return Response(
-                {'success': False, 'message': error_msg}, status=status.HTTP_400_BAD_REQUEST
+                {'success': False, 'message': user_message}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Create APIC client and test connection
@@ -327,8 +334,8 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
         try:
             password = connection.get_password()
         except Exception as e:
-            error_msg = f'Failed to decrypt password: {str(e)}'
-            # Audit log for password decryption failure
+            logger.exception('APIC connection %s: password decryption failed', connection.id)
+            user_message = 'Failed to decrypt the stored password.'
             AuditService.log(
                 user=request.user,
                 action='apic_query_password_error',
@@ -336,17 +343,18 @@ class APICConnectionViewSet(viewsets.ModelViewSet):
                 resource_type='APICConnection',
                 resource_id=connection.id,
                 resource_name=connection.name,
-                description="APIC query execution failed: Password decryption error for '{connection.name}'",
+                description=f"APIC query execution failed: Password decryption error for '{connection.name}'",
                 metadata={
                     'query_path': query_path,
                     'connection_url': connection.url,
+                    'exception': type(e).__name__,
                 },
                 success=False,
-                error_message=error_msg,
+                error_message=str(e),
                 request=request,
             )
             return Response(
-                {'success': False, 'error': error_msg}, status=status.HTTP_400_BAD_REQUEST
+                {'success': False, 'error': user_message}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Create APIC client and execute query
