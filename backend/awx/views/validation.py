@@ -262,7 +262,10 @@ class RegexPatternViewSet(viewsets.ModelViewSet):
         try:
             compiled = re.compile(pattern_str, regex_flags)
         except re.error as exc:
-            return Response({'valid': False, 'error': str(exc), 'results': []})
+            # re.error.msg carries the curated regex parse error (e.g.
+            # "missing ), unterminated subpattern at position 5") — that's
+            # exactly what the user needs to fix their pattern.
+            return Response({'valid': False, 'error': exc.msg, 'results': []})
 
         results = []
         for entry in test_strings[:50]:  # cap at 50

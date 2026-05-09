@@ -126,4 +126,5 @@ class ColumnTemplateViewSet(viewsets.ModelViewSet):
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ColumnTemplateError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            message = e.args[0] if e.args else 'Column template operation failed.'
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)

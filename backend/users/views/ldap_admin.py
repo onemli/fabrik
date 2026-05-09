@@ -126,9 +126,12 @@ def ldap_test_connection(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     except Exception as e:
-        logger.warning(f'LDAP connection test failed: {e}')
+        logger.exception('LDAP connection test failed')
         return Response(
-            {'success': False, 'error': str(e)},
+            {
+                'success': False,
+                'error': f'LDAP connection test failed ({type(e).__name__}). Check server logs for details.',
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -219,9 +222,9 @@ def ldap_users(request):
         return Response({'users': users})
 
     except Exception as e:
-        logger.warning(f'LDAP user listing failed: {e}')
+        logger.exception('LDAP user listing failed')
         return Response(
-            {'error': str(e)},
+            {'error': f'LDAP user listing failed ({type(e).__name__}).'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -286,9 +289,9 @@ def ldap_groups(request):
         return Response({'groups': groups})
 
     except Exception as e:
-        logger.warning(f'LDAP group listing failed: {e}')
+        logger.exception('LDAP group listing failed')
         return Response(
-            {'error': str(e)},
+            {'error': f'LDAP group listing failed ({type(e).__name__}).'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 

@@ -12,6 +12,8 @@
 #   System tasks cannot be created or deleted via the API — use the seed management command.
 #   Admins can change status/priority/order on system tasks but nothing else.
 
+import logging
+
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,6 +23,8 @@ from users.permissions import FabrikModelPermissions
 from audit.services import AuditService
 from ..models import ScheduledTask, ScheduledTaskExecution
 from ..serializers import ScheduledTaskSerializer, ScheduledTaskExecutionSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class ScheduledTaskViewSet(viewsets.ModelViewSet):
@@ -319,11 +323,10 @@ class ScheduledTaskViewSet(viewsets.ModelViewSet):
                 }
             )
 
-        except Exception as e:
-            import traceback
-
+        except Exception:
+            logger.exception('Failed to queue scheduled task')
             return Response(
-                {'error': str(e), 'traceback': traceback.format_exc()},
+                {'error': 'Failed to queue the task.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

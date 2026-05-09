@@ -22,3 +22,16 @@ repos:
     rev: v8.21.2
     hooks:
       - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: no-exception-leak
+        name: no exception strings in DRF Response bodies
+        description: >
+          Catches the py/stack-trace-exposure regression. Views should let
+          unhandled errors bubble to fabrik.exception_handler instead of
+          formatting str(e) into the response.
+        entry: scripts/check_no_exception_leak.py
+        language: system
+        types: [python]
+        files: ^backend/.*views.*\.py$
