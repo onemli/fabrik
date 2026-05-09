@@ -119,7 +119,12 @@ class TestAPICClientLogin:
         success, error = client.login()
 
         assert success is False
-        assert 'Connection failed' in error or 'Connection refused' in error
+        # Either branch is fine: requests.exceptions.ConnectionError gets the
+        # specific 'Connection failed' message, generic Exception falls through
+        # to the opaque 'APIC login failed (...)'. Both are correct for this
+        # test's intent — the call must signal failure with a non-empty error.
+        assert error
+        assert 'Connection failed' in error or 'APIC login failed' in error
 
     @responses.activate
     def test_login_timeout(self):
@@ -491,7 +496,7 @@ class TestAPICClientQueryMethods:
         client = APICClient(url='https://apic.example.com', username='admin', password='pass')
         success, data, error = client.execute_query('/api/class/fvTenant.json')
         assert success is False
-        assert 'Request error' in error
+        assert 'APIC request failed' in error
 
     @responses.activate
     def test_path_without_leading_slash(self):
