@@ -48,7 +48,7 @@ def validate_webhook_signature(payload: bytes, signature_header: str, secret: st
         algorithm, signature = signature_header.split('=', 1)
 
         if algorithm != 'sha256':
-            logger.warning(f'Unsupported signature algorithm: {algorithm}')
+            logger.warning('Unsupported signature algorithm: %s', algorithm)
             return False
 
         # Calculate expected signature
@@ -155,7 +155,7 @@ def awx_webhook_receiver(request: Request) -> Response:
                 # Method 1: HMAC-SHA256 signature (recommended, most secure)
                 if not validate_webhook_signature(raw_body, signature_header, webhook_secret):
                     logger.warning(
-                        f'Invalid HMAC signature from IP: {request.META.get("REMOTE_ADDR")}'
+                        'Invalid HMAC signature from IP: %s', request.META.get('REMOTE_ADDR')
                     )
                     return Response(
                         {'error': 'Invalid HMAC signature'}, status=status.HTTP_401_UNAUTHORIZED
@@ -165,7 +165,7 @@ def awx_webhook_receiver(request: Request) -> Response:
                 # Method 2: Simple token validation (X-AWX-Signature as plain token)
                 if signature_header != webhook_secret:
                     logger.warning(
-                        f'Invalid token signature from IP: {request.META.get("REMOTE_ADDR")}'
+                        'Invalid token signature from IP: %s', request.META.get('REMOTE_ADDR')
                     )
                     return Response(
                         {'error': 'Invalid token signature'}, status=status.HTTP_401_UNAUTHORIZED
@@ -174,14 +174,15 @@ def awx_webhook_receiver(request: Request) -> Response:
             elif token_header:
                 # Method 3: Alternative header (X-AWX-Token)
                 if token_header != webhook_secret:
-                    logger.warning(f'Invalid token from IP: {request.META.get("REMOTE_ADDR")}')
+                    logger.warning('Invalid token from IP: %s', request.META.get('REMOTE_ADDR'))
                     return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
             else:
                 # No authentication header provided but secret is configured
                 logger.warning(
-                    f'Webhook rejected: no auth header from IP: {request.META.get("REMOTE_ADDR")} '
-                    f'(secret is configured but no auth header provided)'
+                    'Webhook rejected: no auth header from IP: %s '
+                    '(secret is configured but no auth header provided)',
+                    request.META.get('REMOTE_ADDR'),
                 )
                 return Response(
                     {'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED
@@ -214,13 +215,15 @@ def awx_webhook_receiver(request: Request) -> Response:
                         monitor._configure_awx_client(execution.awx_connection)
                         monitor.sync_single_execution(execution)
 
-            except Exception as sync_err:
-                logger.exception(f'Failed to sync job {awx_job_id} from webhook: {sync_err}')
+            except Exception:
+                logger.exception('Failed to sync job %s from webhook', awx_job_id)
 
         # Log webhook receipt
         logger.info(
-            f'Webhook received: job_id={event_data.get("awx_job_id")}, '
-            f'status={event_data.get("status")}, routing_key={routing_key}'
+            'Webhook received: job_id=%s, status=%s, routing_key=%s',
+            event_data.get('awx_job_id'),
+            event_data.get('status'),
+            routing_key,
         )
 
         # Audit log (optional - don't fail if audit fails)

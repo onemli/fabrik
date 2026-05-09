@@ -164,8 +164,9 @@ class TimeMachineService:
             if settings.max_snapshot_size_mb > 0 and result_size_mb > settings.max_snapshot_size_mb:
                 if settings.warn_large_snapshots:
                     logger.warning(
-                        f'Snapshot size ({result_size_mb:.2f} MB) exceeds limit '
-                        f'({settings.max_snapshot_size_mb} MB)'
+                        'Snapshot size (%.2f MB) exceeds limit (%d MB)',
+                        result_size_mb,
+                        settings.max_snapshot_size_mb,
                     )
                 return {
                     'success': False,
@@ -189,7 +190,7 @@ class TimeMachineService:
                 )
 
                 if previous and previous.result_hash == result_hash:
-                    logger.info(f'Skipping duplicate snapshot for query {saved_query_id}')
+                    logger.info('Skipping duplicate snapshot for query %s', saved_query_id)
                     return {
                         'success': True,
                         'skipped': True,
