@@ -1,0 +1,25 @@
+[project]
+name = "fabrik"
+description = "Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls."
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    "**/migrations/**",
+    "**/__pycache__/**",
+    "**/htmlcov/**",
+    "**/staticfiles/**",
+]
+
+[tool.ruff.lint]
+# Conservative: pyflakes only for now. Expand in a later phase once the
+# existing tree is fully clean and we've decided which extra rule sets
+# pull their weight.
+select = ["F"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "lf"
