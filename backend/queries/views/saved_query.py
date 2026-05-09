@@ -573,11 +573,8 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
         for that sub-graph, and runs it live. Results are capped at 50 items —
         preview is for exploring structure, not pulling full datasets.
         """
-        import logging
         from apic_connections.models import APICConnection
         from apic_connections.apic_client import APICClient
-
-        logger = logging.getLogger(__name__)
 
         flow_data = request.data.get('flow_data')
         preview_node_id = request.data.get('preview_node_id')
@@ -655,12 +652,6 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        except Exception as e:
-            logger.error(f'[Preview] Preview query error: {e}', exc_info=True)
-            return Response(
-                {'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
     @action(detail=False, methods=['post'], url_path='generate-query')
     def generate_query_path(self, request):
         """Convert canvas flow_data to an optimized APIC query URL.
@@ -689,41 +680,32 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
 
         logger = logging.getLogger(__name__)
 
-        try:
-            flow_data = request.data.get('flow_data')
-            force_strategy = request.data.get('force_strategy')
+        flow_data = request.data.get('flow_data')
+        force_strategy = request.data.get('force_strategy')
 
-            if not flow_data:
-                return Response(
-                    {'success': False, 'error': 'flow_data is required'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Create QueryIntent
-            intent = QueryIntent(flow_data)
-
-            # Execute with QueryExecutor
-            executor = QueryExecutor()
-            query_url, metadata = executor.execute(intent, force_strategy=force_strategy)
-
-            logger.info(f'[GenerateQuery] Strategy: {metadata["strategy"]}, Query: {query_url}')
-
+        if not flow_data:
             return Response(
-                {
-                    'success': True,
-                    'preview_query': query_url,
-                    'strategy': metadata['strategy'],
-                    'estimated_cost': metadata.get('estimated_cost', 'medium'),
-                    'suggestions': metadata.get('suggestions', []),
-                    'metadata': metadata,
-                }
+                {'success': False, 'error': 'flow_data is required'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        except Exception as e:
-            logger.error(f'[GenerateQuery] Error generating query: {e}', exc_info=True)
-            return Response(
-                {'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        intent = QueryIntent(flow_data)
+
+        executor = QueryExecutor()
+        query_url, metadata = executor.execute(intent, force_strategy=force_strategy)
+
+        logger.info(f'[GenerateQuery] Strategy: {metadata["strategy"]}, Query: {query_url}')
+
+        return Response(
+            {
+                'success': True,
+                'preview_query': query_url,
+                'strategy': metadata['strategy'],
+                'estimated_cost': metadata.get('estimated_cost', 'medium'),
+                'suggestions': metadata.get('suggestions', []),
+                'metadata': metadata,
+            }
+        )
 
     def _find_final_class_node(self, nodes, edges):
         """
@@ -1416,9 +1398,17 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 results['queries'].append(q.id)
 
             except Exception as exc:
-                logger.warning(f'[ImportValidation] index={idx} error: {exc}')
+                # Log the full error server-side; the response only carries the
+                # exception class so the client knows what kind of failure it
+                # was (IntegrityError, ValidationError, etc.) without copying
+                # raw DB messages or stack info.
+                logger.warning(f'[ImportValidation] index={idx} error: {exc}', exc_info=True)
                 results['errors'].append(
-                    {'index': idx, 'name': item.get('name', '?'), 'error': str(exc)}
+                    {
+                        'index': idx,
+                        'name': item.get('name', '?'),
+                        'error': type(exc).__name__,
+                    }
                 )
 
         return Response(results, status=status.HTTP_200_OK)
