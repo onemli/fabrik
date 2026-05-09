@@ -57,8 +57,8 @@ class ColumnTemplateService:
             return template
 
         except Exception as e:
-            logger.exception(f'Error creating column template: {str(e)}')
-            raise ColumnTemplateError(f'Failed to create template: {str(e)}')
+            logger.exception('Error creating column template')
+            raise ColumnTemplateError(f'Failed to create template ({type(e).__name__}).') from e
 
     def get_templates(
         self, user, scope: Optional[str] = None, search: Optional[str] = None
@@ -117,8 +117,8 @@ class ColumnTemplateService:
         except self.ColumnTemplate.DoesNotExist:
             raise ColumnTemplateError(f'Template {template_id} not found')
         except Exception as e:
-            logger.exception(f'Error applying column template: {str(e)}')
-            raise ColumnTemplateError(f'Failed to apply template: {str(e)}')
+            logger.exception('Error applying column template')
+            raise ColumnTemplateError(f'Failed to apply template ({type(e).__name__}).') from e
 
     def share_template(self, template_id, user_ids: List[int], shared_by) -> None:
         try:
@@ -141,8 +141,8 @@ class ColumnTemplateService:
         except self.ColumnTemplate.DoesNotExist:
             raise ColumnTemplateError(f'Template {template_id} not found')
         except Exception as e:
-            logger.exception(f'Error sharing template: {str(e)}')
-            raise ColumnTemplateError(f'Failed to share template: {str(e)}')
+            logger.exception('Error sharing template')
+            raise ColumnTemplateError(f'Failed to share template ({type(e).__name__}).') from e
 
     def delete_template(self, template_id, user) -> None:
         try:
@@ -158,8 +158,8 @@ class ColumnTemplateService:
         except self.ColumnTemplate.DoesNotExist:
             raise ColumnTemplateError(f'Template {template_id} not found')
         except Exception as e:
-            logger.exception(f'Error deleting template: {str(e)}')
-            raise ColumnTemplateError(f'Failed to delete template: {str(e)}')
+            logger.exception('Error deleting template')
+            raise ColumnTemplateError(f'Failed to delete template ({type(e).__name__}).') from e
 
     def _validate_column_data(self, column_data: Dict[str, Any]) -> None:
         required_fields = ['name', 'display_name', 'type']

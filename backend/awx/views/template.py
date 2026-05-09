@@ -298,9 +298,10 @@ class AutomationTemplateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_202_ACCEPTED,
             )
 
-        except Exception as e:
+        except Exception:
+            logger.exception('Failed to start validation')
             return Response(
-                {'valid': False, 'errors': [f'Failed to start validation: {str(e)}']},
+                {'valid': False, 'errors': ['Failed to start validation.']},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
