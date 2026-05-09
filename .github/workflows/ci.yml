@@ -10,6 +10,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   backend:
     name: Backend Tests

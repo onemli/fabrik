@@ -10,6 +10,8 @@ concurrency:
   group: docker-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   build-backend:
     name: Build Backend
