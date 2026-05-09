@@ -5,7 +5,6 @@
 # logs to the audit trail, and returns. If you find yourself adding conditional
 # branches here, it probably belongs in services.py instead.
 
-import logging
 from typing import TYPE_CHECKING, Optional, Union
 
 from rest_framework import status
@@ -19,8 +18,6 @@ from audit.services import AuditService
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser as User
     from queries.models import SavedQuery
-
-logger = logging.getLogger(__name__)
 
 
 def _check_query_ownership(saved_query_id: Union[int, str], user: 'User') -> Optional['SavedQuery']:
@@ -76,8 +73,8 @@ def capture_snapshot(request):
 
         return Response(result)
     except Exception as e:
-        logger.error(f'Error capturing Time Machine snapshot: {e}')
-
+        # Record the failure in the audit log with the real error string,
+        # then let the central handler shape the response and log the trace.
         AuditService.log(
             user=request.user,
             action='time_machine_snapshot_failed',
@@ -89,20 +86,15 @@ def capture_snapshot(request):
             error_message=str(e),
             request=request,
         )
-
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        raise
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_queries_with_snapshots(request):
     """Return queries that have at least one snapshot, for the left-side list in the UI."""
-    try:
-        queries = time_machine_service.list_queries_with_snapshots(request.user.id)
-        return Response({'queries': queries})
-    except Exception as e:
-        logger.error(f'Error listing Time Machine queries: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    queries = time_machine_service.list_queries_with_snapshots(request.user.id)
+    return Response({'queries': queries})
 
 
 @api_view(['GET'])
@@ -134,40 +126,35 @@ def get_query_snapshots(request):
         return Response({'error': 'saved_query_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Validate before hitting the service layer
-        try:
-            query_id_int = int(saved_query_id)
-            if query_id_int <= 0:
-                return Response(
-                    {'error': 'saved_query_id must be a positive integer'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        except (ValueError, TypeError):
+        query_id_int = int(saved_query_id)
+        if query_id_int <= 0:
             return Response(
-                {'error': 'saved_query_id must be a valid integer'},
+                {'error': 'saved_query_id must be a positive integer'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        query = _check_query_ownership(query_id_int, request.user)
-        if not query:
-            return Response({'error': 'Query not found'}, status=status.HTTP_404_NOT_FOUND)
-        if not query.enable_time_machine:
-            return Response(
-                {'error': 'Time Machine is not enabled for this query'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        result = time_machine_service.get_query_snapshots(
-            saved_query_id=query_id_int,
-            limit=limit,
-            offset=offset,
-            date=date_filter,
-            timezone=user_tz,
+    except (ValueError, TypeError):
+        return Response(
+            {'error': 'saved_query_id must be a valid integer'},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-        return Response(result)
-    except Exception as e:
-        logger.error(f'Error getting snapshots: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    query = _check_query_ownership(query_id_int, request.user)
+    if not query:
+        return Response({'error': 'Query not found'}, status=status.HTTP_404_NOT_FOUND)
+    if not query.enable_time_machine:
+        return Response(
+            {'error': 'Time Machine is not enabled for this query'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    result = time_machine_service.get_query_snapshots(
+        saved_query_id=query_id_int,
+        limit=limit,
+        offset=offset,
+        date=date_filter,
+        timezone=user_tz,
+    )
+    return Response(result)
 
 
 @api_view(['GET'])
@@ -178,26 +165,20 @@ def get_snapshot_detail(request, snapshot_id):
     This is the only endpoint that returns the raw data payload.
     The list endpoints deliberately omit it to keep page load times reasonable.
     """
+    from time_machine.models import QueryExecutionSnapshot
+
     try:
-        from time_machine.models import QueryExecutionSnapshot
-
-        try:
-            snap_obj = QueryExecutionSnapshot.objects.select_related('saved_query').get(
-                id=snapshot_id
-            )
-        except QueryExecutionSnapshot.DoesNotExist:
-            return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
-        if snap_obj.saved_query:
-            if not _check_query_ownership(snap_obj.saved_query_id, request.user):
-                return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        snapshot = time_machine_service.get_snapshot_detail(snapshot_id)
-        if snapshot:
-            return Response(snapshot)
+        snap_obj = QueryExecutionSnapshot.objects.select_related('saved_query').get(id=snapshot_id)
+    except QueryExecutionSnapshot.DoesNotExist:
         return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        logger.error(f'Error getting snapshot detail: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if snap_obj.saved_query:
+        if not _check_query_ownership(snap_obj.saved_query_id, request.user):
+            return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    snapshot = time_machine_service.get_snapshot_detail(snapshot_id)
+    if snapshot:
+        return Response(snapshot)
+    return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
@@ -216,44 +197,38 @@ def compare_snapshots(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    try:
-        from time_machine.models import QueryExecutionSnapshot
+    from time_machine.models import QueryExecutionSnapshot
 
-        for sid in (snapshot_from_id, snapshot_to_id):
-            try:
-                snap_obj = QueryExecutionSnapshot.objects.select_related('saved_query').get(id=sid)
-            except QueryExecutionSnapshot.DoesNotExist:
+    for sid in (snapshot_from_id, snapshot_to_id):
+        try:
+            snap_obj = QueryExecutionSnapshot.objects.select_related('saved_query').get(id=sid)
+        except QueryExecutionSnapshot.DoesNotExist:
+            return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
+        if snap_obj.saved_query:
+            if not _check_query_ownership(snap_obj.saved_query_id, request.user):
                 return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
-            if snap_obj.saved_query:
-                if not _check_query_ownership(snap_obj.saved_query_id, request.user):
-                    return Response(
-                        {'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND
-                    )
 
-        comparison = time_machine_service.compare_snapshots(
-            snapshot_from_id=snapshot_from_id, snapshot_to_id=snapshot_to_id
-        )
+    comparison = time_machine_service.compare_snapshots(
+        snapshot_from_id=snapshot_from_id, snapshot_to_id=snapshot_to_id
+    )
 
-        AuditService.log(
-            user=request.user,
-            action='time_machine_snapshots_compared',
-            category='time_machine',
-            resource_type='TimeMachineSnapshot',
-            description='Time Machine snapshots compared',
-            metadata={
-                'snapshot_from_id': snapshot_from_id,
-                'snapshot_to_id': snapshot_to_id,
-                'added_count': comparison.get('added_count', 0),
-                'removed_count': comparison.get('removed_count', 0),
-                'modified_count': comparison.get('modified_count', 0),
-            },
-            request=request,
-        )
+    AuditService.log(
+        user=request.user,
+        action='time_machine_snapshots_compared',
+        category='time_machine',
+        resource_type='TimeMachineSnapshot',
+        description='Time Machine snapshots compared',
+        metadata={
+            'snapshot_from_id': snapshot_from_id,
+            'snapshot_to_id': snapshot_to_id,
+            'added_count': comparison.get('added_count', 0),
+            'removed_count': comparison.get('removed_count', 0),
+            'modified_count': comparison.get('modified_count', 0),
+        },
+        request=request,
+    )
 
-        return Response(comparison)
-    except Exception as e:
-        logger.error(f'Error comparing snapshots: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response(comparison)
 
 
 @api_view(['GET', 'PUT'])
@@ -264,77 +239,68 @@ def time_machine_settings(request):
     Settings are per-user — get_for_user() creates a global default row on first use
     if no user-specific row exists, so we never return a 404 here.
     """
-    try:
-        settings = TimeMachineSettings.get_for_user(request.user)
+    settings = TimeMachineSettings.get_for_user(request.user)
 
-        if request.method == 'GET':
-            return Response(
-                {
-                    'retention_policy': settings.retention_policy,
-                    'retention_days': settings.retention_days,
-                    'retention_count': settings.retention_count,
-                    'max_snapshot_size_mb': settings.max_snapshot_size_mb,
-                    'warn_large_snapshots': settings.warn_large_snapshots,
-                    'auto_cleanup_enabled': settings.auto_cleanup_enabled,
-                    'store_duplicates': settings.store_duplicates,
-                }
-            )
-
-        elif request.method == 'PUT':
-            # Snapshot old values before overwriting so the audit log shows what changed
-            old_settings = {
+    if request.method == 'GET':
+        return Response(
+            {
                 'retention_policy': settings.retention_policy,
                 'retention_days': settings.retention_days,
                 'retention_count': settings.retention_count,
+                'max_snapshot_size_mb': settings.max_snapshot_size_mb,
+                'warn_large_snapshots': settings.warn_large_snapshots,
                 'auto_cleanup_enabled': settings.auto_cleanup_enabled,
+                'store_duplicates': settings.store_duplicates,
             }
+        )
 
-            settings.retention_policy = request.data.get(
-                'retention_policy', settings.retention_policy
-            )
-            settings.retention_days = request.data.get('retention_days', settings.retention_days)
-            settings.retention_count = request.data.get('retention_count', settings.retention_count)
-            settings.max_snapshot_size_mb = request.data.get(
-                'max_snapshot_size_mb', settings.max_snapshot_size_mb
-            )
-            settings.warn_large_snapshots = request.data.get(
-                'warn_large_snapshots', settings.warn_large_snapshots
-            )
-            settings.auto_cleanup_enabled = request.data.get(
-                'auto_cleanup_enabled', settings.auto_cleanup_enabled
-            )
-            settings.store_duplicates = request.data.get(
-                'store_duplicates', settings.store_duplicates
-            )
-            settings.save()
+    if request.method == 'PUT':
+        # Snapshot old values before overwriting so the audit log shows what changed
+        old_settings = {
+            'retention_policy': settings.retention_policy,
+            'retention_days': settings.retention_days,
+            'retention_count': settings.retention_count,
+            'auto_cleanup_enabled': settings.auto_cleanup_enabled,
+        }
 
-            new_settings = {
-                'retention_policy': settings.retention_policy,
-                'retention_days': settings.retention_days,
-                'retention_count': settings.retention_count,
-                'auto_cleanup_enabled': settings.auto_cleanup_enabled,
-            }
-            changes = {
-                key: {'old': old_settings[key], 'new': new_settings[key]}
-                for key in old_settings
-                if old_settings[key] != new_settings[key]
-            }
+        settings.retention_policy = request.data.get('retention_policy', settings.retention_policy)
+        settings.retention_days = request.data.get('retention_days', settings.retention_days)
+        settings.retention_count = request.data.get('retention_count', settings.retention_count)
+        settings.max_snapshot_size_mb = request.data.get(
+            'max_snapshot_size_mb', settings.max_snapshot_size_mb
+        )
+        settings.warn_large_snapshots = request.data.get(
+            'warn_large_snapshots', settings.warn_large_snapshots
+        )
+        settings.auto_cleanup_enabled = request.data.get(
+            'auto_cleanup_enabled', settings.auto_cleanup_enabled
+        )
+        settings.store_duplicates = request.data.get('store_duplicates', settings.store_duplicates)
+        settings.save()
 
-            AuditService.log(
-                user=request.user,
-                action='time_machine_settings_updated',
-                category='time_machine',
-                resource_type='TimeMachineSettings',
-                description='Time Machine settings updated',
-                metadata={'changes': changes} if changes else {},
-                request=request,
-            )
+        new_settings = {
+            'retention_policy': settings.retention_policy,
+            'retention_days': settings.retention_days,
+            'retention_count': settings.retention_count,
+            'auto_cleanup_enabled': settings.auto_cleanup_enabled,
+        }
+        changes = {
+            key: {'old': old_settings[key], 'new': new_settings[key]}
+            for key in old_settings
+            if old_settings[key] != new_settings[key]
+        }
 
-            return Response({'message': 'Settings updated successfully'})
+        AuditService.log(
+            user=request.user,
+            action='time_machine_settings_updated',
+            category='time_machine',
+            resource_type='TimeMachineSettings',
+            description='Time Machine settings updated',
+            metadata={'changes': changes} if changes else {},
+            request=request,
+        )
 
-    except Exception as e:
-        logger.error(f'Error with Time Machine settings: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'message': 'Settings updated successfully'})
 
 
 @api_view(['GET'])
@@ -371,12 +337,8 @@ def get_heatmap_data(request):
         year = default_year
 
     user_tz = request.query_params.get('timezone', 'UTC')
-    try:
-        heatmap = time_machine_service.get_heatmap_data(query_id_int, year, user_tz)
-        return Response({'year': year, 'data': heatmap})
-    except Exception as e:
-        logger.error(f'Error getting heatmap data: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    heatmap = time_machine_service.get_heatmap_data(query_id_int, year, user_tz)
+    return Response({'year': year, 'data': heatmap})
 
 
 @api_view(['POST'])
@@ -396,38 +358,32 @@ def annotate_snapshot(request, snapshot_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    from time_machine.models import QueryExecutionSnapshot
+
     try:
-        from time_machine.models import QueryExecutionSnapshot
-
-        try:
-            snap_obj = QueryExecutionSnapshot.objects.select_related('saved_query').get(
-                id=snapshot_id
-            )
-        except QueryExecutionSnapshot.DoesNotExist:
-            return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
-        if snap_obj.saved_query:
-            if not _check_query_ownership(snap_obj.saved_query_id, request.user):
-                return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        result = time_machine_service.annotate_snapshot(snapshot_id, annotation, label)
-        if result is None:
+        snap_obj = QueryExecutionSnapshot.objects.select_related('saved_query').get(id=snapshot_id)
+    except QueryExecutionSnapshot.DoesNotExist:
+        return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
+    if snap_obj.saved_query:
+        if not _check_query_ownership(snap_obj.saved_query_id, request.user):
             return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        AuditService.log(
-            user=request.user,
-            action='time_machine_snapshot_annotated',
-            category='time_machine',
-            resource_type='TimeMachineSnapshot',
-            resource_id=snapshot_id,
-            description='Snapshot annotated',
-            metadata={'label': label, 'has_annotation': annotation is not None},
-            request=request,
-        )
+    result = time_machine_service.annotate_snapshot(snapshot_id, annotation, label)
+    if result is None:
+        return Response({'error': 'Snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response(result)
-    except Exception as e:
-        logger.error(f'Error annotating snapshot: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    AuditService.log(
+        user=request.user,
+        action='time_machine_snapshot_annotated',
+        category='time_machine',
+        resource_type='TimeMachineSnapshot',
+        resource_id=snapshot_id,
+        description='Snapshot annotated',
+        metadata={'label': label, 'has_annotation': annotation is not None},
+        request=request,
+    )
+
+    return Response(result)
 
 
 @api_view(['GET'])
@@ -465,18 +421,14 @@ def attribute_timeline(request):
     from_date = request.query_params.get('from_date') or None
     to_date = request.query_params.get('to_date') or None
 
-    try:
-        result = time_machine_service.get_attribute_timeline(
-            saved_query_id=query_id_int,
-            dn=dn,
-            limit=limit,
-            from_date=from_date,
-            to_date=to_date,
-        )
-        return Response(result)
-    except Exception as e:
-        logger.error(f'Error getting attribute timeline: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    result = time_machine_service.get_attribute_timeline(
+        saved_query_id=query_id_int,
+        dn=dn,
+        limit=limit,
+        from_date=from_date,
+        to_date=to_date,
+    )
+    return Response(result)
 
 
 @api_view(['GET'])
@@ -499,16 +451,12 @@ def dns_in_query(request, saved_query_id: int):
     except (ValueError, TypeError):
         limit = 50
 
-    try:
-        rows = time_machine_service.list_dns_in_latest_snapshot(
-            saved_query_id=saved_query_id,
-            search_term=search_term,
-            limit=limit,
-        )
-        return Response({'dns': rows, 'count': len(rows)})
-    except Exception as e:
-        logger.error(f'Error listing DNs: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    rows = time_machine_service.list_dns_in_latest_snapshot(
+        saved_query_id=saved_query_id,
+        search_term=search_term,
+        limit=limit,
+    )
+    return Response({'dns': rows, 'count': len(rows)})
 
 
 @api_view(['POST'])
@@ -518,15 +466,11 @@ def cleanup_preview(request):
 
     Used by the settings page before the user actually commits to a cleanup.
     """
-    try:
-        settings = TimeMachineSettings.get_for_user(request.user)
-        query_id = request.data.get('query_id')
+    settings = TimeMachineSettings.get_for_user(request.user)
+    query_id = request.data.get('query_id')
 
-        preview = settings.get_cleanup_preview(query_id)
-        return Response(preview)
-    except Exception as e:
-        logger.error(f'Error in cleanup preview: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    preview = settings.get_cleanup_preview(query_id)
+    return Response(preview)
 
 
 @api_view(['POST'])
@@ -537,32 +481,28 @@ def execute_cleanup(request):
     The actual deletion logic lives in TimeMachineSettings.execute_cleanup() —
     this view just triggers it and logs the result.
     """
-    try:
-        settings = TimeMachineSettings.get_for_user(request.user)
-        query_id = request.data.get('query_id')
+    settings = TimeMachineSettings.get_for_user(request.user)
+    query_id = request.data.get('query_id')
 
-        deleted_count = settings.execute_cleanup(query_id)
+    deleted_count = settings.execute_cleanup(query_id)
 
-        AuditService.log(
-            user=request.user,
-            action='time_machine_cleanup_executed',
-            category='time_machine',
-            resource_type='TimeMachineSnapshot',
-            description='Time Machine cleanup executed',
-            metadata={
-                'deleted_count': deleted_count,
-                'query_id': query_id,
-                'retention_policy': settings.retention_policy,
-            },
-            request=request,
-        )
+    AuditService.log(
+        user=request.user,
+        action='time_machine_cleanup_executed',
+        category='time_machine',
+        resource_type='TimeMachineSnapshot',
+        description='Time Machine cleanup executed',
+        metadata={
+            'deleted_count': deleted_count,
+            'query_id': query_id,
+            'retention_policy': settings.retention_policy,
+        },
+        request=request,
+    )
 
-        return Response(
-            {
-                'message': 'Cleanup executed successfully',
-                'deleted_count': deleted_count,
-            }
-        )
-    except Exception as e:
-        logger.error(f'Error executing cleanup: {e}')
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response(
+        {
+            'message': 'Cleanup executed successfully',
+            'deleted_count': deleted_count,
+        }
+    )
