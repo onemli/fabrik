@@ -149,8 +149,16 @@ def devnet_install_view(request):
 
     try:
         seed = load_class_seed(version_key)
-    except (FileNotFoundError, ValueError) as e:
-        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except FileNotFoundError:
+        return Response(
+            {'detail': f'No class seed bundled for {version_key}.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except ValueError:
+        return Response(
+            {'detail': f'Class seed for {version_key} is malformed.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     if not seed:
         return Response(
             {'detail': f'class seed for {version_key} is empty'},
