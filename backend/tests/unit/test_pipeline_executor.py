@@ -8,7 +8,7 @@
 # logic, not the network calls or persistence.
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 from queries.services.pipeline_executor import PipelineStage, PipelineExecutor
 
 
@@ -557,7 +557,7 @@ class TestPipelineExecuteIntegration:
         executor.apic_client.execute_query.return_value = (True, apic_result, None)
 
         with (
-            patch('queries.services.optimizer.QueryIntent') as mock_intent,
+            patch('queries.services.optimizer.QueryIntent'),
             patch('queries.services.optimizer.QueryExecutor') as mock_executor_cls,
         ):
             mock_qe = MagicMock()
@@ -583,7 +583,7 @@ class TestPipelineExecuteIntegration:
         executor.apic_client.execute_query.return_value = (False, None, 'Connection refused')
 
         with (
-            patch('queries.services.optimizer.QueryIntent') as mock_intent,
+            patch('queries.services.optimizer.QueryIntent'),
             patch('queries.services.optimizer.QueryExecutor') as mock_executor_cls,
         ):
             mock_qe = MagicMock()

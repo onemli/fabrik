@@ -5,13 +5,17 @@
 # to configure retention and export options. All views require staff permission.
 
 from __future__ import annotations
+
+import csv
+from datetime import datetime
+from typing import TYPE_CHECKING
+
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import HttpResponse
-import csv
-from datetime import datetime
+
 from users.views import IsAdminOrSuperuser
 from .models import AuditLog, AuditLogSettings, LoginAttempt
 from .serializers import (
@@ -20,6 +24,9 @@ from .serializers import (
     AuditLogSettingsSerializer,
     LoginAttemptSerializer,
 )
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
 
 
 class AuditLogPagination(PageNumberPagination):

@@ -9,7 +9,6 @@
 #   - Strategy selection (MO vs Class)
 
 import pytest
-from unittest.mock import patch
 from queries.services.optimizer import (
     QueryIntent,
     MOQueryStrategy,

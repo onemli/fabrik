@@ -7,7 +7,7 @@ node-level credentials).
 """
 
 from unittest.mock import patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -80,7 +80,7 @@ class RelaunchViewTestCase(TestCase):
         new_id = uuid4()
         mock_execute.return_value = (True, [new_id], None)
 
-        new_execution = AutomationExecution.objects.create(
+        AutomationExecution.objects.create(
             id=new_id,
             automation_request=self.request,
             awx_connection=self.connection,

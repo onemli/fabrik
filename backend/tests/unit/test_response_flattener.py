@@ -5,8 +5,6 @@ target-class objects so PostProcessor pipelines and table renderers
 see a uniform shape.
 """
 
-import pytest
-
 from queries.services.response_flattener import (
     detect_target_class_from_url,
     flatten_to_target_class,

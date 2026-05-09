@@ -5,7 +5,8 @@
 # logs to the audit trail, and returns. If you find yourself adding conditional
 # branches here, it probably belongs in services.py instead.
 
-from typing import Optional, Union
+import logging
+from typing import TYPE_CHECKING, Optional, Union
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -14,7 +15,10 @@ from rest_framework.response import Response
 from time_machine.services import time_machine_service
 from time_machine.models import TimeMachineSettings
 from audit.services import AuditService
-import logging
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser as User
+    from queries.models import SavedQuery
 
 logger = logging.getLogger(__name__)
 

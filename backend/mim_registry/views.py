@@ -35,7 +35,7 @@ from mim_registry.serializers import (
     MIMImportRunSerializer,
     MIMVersionSerializer,
 )
-from mim_registry.services.active_import import get_active, set_active
+from mim_registry.services.active_import import set_active
 from mim_registry.tasks import (
     load_class_seed,
     run_devnet_import,

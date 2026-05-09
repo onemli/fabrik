@@ -17,7 +17,7 @@ import logging
 import os
 import random
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence
 
 import aiohttp
 

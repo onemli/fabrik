@@ -1,6 +1,8 @@
 # Auth views: registration, profile, login (with brute-force protection), session timeout.
 
-from typing import Optional
+from datetime import timedelta
+from typing import TYPE_CHECKING, Optional
+
 from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -9,7 +11,9 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser as User
 
 from ..serializers import (
     UserRegistrationSerializer,
