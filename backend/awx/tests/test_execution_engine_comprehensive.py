@@ -276,7 +276,7 @@ class TestBulkCSVExecution:
         # Verify APIC credentials were injected
         call_args = mock_awx_client.launch_job.call_args
         extra_vars = call_args.kwargs['extra_vars']
-        assert 'https://apic.example.com' in extra_vars['apic_host']
+        assert extra_vars['apic_host'] == 'https://apic.example.com'
         assert extra_vars['apic_username'] == 'admin'
         assert extra_vars['apic_password'] == 'apic-password'
         assert extra_vars['apic_validate_certs'] is False

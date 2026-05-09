@@ -75,7 +75,7 @@ export function buildLiveExample(template: string): string {
     const trimmed = key.trim()
     if (PLACEHOLDER_FALLBACKS[trimmed]) return PLACEHOLDER_FALLBACKS[trimmed]
     // Heuristic: ``fooName`` → ``FooName``, ``tn`` → ``Tn``.
-    return capitalise(trimmed.replace(/Name$/, 'Name'))
+    return capitalise(trimmed)
   })
 }
 

@@ -674,6 +674,9 @@ export class PostProcessorEngine {
     if (!this.isObject(obj)) return
 
     const keys = path.split('.')
+    // Refuse paths that touch the prototype chain — caller-supplied field
+    // names from post-processor config could otherwise pollute Object.prototype.
+    if (keys.some((k) => k === '__proto__' || k === 'prototype' || k === 'constructor')) return
     let target: Record<string, unknown> = obj
 
     // APIC envelope unwrap: if first segment isn't at the root and we have
