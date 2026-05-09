@@ -113,12 +113,6 @@ class AISettingsViewSet(viewsets.ViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        except Exception as e:
-            return Response(
-                {'success': False, 'message': str(e), 'available_models': []},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
     @action(detail=False, methods=['get'])
     def status(self, request):
         """Get AI service status"""
@@ -201,8 +195,10 @@ class AISettingsViewSet(viewsets.ViewSet):
 
             return Response({'success': True, 'models': models})
 
-        except Exception as e:
-            return Response({'success': False, 'models': [], 'error': str(e)})
+        except (http_requests.Timeout, http_requests.ConnectionError, http_requests.HTTPError):
+            return Response(
+                {'success': False, 'models': [], 'error': 'Could not load Ollama models'}
+            )
 
     def _check_connection_status(self, settings):
         """Check system Ollama connection status"""
@@ -302,58 +298,48 @@ class UserAIProviderViewSet(viewsets.ViewSet):
         base_url = data.get('api_base_url', '')
         model = data.get('model_name', '')
 
-        try:
-            # Create temporary client based on provider
-            if provider == 'openai':
-                client = OpenAIClient(
-                    api_key=api_key,
-                    base_url=base_url or 'https://api.openai.com/v1',
-                    model=model or 'gpt-4o',
-                )
-            elif provider == 'azure_openai':
-                client = AzureOpenAIClient(
-                    api_key=api_key,
-                    base_url=base_url,
-                    deployment_name=data.get('azure_deployment_name', ''),
-                    api_version=data.get('azure_api_version', '2024-02-15-preview'),
-                )
-            elif provider == 'anthropic':
-                client = AnthropicClient(
-                    api_key=api_key, model=model or 'claude-3-5-sonnet-20241022'
-                )
-            elif provider == 'groq':
-                client = OpenAIClient(
-                    api_key=api_key,
-                    base_url='https://api.groq.com/openai/v1',
-                    model=model or 'llama-3.3-70b-versatile',
-                )
-            elif provider == 'google':
-                client = GoogleAIClient(api_key=api_key, model=model or 'gemini-2.5-flash')
-            elif provider == 'openrouter':
-                client = OpenAIClient(
-                    api_key=api_key,
-                    base_url='https://openrouter.ai/api/v1',
-                    model=model or 'meta-llama/llama-3.2-3b-instruct:free',
-                )
-            elif provider == 'ollama':
-                client = OllamaClient(
-                    base_url=base_url or 'http://localhost:11434', model=model or 'phi3:mini'
-                )
-            else:
-                return Response(
-                    {'success': False, 'error': f'Unknown provider: {provider}'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Test connection
-            success, message = client.test_connection()
-
-            return Response({'success': success, 'message': message, 'provider': provider})
-
-        except Exception as e:
-            return Response(
-                {'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        if provider == 'openai':
+            client = OpenAIClient(
+                api_key=api_key,
+                base_url=base_url or 'https://api.openai.com/v1',
+                model=model or 'gpt-4o',
             )
+        elif provider == 'azure_openai':
+            client = AzureOpenAIClient(
+                api_key=api_key,
+                base_url=base_url,
+                deployment_name=data.get('azure_deployment_name', ''),
+                api_version=data.get('azure_api_version', '2024-02-15-preview'),
+            )
+        elif provider == 'anthropic':
+            client = AnthropicClient(api_key=api_key, model=model or 'claude-3-5-sonnet-20241022')
+        elif provider == 'groq':
+            client = OpenAIClient(
+                api_key=api_key,
+                base_url='https://api.groq.com/openai/v1',
+                model=model or 'llama-3.3-70b-versatile',
+            )
+        elif provider == 'google':
+            client = GoogleAIClient(api_key=api_key, model=model or 'gemini-2.5-flash')
+        elif provider == 'openrouter':
+            client = OpenAIClient(
+                api_key=api_key,
+                base_url='https://openrouter.ai/api/v1',
+                model=model or 'meta-llama/llama-3.2-3b-instruct:free',
+            )
+        elif provider == 'ollama':
+            client = OllamaClient(
+                base_url=base_url or 'http://localhost:11434', model=model or 'phi3:mini'
+            )
+        else:
+            return Response(
+                {'success': False, 'error': f'Unknown provider: {provider}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        success, message = client.test_connection()
+
+        return Response({'success': success, 'message': message, 'provider': provider})
 
     @action(detail=False, methods=['get'])
     def available(self, request):
