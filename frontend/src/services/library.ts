@@ -31,7 +31,7 @@ export const libraryService = {
     await api.delete(`/api/queries/categories/${id}/`)
   },
 
-  // Scheduled Tasks  
+  // Scheduled Tasks
   async getScheduledTasks() {
     const { data } = await api.get('/api/queries/scheduled-tasks/')
     return data

@@ -1499,4 +1499,3 @@ function ClassListItem({
     </div>
   )
 }
-

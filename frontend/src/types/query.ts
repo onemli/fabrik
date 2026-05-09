@@ -107,4 +107,3 @@ export interface PipelineExecution {
     final_result?: unknown
   }
 }
-

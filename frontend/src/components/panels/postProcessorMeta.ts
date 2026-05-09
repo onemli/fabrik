@@ -41,4 +41,3 @@ export const POST_PROCESSOR_CATEGORIES: Array<{
   { id: 'summarize', label: 'Summarize', textClass: 'text-emerald-600 dark:text-emerald-400', underlineClass: 'border-emerald-500/40' },
   { id: 'custom',    label: 'Custom',    textClass: 'text-slate-600 dark:text-slate-400',   underlineClass: 'border-slate-500/40' },
 ]
-

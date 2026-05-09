@@ -181,7 +181,7 @@ export function ColumnEditor({ open = false, column, onSave, onCancel, existingC
 
   const handleNameChange = (value: string) => {
     const newName = value.toLowerCase().replace(/[^a-z0-9_]/g, '_')
-    const shouldUpdateDisplay = !formData.display_name || 
+    const shouldUpdateDisplay = !formData.display_name ||
       formData.display_name === formatDisplayName(formData.name)
 
     setFormData({

@@ -249,4 +249,3 @@ export interface PipelineEdgeData extends Record<string, unknown> {
   injectAs: PipelineInjectMode // How to inject upstream data into downstream query
   injectProperty?: string      // Target class property to filter on (default: className.dn)
 }
-
