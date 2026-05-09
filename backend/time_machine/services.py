@@ -20,6 +20,7 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
 from time_machine.models import QueryExecutionSnapshot, TimeMachineSettings
 from queries.models import SavedQuery
+from fabrik.logging import safe
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ class TimeMachineService:
                     logger.warning(
                         'Snapshot size (%.2f MB) exceeds limit (%d MB)',
                         result_size_mb,
-                        settings.max_snapshot_size_mb,
+                        safe(settings.max_snapshot_size_mb),
                     )
                 return {
                     'success': False,
@@ -190,7 +191,7 @@ class TimeMachineService:
                 )
 
                 if previous and previous.result_hash == result_hash:
-                    logger.info('Skipping duplicate snapshot for query %s', saved_query_id)
+                    logger.info('Skipping duplicate snapshot for query %s', safe(saved_query_id))
                     return {
                         'success': True,
                         'skipped': True,

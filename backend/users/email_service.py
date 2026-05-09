@@ -12,6 +12,8 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.core.cache import cache
 
+from fabrik.logging import safe
+
 logger = logging.getLogger(__name__)
 
 EMAIL_HEALTH_CACHE_KEY = 'email_service_health'
@@ -85,10 +87,10 @@ class EmailService:
             )
             return {'sent': True}
         except Exception as e:
-            logger.error('Email send failed to %s: %s', recipient_email, e)
+            logger.exception('Email send failed to %s', safe(recipient_email))
             # Invalidate health cache so next check re-probes
             cache.delete(EMAIL_HEALTH_CACHE_KEY)
-            return {'sent': False, 'reason': str(e)}
+            return {'sent': False, 'reason': f'Email send failed ({type(e).__name__}).'}
 
     @staticmethod
     def send_password_reset_email(user, token: str, site_url: str) -> dict:

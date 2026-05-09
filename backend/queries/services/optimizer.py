@@ -34,6 +34,7 @@ from typing import List, Dict, Optional, Tuple
 from abc import ABC, abstractmethod
 from urllib.parse import urlencode
 import re
+from fabrik.logging import safe
 from .class_hierarchy import build_rn, can_build_dn_from_filter, get_rn_format
 
 logger = logging.getLogger(__name__)
@@ -154,8 +155,8 @@ class QueryIntent:
         """
         logger.info(
             '[QueryIntent._build_class_chain] Starting with target_node: id=%s, class=%s',
-            self.target_node.get('id'),
-            self.target_node.get('data', {}).get('className'),
+            safe(self.target_node.get('id')),
+            safe(self.target_node.get('data', {}).get('className')),
         )
 
         chain = []
@@ -189,8 +190,8 @@ class QueryIntent:
                 path_nodes.insert(0, source_node)  # Insert parent at beginning
                 logger.info(
                     '[QueryIntent._build_class_chain] Found parent class: id=%s, class=%s',
-                    source_node.get('id'),
-                    source_node.get('data', {}).get('className'),
+                    safe(source_node.get('id')),
+                    safe(source_node.get('data', {}).get('className')),
                 )
 
             current_id = source_node['id']
@@ -198,7 +199,7 @@ class QueryIntent:
         logger.info(
             '_build_class_chain: Found %d class nodes in path: %s',
             len(path_nodes),
-            [n.get('data', {}).get('className') for n in path_nodes],
+            [safe(n.get('data', {}).get('className')) for n in path_nodes],
         )
 
         # Build chain with filters
@@ -209,10 +210,12 @@ class QueryIntent:
             # For backward compatibility, also keep first filter as 'filter_node'
             filter_node = filter_nodes[0] if filter_nodes else None
 
-            logger.info('_build_class_chain: Node %s, filters_found=%d', node_id, len(filter_nodes))
+            logger.info(
+                '_build_class_chain: Node %s, filters_found=%d', safe(node_id), len(filter_nodes)
+            )
             if filter_nodes:
                 for idx, f in enumerate(filter_nodes):
-                    logger.info('_build_class_chain: Filter %d: %s', idx + 1, f.get('data'))
+                    logger.info('_build_class_chain: Filter %d: %s', idx + 1, safe(f.get('data')))
 
             chain.append(
                 {
@@ -294,7 +297,9 @@ class QueryIntent:
 
             current_id = next_node['id']
 
-        logger.info('_find_all_connected_filters: Found %d filters for %s', len(filters), node_id)
+        logger.info(
+            '_find_all_connected_filters: Found %d filters for %s', len(filters), safe(node_id)
+        )
         return filters
 
     def can_build_dn(self) -> bool:

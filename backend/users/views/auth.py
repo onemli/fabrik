@@ -30,6 +30,7 @@ from ..throttles import (
     SensitiveActionThrottle,
 )
 from audit.services import AuditService
+from fabrik.logging import safe
 
 import logging
 
@@ -299,7 +300,7 @@ class LDAPLoginView(APIView):
             backend = LDAPBackend()
             user = backend.authenticate(request, username=username, password=password)
         except Exception:
-            logger.exception("LDAP authentication error for user '%s'", username)
+            logger.exception("LDAP authentication error for user '%s'", safe(username))
             return Response(
                 {'detail': 'LDAP server is unreachable. Try local login instead.'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

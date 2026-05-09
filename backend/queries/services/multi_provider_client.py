@@ -31,6 +31,8 @@ from typing import Dict, Any, Optional
 
 import requests
 
+from fabrik.logging import safe
+
 logger = logging.getLogger(__name__)
 
 
@@ -566,7 +568,8 @@ def get_client_for_user(user) -> AIProviderClient:
     except UserAIProvider.DoesNotExist:
         # Fallback to global Ollama settings
         logger.info(
-            f'[MultiProvider] No provider for user {user.username}, falling back to global settings'
+            '[MultiProvider] No provider for user %s, falling back to global settings',
+            safe(user.username),
         )
         settings = AIQueryBuilderSettings.get_settings()
         return OllamaClient(base_url=settings.ollama_url, model=settings.query_builder_model)

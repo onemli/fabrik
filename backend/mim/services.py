@@ -1713,6 +1713,8 @@ class MIMService:
         import json
         import logging
 
+        from fabrik.logging import safe
+
         logger = logging.getLogger(__name__)
 
         query = """
@@ -1730,7 +1732,12 @@ class MIMService:
                 parsed = json.loads(raw)
                 return parsed if isinstance(parsed, list) else []
             except (ValueError, TypeError) as exc:
-                logger.warning('class %s: failed to parse %s JSON: %s', class_name, label, exc)
+                logger.warning(
+                    'class %s: failed to parse %s JSON: %s',
+                    safe(class_name),
+                    safe(label),
+                    exc,
+                )
                 return []
 
         row = results[0]
@@ -1750,6 +1757,8 @@ class MIMService:
         """
         import json
         import logging
+
+        from fabrik.logging import safe
 
         logger = logging.getLogger(__name__)
 
@@ -1804,8 +1813,8 @@ class MIMService:
                 except (ValueError, TypeError) as exc:
                     logger.warning(
                         'class %s prop %s: failed to parse validators JSON: %s',
-                        class_name,
-                        row.get('name'),
+                        safe(class_name),
+                        safe(row.get('name')),
                         exc,
                     )
                     row['validators'] = []

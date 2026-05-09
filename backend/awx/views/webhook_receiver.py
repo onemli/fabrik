@@ -25,6 +25,7 @@ from rest_framework import status
 
 from users.throttles import WebhookRateThrottle
 from audit.services import AuditService
+from fabrik.logging import safe
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def validate_webhook_signature(payload: bytes, signature_header: str, secret: st
         algorithm, signature = signature_header.split('=', 1)
 
         if algorithm != 'sha256':
-            logger.warning('Unsupported signature algorithm: %s', algorithm)
+            logger.warning('Unsupported signature algorithm: %s', safe(algorithm))
             return False
 
         # Calculate expected signature
@@ -155,7 +156,8 @@ def awx_webhook_receiver(request: Request) -> Response:
                 # Method 1: HMAC-SHA256 signature (recommended, most secure)
                 if not validate_webhook_signature(raw_body, signature_header, webhook_secret):
                     logger.warning(
-                        'Invalid HMAC signature from IP: %s', request.META.get('REMOTE_ADDR')
+                        'Invalid HMAC signature from IP: %s',
+                        safe(request.META.get('REMOTE_ADDR')),
                     )
                     return Response(
                         {'error': 'Invalid HMAC signature'}, status=status.HTTP_401_UNAUTHORIZED
@@ -165,7 +167,8 @@ def awx_webhook_receiver(request: Request) -> Response:
                 # Method 2: Simple token validation (X-AWX-Signature as plain token)
                 if signature_header != webhook_secret:
                     logger.warning(
-                        'Invalid token signature from IP: %s', request.META.get('REMOTE_ADDR')
+                        'Invalid token signature from IP: %s',
+                        safe(request.META.get('REMOTE_ADDR')),
                     )
                     return Response(
                         {'error': 'Invalid token signature'}, status=status.HTTP_401_UNAUTHORIZED
@@ -174,7 +177,9 @@ def awx_webhook_receiver(request: Request) -> Response:
             elif token_header:
                 # Method 3: Alternative header (X-AWX-Token)
                 if token_header != webhook_secret:
-                    logger.warning('Invalid token from IP: %s', request.META.get('REMOTE_ADDR'))
+                    logger.warning(
+                        'Invalid token from IP: %s', safe(request.META.get('REMOTE_ADDR'))
+                    )
                     return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
             else:
@@ -182,7 +187,7 @@ def awx_webhook_receiver(request: Request) -> Response:
                 logger.warning(
                     'Webhook rejected: no auth header from IP: %s '
                     '(secret is configured but no auth header provided)',
-                    request.META.get('REMOTE_ADDR'),
+                    safe(request.META.get('REMOTE_ADDR')),
                 )
                 return Response(
                     {'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED
@@ -191,8 +196,8 @@ def awx_webhook_receiver(request: Request) -> Response:
         # Parse JSON payload
         try:
             payload = json.loads(raw_body)
-        except json.JSONDecodeError as e:
-            logger.error(f'Invalid JSON in webhook payload: {str(e)}')
+        except json.JSONDecodeError:
+            logger.exception('Invalid JSON in webhook payload')
             return Response({'error': 'Invalid JSON payload'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extract event type and normalize data
@@ -222,8 +227,8 @@ def awx_webhook_receiver(request: Request) -> Response:
         logger.info(
             'Webhook received: job_id=%s, status=%s, routing_key=%s',
             event_data.get('awx_job_id'),
-            event_data.get('status'),
-            routing_key,
+            safe(event_data.get('status')),
+            safe(routing_key),
         )
 
         # Audit log (optional - don't fail if audit fails)
