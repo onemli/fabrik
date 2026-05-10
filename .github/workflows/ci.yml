@@ -155,5 +155,8 @@ jobs:
       - name: OSV-Scanner
         # Default scan-args already do a recursive scan from the repo root,
         # which is what we want — every requirements.txt and package-lock.json
-        # gets matched against the OSV.dev database.
+        # gets matched against the OSV.dev database. Non-fatal so an
+        # advisory we can't fix today (no upstream release yet) doesn't
+        # block unrelated PRs; same policy as pip-audit and npm audit.
         uses: google/osv-scanner-action/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
+        continue-on-error: true
