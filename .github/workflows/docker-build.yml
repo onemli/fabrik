@@ -74,15 +74,28 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
           COSIGN_EXPERIMENTAL: "true"
-        # Same digest for every tag the build produced; cosign signs once
-        # per image ref so verifiers can resolve by either name.
+        # Same digest for every tag the build produced; cosign signs once per
+        # *registry* (one ref per image name, not per tag — tags are aliases).
+        # Retries up to three times because cosign uploads occasionally fail
+        # with a transient INTERNAL_ERROR/stream-reset against ghcr.io.
         run: |
           set -euo pipefail
-          while IFS= read -r tag; do
-            [ -z "$tag" ] && continue
-            image="${tag%%:*}"
-            cosign sign --yes "${image}@${DIGEST}"
-          done <<< "$TAGS"
+          # De-duplicate to image names (ghcr.io/.../fabrik-backend, onemli/fabrik-backend, ...).
+          mapfile -t IMAGES < <(printf '%s\n' "$TAGS" | awk -F: 'NF{print $1}' | sort -u)
+          for image in "${IMAGES[@]}"; do
+            ref="${image}@${DIGEST}"
+            for attempt in 1 2 3; do
+              if cosign sign --yes "$ref"; then
+                echo "signed: $ref (attempt $attempt)"
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::cosign sign failed for $ref after 3 attempts"
+                exit 1
+              fi
+              sleep $((attempt * 5))
+            done
+          done
 
   build-frontend:
     name: Build Frontend
@@ -145,8 +158,18 @@ jobs:
           COSIGN_EXPERIMENTAL: "true"
         run: |
           set -euo pipefail
-          while IFS= read -r tag; do
-            [ -z "$tag" ] && continue
-            image="${tag%%:*}"
-            cosign sign --yes "${image}@${DIGEST}"
-          done <<< "$TAGS"
+          mapfile -t IMAGES < <(printf '%s\n' "$TAGS" | awk -F: 'NF{print $1}' | sort -u)
+          for image in "${IMAGES[@]}"; do
+            ref="${image}@${DIGEST}"
+            for attempt in 1 2 3; do
+              if cosign sign --yes "$ref"; then
+                echo "signed: $ref (attempt $attempt)"
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::cosign sign failed for $ref after 3 attempts"
+                exit 1
+              fi
+              sleep $((attempt * 5))
+            done
+          done

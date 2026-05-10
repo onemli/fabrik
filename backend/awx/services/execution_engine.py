@@ -152,7 +152,10 @@ class ExecutionEngine:
                     request.status = AutomationRequest.STATUS_FAILED
                     request.save(update_fields=['status'])
 
-                logger.error(f'Validation failed for request {request_id}: {str(ve)}')
+                logger.error('Validation failed for request %s: %s', request_id, str(ve))
+                # ValidationError messages are user-facing on purpose ("Missing
+                # required field 'tenant_name'") — these are crafted strings,
+                # not exception object payloads, so passing them through is safe.
                 return False, [execution.id], str(ve)
 
             # Configure AWX client
@@ -175,7 +178,7 @@ class ExecutionEngine:
                     f'Created {len(execution_ids)} execution(s)'
                 )
             else:
-                logger.error(f'Failed to execute request {request_id}: {error}')
+                logger.error('Failed to execute request %s: %s', request_id, error)
 
             return success, execution_ids, error
 
@@ -185,13 +188,14 @@ class ExecutionEngine:
             return False, [], error_msg
 
         except (ValidationError, AWXConnectionError) as e:
-            logger.exception(f'Execution failed for request {request_id}: {str(e)}')
+            # Domain-specific exceptions raise messages we control (validation
+            # text or AWX connection state) so they're safe to surface.
+            logger.exception('Execution failed for request %s', request_id)
             return False, [], str(e)
 
         except Exception as e:
-            error_msg = f'Unexpected error during execution: {str(e)}'
-            logger.exception(error_msg)
-            return False, [], error_msg
+            logger.exception('Unexpected error during execution of request %s', request_id)
+            return False, [], f'Execution failed ({type(e).__name__}).'
 
     def execute_bulk(
         self,
@@ -365,7 +369,7 @@ class ExecutionEngine:
             return csv_string
 
         except Exception as e:
-            logger.exception(f'Error transforming data to CSV: {str(e)}')
+            logger.exception('Error transforming data to CSV')
             raise ValidationError(f'Failed to generate CSV: {str(e)}')
 
     def _filter_awx_columns(self, input_data: Any, table_schemas: List[Dict]) -> Any:
@@ -461,8 +465,8 @@ class ExecutionEngine:
 
                 return filtered_rows
 
-        except Exception as e:
-            logger.exception(f'Error filtering AWX columns: {str(e)}')
+        except Exception:
+            logger.exception('Error filtering AWX columns')
             # Return original data as fallback
             return input_data if isinstance(input_data, list) else []
 
@@ -522,7 +526,7 @@ class ExecutionEngine:
                     credentials=credentials,
                 )
                 if not ok:
-                    logger.error(f'AWX job launch failed: {err}')
+                    logger.error('AWX job launch failed: %s', err)
                     return LaunchResult(False, {}, err)
                 logger.info(f'Successfully launched AWX job {job_data.get("id")}')
                 return LaunchResult(True, job_data, None)
@@ -718,7 +722,7 @@ class ExecutionEngine:
         for node_id in eligible_node_ids:
             ok, existing, err = self.awx_client.list_node_credentials(node_id)
             if not ok:
-                logger.warning(f'Skipping clone node {node_id} (list credentials failed): {err}')
+                logger.warning('Skipping clone node %s (list credentials failed): %s', node_id, err)
                 continue
             existing_types = {c.get('credential_type') for c in existing}
 
@@ -742,7 +746,7 @@ class ExecutionEngine:
         """Best-effort clone deletion. Failures are logged; reaper retries."""
         ok, err = self.awx_client.delete_workflow_template(clone_id)
         if not ok:
-            logger.warning(f'Failed to delete workflow clone {clone_id}: {err}')
+            logger.warning('Failed to delete workflow clone %s: %s', clone_id, err)
 
     @staticmethod
     def _build_clone_name(request_id: uuid.UUID) -> str:
@@ -806,8 +810,8 @@ class ExecutionEngine:
 
             return execution
 
-        except Exception as e:
-            logger.exception(f'Error creating execution record: {str(e)}')
+        except Exception:
+            logger.exception('Error creating execution record')
             raise
 
     @staticmethod
@@ -847,7 +851,7 @@ class ExecutionEngine:
         except ValidationError:
             raise
         except Exception as e:
-            logger.exception(f'Error validating input data: {str(e)}')
+            logger.exception('Error validating input data')
             raise ValidationError(f'Validation error: {str(e)}')
 
     def _configure_awx_client(self, awx_connection: AWXConnection) -> None:

@@ -162,7 +162,7 @@ class OpenAIClient(AIProviderClient):
             else:
                 return False, f'HTTP {response.status_code}'
         except Exception as e:
-            return False, str(e)
+            return False, f'AI provider request failed ({type(e).__name__}).'
 
 
 class AzureOpenAIClient(AIProviderClient):
@@ -255,7 +255,7 @@ class AzureOpenAIClient(AIProviderClient):
             else:
                 return False, f'HTTP {response.status_code}'
         except Exception as e:
-            return False, str(e)
+            return False, f'AI provider request failed ({type(e).__name__}).'
 
 
 class AnthropicClient(AIProviderClient):
@@ -352,7 +352,7 @@ class AnthropicClient(AIProviderClient):
             else:
                 return False, f'HTTP {response.status_code}'
         except Exception as e:
-            return False, str(e)
+            return False, f'AI provider request failed ({type(e).__name__}).'
 
 
 class GoogleAIClient(AIProviderClient):
@@ -434,7 +434,7 @@ class GoogleAIClient(AIProviderClient):
             else:
                 return False, f'HTTP {response.status_code}'
         except Exception as e:
-            return False, str(e)
+            return False, f'AI provider request failed ({type(e).__name__}).'
 
 
 class OllamaClient(AIProviderClient):
@@ -506,7 +506,7 @@ class OllamaClient(AIProviderClient):
             else:
                 return False, f'HTTP {response.status_code}'
         except Exception as e:
-            return False, str(e)
+            return False, f'AI provider request failed ({type(e).__name__}).'
 
 
 def create_client_from_provider(provider_config) -> AIProviderClient:
