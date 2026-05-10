@@ -75,11 +75,14 @@ jobs:
           cache-dependency-path: backend/requirements*.txt
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libldap2-dev libsasl2-dev
+        run: sudo apt-get update && sudo apt-get install -y gcc libldap2-dev libsasl2-dev
 
       - name: Install dependencies
         working-directory: backend
-        run: pip install -r requirements.txt -r requirements_test.txt
+        # Use the test lock file: it pins the same set as requirements.txt
+        # plus the test-only deps, all hashed. --require-hashes refuses to
+        # install anything not pinned in the file.
+        run: pip install --require-hashes -r requirements_test.txt
 
       - name: Audit dependencies for known CVEs
         working-directory: backend

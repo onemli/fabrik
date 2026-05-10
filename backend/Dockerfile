@@ -30,9 +30,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Pre-build wheels for every requirement (faster runtime install, no compile)
+# Pre-build wheels for every requirement (faster runtime install, no compile).
+# --require-hashes forces every package to match the hashes pip-compile recorded;
+# anything not listed (or with a different hash) gets rejected.
 COPY requirements.txt ./
-RUN pip wheel --wheel-dir /wheels -r requirements.txt
+RUN pip wheel --require-hashes --wheel-dir /wheels -r requirements.txt
 
 # ============================================================================
 # Stage 2 — runner
@@ -66,10 +68,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps from pre-built wheels
+# Install Python deps from pre-built wheels.
+# Builder already enforced --require-hashes, so the wheel cache is trusted.
+# Installing the wheels directly (rather than via requirements.txt) skips
+# pip's auto-hash-check that triggers when the requirements file contains
+# hashes — those hashes are for sdists/upstream wheels, not the locally-
+# built artefacts in /wheels.
 COPY --from=builder /wheels /wheels
 COPY requirements.txt ./
-RUN pip install --no-index --find-links=/wheels -r requirements.txt \
+RUN pip install --no-index --no-deps /wheels/*.whl \
     && rm -rf /wheels
 
 # Application code
