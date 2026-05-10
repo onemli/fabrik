@@ -127,6 +127,14 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Audit npm dependencies for known CVEs
+        working-directory: frontend
+        # high-or-critical advisories should be addressed, but we don't want
+        # a transient registry advisory blocking unrelated PRs — stays non-
+        # fatal until pip-audit is also fatal.
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
       - name: TypeScript check
         working-directory: frontend
         run: npx tsc --noEmit || true
@@ -134,3 +142,20 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: npm run test -- --run
+
+  vulnscan:
+    name: OSV scan
+    runs-on: ubuntu-latest
+    # OSV scans every dependency manifest in the repo against the OSV.dev
+    # database — broader Python/JavaScript coverage than pip-audit + npm audit
+    # alone (Go, Cargo, etc. covered too if we add them later).
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
+        with:
+          scan-args: |-
+            --recursive
+            --skip-git
+            ./
