@@ -10,6 +10,7 @@
 **Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/onemli/fabrik/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/codeql.yml?branch=main&style=flat-square&label=CodeQL&logo=github)](https://github.com/onemli/fabrik/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/onemli/fabrik?style=flat-square&color=0ea5e9&label=release)](https://github.com/onemli/fabrik/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-10b981?style=flat-square)](./LICENSE)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12797/badge)](https://www.bestpractices.dev/projects/12797)
