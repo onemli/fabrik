@@ -20,8 +20,9 @@ requests-mock==1.11.0
 # Time Mocking
 freezegun==1.5.1  # Updated for Python 3.13 compatibility
 
-# Celery Testing
-celery[pytest]==5.3.6
+# celery itself is pinned in requirements.in. The [pytest] extra used to
+# pull in pytest-celery, but no test in the suite imports anything from it,
+# so we don't need it (and recent versions clash with our urllib3/responses).
 
 # WebSocket Testing
 websockets==12.0

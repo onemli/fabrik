@@ -79,10 +79,12 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        # Use the test lock file: it pins the same set as requirements.txt
-        # plus the test-only deps, all hashed. --require-hashes refuses to
-        # install anything not pinned in the file.
-        run: pip install --require-hashes -r requirements_test.txt
+        # Two lock files: requirements.txt is the runtime stack,
+        # requirements_test.txt is just the test-only extras pinned against
+        # those runtime versions. --require-hashes refuses anything not
+        # pinned in either file. Two separate lock files keep Dependabot
+        # bumps surgical — bumping pytest never has to touch Django.
+        run: pip install --require-hashes -r requirements.txt -r requirements_test.txt
 
       - name: Audit dependencies for known CVEs
         working-directory: backend
