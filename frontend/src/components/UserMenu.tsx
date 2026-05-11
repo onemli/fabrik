@@ -21,14 +21,11 @@ import {
   LogOut,
   Radio,
   HelpCircle,
-  BookOpen,
   ChevronDown,
 } from 'lucide-react'
 
-// Bumped per release. Documentation URL pins to this version so users reading
-// docs always see the features their running build actually ships.
-const APP_VERSION = '1.0.1'
-const DOCS_URL = `https://docs.fabrikops.com/v${APP_VERSION}/`
+// __APP_VERSION__ is build-time injected by vite.config.ts from
+// frontend/package.json — bumping the package version updates this in lockstep.
 const SUPPORT_URL = 'https://github.com/onemli/fabrik/issues'
 
 export function UserMenu() {
@@ -113,21 +110,13 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        {/* Help & Documentation */}
+        {/* Help & Support */}
         <DropdownMenuItem
           onClick={() => window.open(SUPPORT_URL, '_blank', 'noopener,noreferrer')}
           className="cursor-pointer"
         >
           <HelpCircle className="w-4 h-4 mr-2" />
           Help & Support
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => window.open(DOCS_URL, '_blank', 'noopener,noreferrer')}
-          className="cursor-pointer"
-        >
-          <BookOpen className="w-4 h-4 mr-2" />
-          Documentation
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -146,7 +135,7 @@ export function UserMenu() {
         {/* Version */}
         <div className="px-2 py-1.5">
           <p className="text-xs text-center text-muted-foreground">
-            v{APP_VERSION}
+            v{__APP_VERSION__}
           </p>
         </div>
       </DropdownMenuContent>

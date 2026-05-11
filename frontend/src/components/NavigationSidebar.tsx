@@ -13,10 +13,10 @@ import {
   Library,
   ListChecks,
   Settings,
-  HelpCircle,
   ChevronRight,
   Radio,
   FileText,
+  BookOpen,
   BookTemplate,
   Pin,
   Users,
@@ -38,6 +38,9 @@ interface MenuItem {
   label: string
   icon: React.ElementType
   path: string
+  // When true, `path` is an absolute URL opened in a new tab via a plain
+  // anchor instead of routed through react-router.
+  external?: boolean
   children?: MenuItem[]
   adminOnly?: boolean
   featureFlag?: string
@@ -221,10 +224,11 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    id: 'help',
-    label: 'Help',
-    icon: HelpCircle,
-    path: '/help',
+    id: 'documentation',
+    label: 'Documentation',
+    icon: BookOpen,
+    path: 'https://docs.fabrikops.com/fabrik/',
+    external: true,
   },
 ]
 
@@ -349,6 +353,25 @@ export function NavigationSidebar() {
               />
             )}
           </button>
+        ) : item.external ? (
+          <a
+            href={item.path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={commonClasses}
+          >
+            <Icon className="w-4 h-4 flex-shrink-0 transition-colors duration-200" />
+
+            <span
+              className={cn(
+                'text-sm truncate transition-opacity duration-300',
+                isOpen ? 'opacity-100' : 'opacity-0'
+              )}
+              style={{ width: isOpen ? 'auto' : 0 }}
+            >
+              {item.label}
+            </span>
+          </a>
         ) : (
           <Link
             to={item.path}
