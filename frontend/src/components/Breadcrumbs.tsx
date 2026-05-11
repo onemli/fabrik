@@ -183,9 +183,6 @@ export function Breadcrumbs() {
         breadcrumbs.push({ label: 'Query Builder', icon: <Workflow className="w-3.5 h-3.5" /> })
       }
 
-    } else if (path === '/help') {
-      breadcrumbs.push({ label: 'Help & Documentation' })
-
     // ── AWX / Ansible ─────────────────────────────────────────────────────────
     } else if (path === '/awx-connections') {
       breadcrumbs.push({ label: 'AWX Connections', icon: <Workflow className="w-3.5 h-3.5" /> })

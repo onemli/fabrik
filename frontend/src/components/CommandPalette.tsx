@@ -176,14 +176,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         group: 'navigation',
       },
       {
-        id: 'nav-help',
-        label: 'Go to Help & Documentation',
+        id: 'nav-docs',
+        label: 'Open Documentation',
         icon: <HelpCircle className="w-4 h-4" />,
         action: () => {
-          navigate('/help')
+          window.open('https://docs.fabrikops.com/fabrik/', '_blank', 'noopener,noreferrer')
           onOpenChange(false)
         },
-        keywords: ['help', 'documentation', 'support'],
+        keywords: ['help', 'documentation', 'docs', 'support'],
         group: 'navigation',
       }
     )
