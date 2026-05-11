@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="frontend/src/assets/fabrik_dark.svg">
-  <img src="frontend/src/assets/fabrik_light.svg" alt="Fabrik" width="220">
+  <source media="(prefers-color-scheme: dark)" srcset="https://docs.fabrikops.com/images/fabrik_dark.svg">
+  <img src="https://docs.fabrikops.com/images/fabrik_light.svg" alt="Fabrik" width="220">
 </picture>
 
 # The fabric, finally legible.
@@ -28,7 +28,7 @@
 
 <br>
 
-<img src="fabrik_basic.gif" alt="Fabrik query builder demo" width="100%">
+<img src="https://docs.fabrikops.com/images/fabrik_basic.gif" alt="Fabrik query builder demo" width="100%">
 
 </div>
 
@@ -49,7 +49,7 @@ Fabrik is a self-hosted operations platform for Cisco ACI that replaces the APIC
 
 ## Quickstart
 
-> **Requirements:** Docker 24+ · Docker Compose v2 · 4 vCPU · 8 GB RAM · 100 GB free disk (Time Machine snapshots and the MIM graph grow with fabric size)
+> **Requirements:** Docker 24+ · Docker Compose v2. Sizing depends on fabric size and Time Machine retention — see the [deployment guide](https://docs.fabrikops.com/fabrik/deployment) for current recommendations.
 
 ```bash
 mkdir fabrik && cd fabrik
@@ -79,68 +79,18 @@ That's it. Detailed walkthrough, production deployment, reverse proxy, backups, 
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    User([Operator])
+<p align="center">
+  <img src="https://docs.fabrikops.com/images/architecture.svg" alt="Fabrik architecture: operator → web tier (React + Django) → workers (Celery) → stateful services (Neo4j, PostgreSQL, Redis, RabbitMQ) → external systems (APIC, AWX, Git SCM)" width="100%">
+</p>
 
-    subgraph EXT[External systems]
-        APIC[(APIC&nbsp;REST)]
-        AWX[(AWX&nbsp;/&nbsp;Tower<br/><i>optional</i>)]
-        SCM[(Git&nbsp;SCM<br/>playbook&nbsp;source<br/><i>optional</i>)]
-    end
+<!--
+Diagram source: frontend/src/assets/architecture.mmd
+Re-render after edits with:
+  docker run --rm -v $PWD/frontend/src/assets:/data minlag/mermaid-cli:11.4.0 \
+    -i /data/architecture.mmd -o /data/architecture.svg -b transparent
+Upload the SVG to docs.fabrikops.com/images/architecture.svg.
+-->
 
-    subgraph WEB[Web tier]
-        FE[Frontend<br/>React 19 · Vite · Zustand]
-        BE[Backend<br/>Django · DRF · Daphne ASGI]
-        WS{{WebSocket<br/>Channels}}
-    end
-
-    subgraph WORK[Workers]
-        WORKER[Celery worker<br/>queries · automations]
-        BEAT[Celery beat<br/>scheduler]
-    end
-
-    subgraph DATA[Stateful services]
-        NEO[(Neo4j<br/>MIM graph)]
-        PG[(PostgreSQL<br/>state · snapshots · audit)]
-        REDIS[(Redis<br/>cache · Celery broker · channel layer)]
-        MQ[(RabbitMQ<br/>AWX event bus)]
-    end
-
-    User -->|HTTPS| FE
-    FE -->|REST + JWT| BE
-    FE <-->|live progress| WS
-    WS --- BE
-
-    BE -->|Cypher| NEO
-    BE -->|ORM| PG
-    BE -->|cache hits| REDIS
-    BE -->|enqueue tasks| REDIS
-
-    REDIS -.->|deliver tasks| WORKER
-    BEAT -.->|schedule| REDIS
-    WORKER -->|results| PG
-    WORKER -->|progress events| REDIS
-    REDIS -.->|fan-out| WS
-
-    BE -->|class&nbsp;/&nbsp;mo queries| APIC
-    WORKER -->|launch jobs| AWX
-    AWX -.->|webhook events| MQ
-    MQ -.->|consume| WORKER
-    AWX -.->|pull playbooks| SCM
-
-    classDef ext stroke:#64748b,stroke-width:1.5px
-    classDef data stroke:#0284c7,stroke-width:1.5px
-    classDef worker stroke:#7c3aed,stroke-width:1.5px
-    classDef web stroke:#10b981,stroke-width:1.5px
-    classDef user stroke:#6b7280,stroke-width:1.5px
-
-    class APIC,AWX,SCM ext
-    class NEO,PG,REDIS,MQ data
-    class WORKER,BEAT worker
-    class FE,BE,WS web
-    class User user
-```
 
 > Solid arrows are synchronous calls; dashed arrows are asynchronous events.
 
