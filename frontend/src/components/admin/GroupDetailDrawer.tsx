@@ -119,6 +119,16 @@ export function GroupDetailDrawer({
     }
   }, [editMode])
 
+  // The Admin group bypasses RBAC via a name match in
+  // IsAdminOrSuperuser / FabrikModelPermissions, so its Group.permissions
+  // table is empty. Load the full permission catalogue so the drawer can
+  // show the effective access set instead of "0 permissions".
+  useEffect(() => {
+    if (group?.name === SYSTEM_ADMIN_GROUP_NAME && allPermissions.length === 0) {
+      void loadAllPermissions()
+    }
+  }, [group?.name, allPermissions.length])
+
   const loadAllPermissions = async () => {
     try {
       setPermissionsLoading(true)
@@ -293,12 +303,18 @@ export function GroupDetailDrawer({
     onClose()
   }
 
-  const permissionsByCategory = group?.permissions.reduce((acc, perm) => {
+  // For the Admin group the explicit Group.permissions list is empty by design
+  // (the role bypasses the permission system entirely). Substitute the full
+  // catalogue when we have it loaded so the drawer reflects effective access.
+  const effectivePermissions =
+    group?.name === SYSTEM_ADMIN_GROUP_NAME ? allPermissions : group?.permissions ?? []
+
+  const permissionsByCategory = effectivePermissions.reduce((acc, perm) => {
     const category = (perm as any).category || 'Other'
     if (!acc[category]) acc[category] = []
     acc[category].push(perm)
     return acc
-  }, {} as Record<string, any[]>) || {}
+  }, {} as Record<string, any[]>)
 
   // Filtered members list
   const filteredMembers = useMemo(() => {
@@ -484,7 +500,16 @@ export function GroupDetailDrawer({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">Permissions</p>
-                        <p className="text-2xl font-bold mt-1">{group.permissions.length}</p>
+                        {isSystemGroup ? (
+                          <>
+                            <p className="text-2xl font-bold mt-1">All</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Full system access
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-2xl font-bold mt-1">{group.permissions.length}</p>
+                        )}
                       </div>
                       <Key className="h-8 w-8 text-muted-foreground/30" />
                     </div>
@@ -494,6 +519,19 @@ export function GroupDetailDrawer({
 
               <div className="space-y-3">
                 <h3 className="font-semibold">Permission Summary</h3>
+                {isSystemGroup && (
+                  <div className="flex items-start gap-3 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-500">System role</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Admin members bypass the permission system and have access to every
+                        feature. Per-category counts below reflect the effective permission
+                        catalogue, not explicit grants on this group.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="border rounded-lg divide-y">
                   {Object.entries(permissionsByCategory).map(([category, perms]) => (
                     <div key={category} className="px-4 py-3 flex items-center justify-between">
@@ -503,7 +541,7 @@ export function GroupDetailDrawer({
                   ))}
                   {Object.keys(permissionsByCategory).length === 0 && (
                     <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                      No permissions assigned
+                      {isSystemGroup ? 'Loading permission catalogue…' : 'No permissions assigned'}
                     </div>
                   )}
                 </div>
@@ -696,12 +734,31 @@ export function GroupDetailDrawer({
             <TabsContent value="permissions" className="mt-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">
-                  {editMode ? 'Manage Permissions' : `All Permissions (${group.permissions.length})`}
+                  {editMode
+                    ? 'Manage Permissions'
+                    : isSystemGroup
+                      ? 'Effective Permissions (All)'
+                      : `All Permissions (${group.permissions.length})`}
                 </h3>
                 {editMode && permsDirty && (
                   <Badge variant="secondary" className="text-xs">{editPermissionIds.length} selected</Badge>
                 )}
               </div>
+
+              {!editMode && isSystemGroup && (
+                <div className="flex items-start gap-3 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                  <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-500">Implicit full access</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Admin is a system role — its members bypass the permission system and
+                      can use every feature regardless of explicit grants. The list below
+                      shows the catalogue of permissions that effectively apply to Admin
+                      members; it can't be edited here.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {editMode ? (
                 <PermissionSelector
@@ -747,7 +804,9 @@ export function GroupDetailDrawer({
                 {Object.keys(permissionsByCategory).length === 0 && (
                   <div className="border rounded-lg p-8 text-center">
                     <Key className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No permissions assigned</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isSystemGroup ? 'Loading permission catalogue…' : 'No permissions assigned'}
+                    </p>
                   </div>
                 )}
               </div>
