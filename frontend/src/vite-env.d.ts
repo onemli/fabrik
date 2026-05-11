@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+// Injected by vite.config.ts from frontend/package.json's `version` field.
+declare const __APP_VERSION__: string
+
 declare module '*.svg' {
   const content: string
   export default content
