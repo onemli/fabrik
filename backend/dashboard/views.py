@@ -29,7 +29,7 @@ def platform_info(request):
     return Response(
         {
             'demo_mode': getattr(settings, 'DEMO_MODE', False),
-            'version': os.getenv('FABRIK_VERSION', '1.0.1'),
+            'version': os.getenv('FABRIK_VERSION', '1.1.0'),
             'ldap_enabled': getattr(settings, 'LDAP_ENABLED', False),
             'registration_enabled': getattr(settings, 'FABRIK_ALLOW_PUBLIC_REGISTRATION', False),
         }
