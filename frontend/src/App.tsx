@@ -302,17 +302,6 @@ function APICSettings() {
   return <APICConnections />
 }
 
-function Help() {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Help & Documentation</h2>
-        <p className="text-muted-foreground">Documentation coming soon...</p>
-      </div>
-    </div>
-  )
-}
-
 function MainLayout() {
   const { isSidebarPinned } = useQueryBuilderStore()
   const location = useLocation()
@@ -384,7 +373,6 @@ function MainLayout() {
               <Route path="security"      element={<SettingsSecurity />} />
               <Route path="mim-management" element={<SettingsMIMManagement />} />
             </Route>
-            <Route path="/help" element={<Help />} />
           </Routes>
         </Suspense>
         </ErrorBoundary>
