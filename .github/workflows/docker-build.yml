@@ -17,7 +17,10 @@ jobs:
     name: Build Backend
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # contents: write so anchore/sbom-action can attach the SBOM file
+      # to the GitHub Release on tag pushes. Plain pushes don't trigger
+      # the attachment step.
+      contents: write
       packages: write
       # cosign keyless signing exchanges this short-lived OIDC token with
       # the public Sigstore Fulcio CA to mint the signing certificate.
@@ -121,7 +124,7 @@ jobs:
     name: Build Frontend
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
 
