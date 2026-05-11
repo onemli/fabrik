@@ -1,16 +1,48 @@
 // library/CategoryManager.tsx
 //
-// Inline category management panel that lives inside the Library page sidebar.
-// Users can create, rename, and delete categories here without leaving the page.
-// Each category row shows how many queries it contains so you know before deleting.
+// Table-style category list for the Library "categories" tab. Mirrors the
+// queries-tab layout (TanStack Table, sortable headers, paginated, bulk-
+// select) so the two tabs feel like one app. Clicking a category name
+// fires onSelectCategory; the parent (Library) flips into a drill-down
+// that reuses the queries ListView filtered to that category.
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { queriesService } from '@/services/queries'
-import { Plus, Edit, Trash2, Tag, ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { queriesService, type Category } from '@/services/queries'
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Tag,
+  Search,
+  X,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -19,49 +51,68 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { EmptyState } from './EmptyState'
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  SortingState,
+} from '@tanstack/react-table'
+import { formatDistanceToNow } from 'date-fns'
 
-export function CategoryManager() {
+const DEFAULT_COLOR = '#10b981'
+
+const PRESET_COLORS = [
+  '#10b981', // emerald
+  '#3b82f6', // blue
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#06b6d4', // cyan
+  '#84cc16', // lime
+]
+
+interface CategoryManagerProps {
+  onSelectCategory: (id: number) => void
+}
+
+export function CategoryManager({ onSelectCategory }: CategoryManagerProps) {
   const queryClient = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<any>(null)
-  const [expandedCategory, setExpandedCategory] = useState<number | null>(null)
-  const [deleteConfirmCategory, setDeleteConfirmCategory] = useState<any>(null)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [deleteConfirmCategory, setDeleteConfirmCategory] = useState<Category | null>(null)
+  const [search, setSearch] = useState('')
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }])
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: '#10b981',
+    color: DEFAULT_COLOR,
   })
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: () => queriesService.getCategories(),
   })
 
-  // Fetch queries for expanded category
-  const { data: categoryQueries } = useQuery({
-    queryKey: ['category-queries', expandedCategory],
-    queryFn: () => queriesService.getSavedQueriesPaginated({
-      category: expandedCategory!,
-      page_size: 100,
-    }),
-    enabled: !!expandedCategory,
-  })
-
   const createMutation = useMutation({
-    mutationFn: (data: any) => queriesService.createCategory(data),
+    mutationFn: (data: typeof formData) => queriesService.createCategory(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] })
-      setDialogOpen(false)
-      resetForm()
+      closeDialog()
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => queriesService.updateCategory(id, data),
+    mutationFn: ({ id, data }: { id: number; data: typeof formData }) =>
+      queriesService.updateCategory(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] })
-      setDialogOpen(false)
-      resetForm()
+      closeDialog()
     },
   })
 
@@ -74,11 +125,17 @@ export function CategoryManager() {
   })
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', color: '#10b981' })
+    setFormData({ name: '', description: '', color: DEFAULT_COLOR })
     setEditingCategory(null)
   }
 
+  const closeDialog = () => {
+    setDialogOpen(false)
+    resetForm()
+  }
+
   const handleSubmit = () => {
+    if (!formData.name.trim()) return
     if (editingCategory) {
       updateMutation.mutate({ id: editingCategory.id, data: formData })
     } else {
@@ -86,186 +143,440 @@ export function CategoryManager() {
     }
   }
 
-  const handleDelete = (category: any) => {
-    setDeleteConfirmCategory(category)
+  const openCreate = () => {
+    resetForm()
+    setDialogOpen(true)
   }
 
-  const handleEdit = (category: any) => {
+  const openEdit = (category: Category) => {
     setEditingCategory(category)
     setFormData({
       name: category.name,
       description: category.description || '',
-      color: category.color || '#10b981',
+      color: category.color || DEFAULT_COLOR,
     })
     setDialogOpen(true)
   }
 
+  const columns = useMemo<ColumnDef<Category>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <button
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          >
+            Name
+            {column.getIsSorted() === 'asc' ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : column.getIsSorted() === 'desc' ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+            )}
+          </button>
+        ),
+        cell: ({ row }) => {
+          const cat = row.original
+          const color = cat.color || DEFAULT_COLOR
+          return (
+            <button
+              onClick={() => onSelectCategory(cat.id)}
+              className="flex items-center gap-3 group"
+            >
+              <span
+                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: `${color}22` }}
+              >
+                <Tag className="w-4 h-4" style={{ color }} />
+              </span>
+              <span className="font-medium text-sm group-hover:text-primary transition-colors">
+                {cat.name}
+              </span>
+            </button>
+          )
+        },
+      },
+      {
+        accessorKey: 'description',
+        header: 'Description',
+        cell: ({ row }) =>
+          row.original.description ? (
+            <span className="text-sm text-muted-foreground line-clamp-1 max-w-md">
+              {row.original.description}
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground/50">—</span>
+          ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: 'query_count',
+        header: ({ column }) => (
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            >
+              Queries
+              {column.getIsSorted() === 'asc' ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : column.getIsSorted() === 'desc' ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+              )}
+            </button>
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center">
+            <Badge variant="outline" className="text-xs">
+              {row.original.query_count || 0}
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'created_at',
+        header: ({ column }) => (
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            >
+              Created
+              {column.getIsSorted() === 'asc' ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : column.getIsSorted() === 'desc' ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+              )}
+            </button>
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center text-sm text-muted-foreground">
+            {formatDistanceToNow(new Date(row.original.created_at), { addSuffix: true })}
+          </div>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-center">Actions</div>,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                openEdit(row.original)
+              }}
+              aria-label="Edit category"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation()
+                setDeleteConfirmCategory(row.original)
+              }}
+              aria-label="Delete category"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+        enableSorting: false,
+      },
+    ],
+    [onSelectCategory]
+  )
+
+  const filteredCategories = useMemo(() => {
+    if (!search) return categories
+    const q = search.toLowerCase()
+    return categories.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.description || '').toLowerCase().includes(q)
+    )
+  }, [categories, search])
+
+  const table = useReactTable({
+    data: filteredCategories,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 20 } },
+  })
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Categories</h2>
-          <p className="text-sm text-muted-foreground">Organize your queries with categories</p>
+    <div className="flex-1 flex flex-col">
+      {/* Toolbar */}
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex-1 max-w-md relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search categories..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-10 glass border-border/20"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-accent/50"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+
+        <div className="flex-1" />
+
+        <Button onClick={openCreate} className="gap-2">
           <Plus className="w-4 h-4" />
           New Category
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map((category: any) => (
-          <div
-            key={category.id}
-            className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-all"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${category.color}20` }}
-                >
-                  <Tag className="w-5 h-5" style={{ color: category.color }} />
-                </div>
-                <div>
-                  <h3 className="font-semibold">{category.name}</h3>
-                  <p className="text-xs text-muted-foreground">{category.query_count || 0} queries</p>
-                </div>
-              </div>
-            </div>
-
-            {category.description && (
-              <p className="text-sm text-muted-foreground mb-3">{category.description}</p>
-            )}
-
-            <div className="flex gap-2 mb-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setExpandedCategory(
-                  expandedCategory === category.id ? null : category.id
-                )}
-                className="flex-1"
-              >
-                {expandedCategory === category.id ? (
-                  <>
-                    <ChevronUp className="w-3 h-3 mr-2" />
-                    Hide Queries
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-3 h-3 mr-2" />
-                    View Queries
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEdit(category)}
-                className="px-3"
-              >
-                <Edit className="w-3 h-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDelete(category)}
-                className="px-3 hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {/* Expandable Query List */}
-            {expandedCategory === category.id && (
-              <div className="mt-3 pt-3 border-t border-border space-y-2">
-                {!categoryQueries ? (
-                  <p className="text-sm text-muted-foreground text-center py-2">Loading...</p>
-                ) : categoryQueries.results.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-2">No queries in this category</p>
-                ) : (
-                  categoryQueries.results.map((query: any) => (
-                    <div
-                      key={query.id}
-                      className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
-                    >
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm flex-1 truncate">{query.name}</span>
-                      {query.is_template && (
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Template</span>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+      {/* Content */}
+      {categories.length === 0 ? (
+        <EmptyState
+          title="No categories yet"
+          description="Create your first category to organize your queries."
+          action={
+            <Button onClick={openCreate} size="lg" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Create Category
+            </Button>
+          }
+        />
+      ) : filteredCategories.length === 0 ? (
+        <EmptyState
+          title="No categories match"
+          description="Try a different search term."
+        />
+      ) : (
+        <div className="flex-1 flex flex-col justify-between">
+          <div className="border rounded-lg shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id} className="py-3 px-4">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="hover:bg-muted/30 cursor-pointer"
+                    onClick={() => onSelectCategory(row.original.id)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-2.5 px-4">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        ))}
-      </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          {/* Pagination */}
+          {filteredCategories.length > 0 && (
+            <div className="mt-4 flex-shrink-0">
+              <div className="border rounded-lg shadow-sm px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Showing{' '}
+                    <span className="font-medium text-foreground">
+                      {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
+                    </span>{' '}
+                    to{' '}
+                    <span className="font-medium text-foreground">
+                      {Math.min(
+                        (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                        filteredCategories.length
+                      )}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-medium text-foreground">{filteredCategories.length}</span>{' '}
+                    categories
+                  </span>
+                  <div className="flex items-center gap-4">
+                    <Select
+                      value={table.getState().pagination.pageSize.toString()}
+                      onValueChange={(value) => table.setPageSize(Number(value))}
+                    >
+                      <SelectTrigger className="h-9 w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 20, 50, 100].map((pageSize) => (
+                          <SelectItem key={pageSize} value={pageSize.toString()}>
+                            {pageSize} per page
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.setPageIndex(0)}
+                        disabled={!table.getCanPreviousPage()}
+                        aria-label="First page"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-medium">
+                        Page {table.getState().pagination.pageIndex + 1} of{' '}
+                        {Math.max(table.getPageCount(), 1)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                        aria-label="Next page"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                        disabled={!table.getCanNextPage()}
+                        aria-label="Last page"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create / Edit dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingCategory ? 'Edit Category' : 'Create Category'}</DialogTitle>
             <DialogDescription>
-              {editingCategory ? 'Update category details' : 'Add a new category to organize your queries'}
+              {editingCategory
+                ? 'Update the category details.'
+                : 'Add a new category to organize your queries.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="cat-name">Name</Label>
               <Input
-                id="name"
+                id="cat-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Category name"
+                autoFocus
               />
             </div>
 
             <div>
-              <Label htmlFor="description">Description (Optional)</Label>
+              <Label htmlFor="cat-description">Description (optional)</Label>
               <Input
-                id="description"
+                id="cat-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Category description"
+                placeholder="What goes in this category?"
               />
             </div>
 
             <div>
-              <Label htmlFor="color">Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="color"
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="w-20 h-10"
-                />
-                <Input
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  placeholder="#10b981"
-                  className="flex-1"
-                />
+              <Label>Color</Label>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color: c })}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      formData.color.toLowerCase() === c.toLowerCase()
+                        ? 'border-foreground scale-110'
+                        : 'border-transparent hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: c }}
+                    aria-label={`Pick color ${c}`}
+                  />
+                ))}
+                <div className="flex items-center gap-2 ml-2">
+                  <Input
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-10 h-8 p-1"
+                    aria-label="Custom color"
+                  />
+                  <Input
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-28 h-8 font-mono text-xs"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
+            <Button variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!formData.name}>
+            <Button
+              onClick={handleSubmit}
+              disabled={!formData.name.trim() || createMutation.isPending || updateMutation.isPending}
+            >
               {editingCategory ? 'Update' : 'Create'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={!!deleteConfirmCategory}
         onClose={() => setDeleteConfirmCategory(null)}
@@ -277,8 +588,8 @@ export function CategoryManager() {
         }}
         title="Delete Category"
         message={
-          deleteConfirmCategory?.query_count > 0
-            ? `Are you sure you want to delete "${deleteConfirmCategory?.name}"? This category has ${deleteConfirmCategory?.query_count} ${deleteConfirmCategory?.query_count === 1 ? 'query' : 'queries'}. The queries will not be deleted, but they will be uncategorized.`
+          deleteConfirmCategory && (deleteConfirmCategory.query_count ?? 0) > 0
+            ? `Are you sure you want to delete "${deleteConfirmCategory.name}"? It contains ${deleteConfirmCategory.query_count} ${deleteConfirmCategory.query_count === 1 ? 'query' : 'queries'} — they won't be deleted, just uncategorised.`
             : `Are you sure you want to delete "${deleteConfirmCategory?.name}"?`
         }
         confirmText="Delete"
