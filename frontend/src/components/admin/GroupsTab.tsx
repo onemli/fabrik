@@ -255,7 +255,16 @@ function GroupRow({
       <td className="py-1.5 px-4">
         <div className="flex items-center gap-2">
           <Key className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">{group.permissions.length}</span>
+          {group.name === SYSTEM_ADMIN_GROUP_NAME ? (
+            <span
+              className="text-sm font-medium"
+              title="Admin members bypass the permission system and have access to every feature."
+            >
+              All
+            </span>
+          ) : (
+            <span className="text-sm font-medium">{group.permissions.length}</span>
+          )}
         </div>
       </td>
       <td className="py-1.5 px-4">
