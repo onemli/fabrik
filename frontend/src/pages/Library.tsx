@@ -23,6 +23,7 @@ import {
   Tag,
   Filter,
   X,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,8 +62,18 @@ export default function Library() {
     return 'queries'
   }
 
+  // ?tab=categories&id=N drops the user into the queries-style table filtered
+  // to that category. Null = the categories list view itself.
+  const getInitialDrillDownId = (): number | null => {
+    const idParam = searchParams.get('id')
+    if (!idParam) return null
+    const parsed = parseInt(idParam, 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+  }
+
   // State
   const [activeTab, setActiveTab] = useState<'queries' | 'templates' | 'categories'>(getInitialTab())
+  const [categoryDrillDownId, setCategoryDrillDownId] = useState<number | null>(getInitialDrillDownId())
   const [viewMode, _setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('library-view-mode')
     return (saved as ViewMode) || 'list'
@@ -86,12 +97,32 @@ export default function Library() {
     } else if (!tabParam) {
       setActiveTab('queries')
     }
+
+    // Drill-down id is only meaningful on the categories tab.
+    if (tabParam === 'categories') {
+      const idParam = searchParams.get('id')
+      const parsed = idParam ? parseInt(idParam, 10) : NaN
+      setCategoryDrillDownId(Number.isFinite(parsed) && parsed > 0 ? parsed : null)
+    } else {
+      setCategoryDrillDownId(null)
+    }
   }, [searchParams])
 
-  // Update URL when tab changes
+  // Update URL when tab changes — also clears any drill-down id.
   const handleTabChange = (newTab: 'queries' | 'templates' | 'categories') => {
     setActiveTab(newTab)
+    setCategoryDrillDownId(null)
     setSearchParams({ tab: newTab })
+  }
+
+  const openCategory = (id: number) => {
+    setCategoryDrillDownId(id)
+    setSearchParams({ tab: 'categories', id: id.toString() })
+  }
+
+  const exitCategoryDrillDown = () => {
+    setCategoryDrillDownId(null)
+    setSearchParams({ tab: 'categories' })
   }
 
   // Persist view mode to localStorage
@@ -99,23 +130,32 @@ export default function Library() {
     localStorage.setItem('library-view-mode', viewMode)
   }, [viewMode])
 
+  // Drill-down preempts the toolbar's category filter — we're already
+  // narrowed to a specific category by the URL.
+  const effectiveCategory = categoryDrillDownId ?? selectedCategory
+
+  // Drill-down on the categories tab shows queries (not templates) so the
+  // page-internal contract matches the standalone queries tab.
+  const effectiveIsTemplate =
+    activeTab === 'templates' ? true : activeTab === 'queries' || categoryDrillDownId !== null ? false : undefined
+
   // Fetch all data (pagination handled by ListView component)
   const {
     data: queriesData,
     isLoading: queriesLoading,
   } = useQuery({
-    queryKey: ['saved-queries-paginated', activeTab, searchQuery, filterMode, selectedCategory],
+    queryKey: ['saved-queries-paginated', activeTab, searchQuery, filterMode, effectiveCategory, effectiveIsTemplate],
     queryFn: () =>
       queriesService.getSavedQueriesPaginated({
         page: 1,
         page_size: 1000,
         search: searchQuery || undefined,
-        category: selectedCategory || undefined,
+        category: effectiveCategory || undefined,
         is_favorite: filterMode === 'favorites' || undefined,
         is_owner: filterMode === 'mine' || undefined,
-        is_template: activeTab === 'templates' ? true : activeTab === 'queries' ? false : undefined,
+        is_template: effectiveIsTemplate,
       }),
-    enabled: !!user && activeTab !== 'categories',
+    enabled: !!user && (activeTab !== 'categories' || categoryDrillDownId !== null),
   })
 
   const queries = useMemo(() => {
@@ -127,6 +167,11 @@ export default function Library() {
     queryFn: () => queriesService.getCategories(),
     enabled: !!user,
   })
+
+  const drillDownCategory = useMemo(
+    () => categories.find((c: any) => c.id === categoryDrillDownId) ?? null,
+    [categories, categoryDrillDownId]
+  )
 
   // Fetch separate stats for counts (independent of active tab)
   const { data: queriesCount = { count: 0 } } = useQuery({
@@ -348,12 +393,57 @@ export default function Library() {
 
       {/* Content Area */}
       <div className="px-8 py-6 flex-1 flex flex-col">
-        {activeTab === 'categories' ? (
-          <div className="flex-1">
-            <CategoryManager />
+        {activeTab === 'categories' && !categoryDrillDownId ? (
+          <div className="flex-1 flex flex-col">
+            <CategoryManager onSelectCategory={openCategory} />
           </div>
         ) : (
           <div className="flex-1 flex flex-col">
+            {categoryDrillDownId !== null && (
+              <div
+                className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg border bg-card"
+                style={
+                  drillDownCategory?.color
+                    ? { borderLeft: `4px solid ${drillDownCategory.color}` }
+                    : undefined
+                }
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={exitCategoryDrillDown}
+                  className="gap-2 -ml-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Categories
+                </Button>
+                <div className="h-6 w-px bg-border" />
+                {drillDownCategory ? (
+                  <>
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${drillDownCategory.color || '#10b981'}22` }}
+                    >
+                      <Tag
+                        className="w-4 h-4"
+                        style={{ color: drillDownCategory.color || '#10b981' }}
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm">{drillDownCategory.name}</span>
+                      {drillDownCategory.description && (
+                        <span className="text-xs text-muted-foreground line-clamp-1">
+                          {drillDownCategory.description}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Category not found</span>
+                )}
+              </div>
+            )}
+
             {/* Premium Toolbar */}
             <div className="mb-6 space-y-4">
               {/* Main Toolbar */}
