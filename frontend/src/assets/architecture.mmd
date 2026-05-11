@@ -1,0 +1,60 @@
+flowchart LR
+    User([Operator])
+
+    subgraph EXT[External systems]
+        APIC[(APIC&nbsp;REST)]
+        AWX[(AWX&nbsp;/&nbsp;Tower<br/><i>optional</i>)]
+        SCM[(Git&nbsp;SCM<br/>playbook&nbsp;source<br/><i>optional</i>)]
+    end
+
+    subgraph WEB[Web tier]
+        FE[Frontend<br/>React 19 · Vite · Zustand]
+        BE[Backend<br/>Django · DRF · Daphne ASGI]
+        WS{{WebSocket<br/>Channels}}
+    end
+
+    subgraph WORK[Workers]
+        WORKER[Celery worker<br/>queries · automations]
+        BEAT[Celery beat<br/>scheduler]
+    end
+
+    subgraph DATA[Stateful services]
+        NEO[(Neo4j<br/>MIM graph)]
+        PG[(PostgreSQL<br/>state · snapshots · audit)]
+        REDIS[(Redis<br/>cache · Celery broker · channel layer)]
+        MQ[(RabbitMQ<br/>AWX event bus)]
+    end
+
+    User -->|HTTPS| FE
+    FE -->|REST + JWT| BE
+    FE <-->|live progress| WS
+    WS --- BE
+
+    BE -->|Cypher| NEO
+    BE -->|ORM| PG
+    BE -->|cache hits| REDIS
+    BE -->|enqueue tasks| REDIS
+
+    REDIS -.->|deliver tasks| WORKER
+    BEAT -.->|schedule| REDIS
+    WORKER -->|results| PG
+    WORKER -->|progress events| REDIS
+    REDIS -.->|fan-out| WS
+
+    BE -->|class&nbsp;/&nbsp;mo queries| APIC
+    WORKER -->|launch jobs| AWX
+    AWX -.->|webhook events| MQ
+    MQ -.->|consume| WORKER
+    AWX -.->|pull playbooks| SCM
+
+    classDef ext stroke:#64748b,stroke-width:1.5px
+    classDef data stroke:#0284c7,stroke-width:1.5px
+    classDef worker stroke:#7c3aed,stroke-width:1.5px
+    classDef web stroke:#10b981,stroke-width:1.5px
+    classDef user stroke:#6b7280,stroke-width:1.5px
+
+    class APIC,AWX,SCM ext
+    class NEO,PG,REDIS,MQ data
+    class WORKER,BEAT worker
+    class FE,BE,WS web
+    class User user
