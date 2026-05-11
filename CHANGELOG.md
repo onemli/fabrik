@@ -5,7 +5,7 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — targeting 1.1.0
+## [1.1.0] — 2026-05-11
 
 This release is mostly invisible to the user — most of the work went into
 the security posture of the project itself, what gets shipped, and how it
@@ -128,14 +128,35 @@ we found ourselves on the way:
 - Test results stick around: hit Test, the timestamp and the full
   controller message are saved on the connection itself.
 
-### Categories rework _(in progress for this release)_
-- The categories tab in the saved-queries library moves from the
-  card-grid layout to the same table view the queries tab uses.
-  Toolbar, search, sort, and bulk-select all match the queries
-  experience. Clicking a category drills down into a filtered queries
-  table for that category, with a breadcrumb back to the categories
-  list. URL parameter `?tab=categories&id=N` makes the drill-down
-  shareable. Color picker behaviour is unchanged.
+### Library UI
+- **Categories tab is now a table.** Card-grid out, sortable
+  table view in — same shape as the queries tab. Toolbar, search,
+  pagination all match. Clicking a category drills into a filtered
+  queries table for that category with a breadcrumb header carrying
+  the category color as a left border. URL parameter
+  `?tab=categories&id=N` makes the drill-down shareable. Color
+  picker behaviour is unchanged; the create/edit dialog now offers
+  eight preset swatches alongside the custom-color input.
+- **Admin group permission display fixed.** The Admin group's RBAC
+  bypass means its `Group.permissions` table is empty by design,
+  which used to render as `0 permissions` / `No permissions
+  assigned` in every group widget and read like a bug. The Groups
+  table, the GroupDetailDrawer header, Overview stat card, Permission
+  Summary, Permissions tab, and the Clone Group dialog now all show
+  `All` / `All permissions (system role)` for Admin, with the full
+  permission catalogue listed read-only and a blue banner explaining
+  the bypass.
+- **Documentation link consolidated.** The user-menu dropdown used to
+  have both Help & Support and Documentation; the side nav had a
+  `/help` route that only rendered a placeholder. Documentation now
+  lives in one place — the side-nav "Documentation" item — and
+  points at https://docs.fabrikops.com/fabrik/ directly. The internal
+  `/help` route and its placeholder page are gone. The user-menu
+  keeps "Help & Support" (GitHub issues).
+- **Frontend version single-sourced.** Vite now injects
+  `__APP_VERSION__` from `frontend/package.json` at build time, so
+  the version string in the user menu stays in lockstep with the
+  package version. No more two-place edits per release.
 
 ### Upgrade
 
@@ -255,6 +276,7 @@ This release wouldn't exist without:
 - The handful of network engineers who tried early builds, broke them, and
   told me how.
 
-[Unreleased]: https://github.com/onemli/fabrik/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/onemli/fabrik/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/onemli/fabrik/releases/tag/v1.1.0
 [1.0.1]: https://github.com/onemli/fabrik/releases/tag/v1.0.1
 [1.0.0]: https://github.com/onemli/fabrik/releases/tag/v1.0.0
