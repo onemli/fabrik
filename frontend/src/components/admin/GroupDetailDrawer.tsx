@@ -370,7 +370,9 @@ export function GroupDetailDrawer({
             </div>
             <div className="flex items-center gap-2">
               <Key className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{group.permissions.length} permissions</span>
+              <span className="text-sm font-medium">
+                {isSystemGroup ? 'All permissions' : `${group.permissions.length} permissions`}
+              </span>
             </div>
           </div>
 

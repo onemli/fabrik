@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Copy, Shield } from 'lucide-react'
-import { userManagementService, GroupDetail } from '@/services/userManagement'
+import { userManagementService, GroupDetail, SYSTEM_ADMIN_GROUP_NAME } from '@/services/userManagement'
 import { useQueryBuilderStore } from '@/store/queryBuilderStore'
 
 interface CloneGroupDialogProps {
@@ -82,7 +82,9 @@ export function CloneGroupDialog({ open, onClose, onSuccess, group }: CloneGroup
                 <p className="text-sm font-medium truncate">Source: {group.name}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">
-                    {group.permissions.length} permissions
+                    {group.name === SYSTEM_ADMIN_GROUP_NAME
+                      ? 'All permissions (system role)'
+                      : `${group.permissions.length} permissions`}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     {group.user_count} members
