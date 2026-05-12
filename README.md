@@ -7,7 +7,7 @@
 
 # The fabric, finally legible.
 
-**Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.**
+**Visualize, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/onemli/fabrik/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/codeql.yml?branch=main&style=flat-square&label=CodeQL&logo=github)](https://github.com/onemli/fabrik/actions/workflows/codeql.yml)
