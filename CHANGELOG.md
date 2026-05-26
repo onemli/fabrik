@@ -5,6 +5,27 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- RabbitMQ broker and the three AWX event-consumer containers. The publisher
+  side of the event bus was incomplete: the `awx.job.status` and
+  `awx.workflow.status` queues had no producers in the codebase, and the
+  output path duplicated work that the AWX events poller already performed.
+  Webhook ingestion and the 30-second Celery sync remain the authoritative
+  status path; the live job-output stream continues to flow over the existing
+  Redis-backed WebSocket channel.
+- `pika` Python dependency, the `event_publisher`, `run_event_consumer`, and
+  `setup_rabbitmq` modules, and all RABBITMQ_* environment variables.
+
+### Fixed
+
+- Webhook receiver was calling `JobMonitor.sync_single_execution()`, a method
+  that does not exist; the surrounding `try/except` masked the `AttributeError`.
+  Replaced with `JobMonitor.sync_job_status(execution.id)` so webhook-driven
+  sync actually runs.
+
 ## [1.1.0] — 2026-05-11
 
 This release is mostly invisible to the user — most of the work went into

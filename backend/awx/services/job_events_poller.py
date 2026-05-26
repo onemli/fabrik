@@ -24,7 +24,6 @@ from typing import Dict, Any
 from django.utils import timezone
 
 from awx.services.awx_client import AWXClient
-from awx.services.event_publisher import get_event_publisher
 from awx.services.websocket_service import get_websocket_service
 from awx.models import AutomationExecution
 
@@ -75,12 +74,6 @@ class JobEventsPoller:
 
             awx_connection = self.execution.awx_connection
             self.awx_client = AWXClient.for_connection(awx_connection)
-
-            try:
-                self.publisher = get_event_publisher()
-            except Exception as pub_err:
-                logger.warning(f'Event publisher unavailable (non-critical): {pub_err}')
-                self.publisher = None
 
             # Restore cursor from Redis for restart recovery
             self.last_counter = self._load_cursor()
@@ -358,7 +351,6 @@ class JobEventsPoller:
         Process a single AWX job_event:
           1. Persist to JobOutputChunk (historical playback, late-joiners)
           2. Emit via WebSocket (live streaming)
-          3. Publish to RabbitMQ (optional external consumers)
         """
         try:
             event_payload = {
@@ -388,17 +380,6 @@ class JobEventsPoller:
                 )
             except Exception as ws_err:
                 logger.debug(f'WS emit failed (non-critical): {ws_err}')
-
-            # 3. RabbitMQ (graceful degradation) ──────────────────────────
-            if self.publisher:
-                routing_key = f'job.output.{self.awx_job_id}'
-                success, error = self.publisher.publish_event(
-                    routing_key=routing_key,
-                    event_data=event_payload,
-                    correlation_id=(f'job-output-{self.awx_job_id}-{event_payload["counter"]}'),
-                )
-                if not success:
-                    logger.debug(f'RabbitMQ publish failed (non-critical): {error}')
 
         except Exception as e:
             logger.exception(f'Error publishing event counter={event.get("counter")}: {e}')

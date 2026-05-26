@@ -17,7 +17,6 @@ django-redis
 celery
 django-celery-beat
 django-celery-results
-pika
 
 # WebSocket & Real-time
 channels

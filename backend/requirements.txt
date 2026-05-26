@@ -1021,10 +1021,6 @@ packaging==26.2 \
     #   gunicorn
     #   incremental
     #   kombu
-pika==1.4.0 \
-    --hash=sha256:84aa6d0cf60bbdb79d5780544a4a4e1799392760127bf9de2a03d3c3b92f5f1a \
-    --hash=sha256:937d8576f92a1ce3673d442161fefef614ac557583e10b9d84c14a6e228ed6a7
-    # via -r requirements.in
 pillow==12.2.0 \
     --hash=sha256:00a2865911330191c0b818c59103b58a5e697cae67042366970a6b6f1b20b7f9 \
     --hash=sha256:01afa7cf67f74f09523699b4e88c73fb55c13346d212a59a2db1f86b0a63e8c5 \

@@ -43,36 +43,6 @@ services:
       timeout: 5s
       retries: 5
 
-  rabbitmq:
-    image: rabbitmq:4.1-management-alpine
-    container_name: fabrik-rabbitmq
-    mem_limit: 1g
-    env_file:
-      - .env
-    environment:
-      - TZ=${TZ:-UTC}
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-fabrik}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
-      - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST:-fabrik}
-      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit vm_memory_high_watermark 0.7
-    ports:
-      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
-      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - fabrik-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   neo4j:
     image: neo4j:5.26
     container_name: fabrik-neo4j
@@ -122,8 +92,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       neo4j:
         condition: service_healthy
     env_file:
@@ -136,7 +104,6 @@ services:
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       - DEBUG=${DEBUG:-False}
@@ -166,8 +133,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       neo4j:
         condition: service_started
     env_file:
@@ -180,7 +145,6 @@ services:
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
@@ -206,8 +170,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -218,7 +180,6 @@ services:
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
@@ -230,122 +191,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-  # Event Consumer - Job Status Queue (Event-Driven Architecture - Phase 1)
-  event-consumer-job:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: onemli/fabrik-backend:latest
-    container_name: fabrik-event-consumer-job
-    mem_limit: 256m
-    command: python manage.py run_event_consumer --queue awx.job.status
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      - TZ=${TZ:-UTC}
-      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
-      - NEO4J_USER=${NEO4J_USER:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-    networks:
-      - fabrik-network
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os; import pika; pika.BlockingConnection(pika.URLParameters(os.environ['RABBITMQ_URL'])).close()\""]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Event Consumer - Workflow Status Queue
-  event-consumer-workflow:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: onemli/fabrik-backend:latest
-    container_name: fabrik-event-consumer-workflow
-    mem_limit: 256m
-    command: python manage.py run_event_consumer --queue awx.workflow.status
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      - TZ=${TZ:-UTC}
-      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
-      - NEO4J_USER=${NEO4J_USER:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-    networks:
-      - fabrik-network
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os; import pika; pika.BlockingConnection(pika.URLParameters(os.environ['RABBITMQ_URL'])).close()\""]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  event-consumer-output:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: onemli/fabrik-backend:latest
-    container_name: fabrik-event-consumer-output
-    mem_limit: 256m
-    command: python manage.py run_event_consumer --queue awx.job.output
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      - TZ=${TZ:-UTC}
-      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
-      - NEO4J_USER=${NEO4J_USER:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-    networks:
-      - fabrik-network
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os; import pika; pika.BlockingConnection(pika.URLParameters(os.environ['RABBITMQ_URL'])).close()\""]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   frontend:
     build:
@@ -452,8 +297,6 @@ volumes:
     name: fabrik_postgres_data
   redis_data:
     name: fabrik_redis_data
-  rabbitmq_data:
-    name: fabrik_rabbitmq_data
   neo4j_data:
     name: fabrik_neo4j_data
   neo4j_logs:

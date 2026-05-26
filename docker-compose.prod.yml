@@ -51,7 +51,6 @@ services:
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
-      - RABBITMQ_URL=${RABBITMQ_URL:?RABBITMQ_URL is required}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       - DEBUG=false
@@ -73,28 +72,6 @@ services:
 
   # --- Celery beat: production image, no volume mount ---
   celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
-    image: fabrik-backend:prod
-    volumes: []
-
-  # --- Event consumers: production image, no volume mount ---
-  event-consumer-job:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
-    image: fabrik-backend:prod
-    volumes: []
-
-  event-consumer-workflow:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
-    image: fabrik-backend:prod
-    volumes: []
-
-  event-consumer-output:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
@@ -125,9 +102,6 @@ services:
     ports: []  # Not exposed externally in production
 
   redis:
-    ports: []
-
-  rabbitmq:
     ports: []
 
   neo4j:

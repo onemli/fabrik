@@ -61,7 +61,6 @@ cp .env.example .env
 #   DJANGO_SECRET_KEY, ENCRYPTION_KEY
 #   POSTGRES_PASSWORD          (and update the password inside DATABASE_URL!)
 #   NEO4J_PASSWORD
-#   RABBITMQ_PASSWORD          (and update the password inside RABBITMQ_URL!)
 #   ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS
 
 docker compose pull
@@ -69,7 +68,7 @@ docker compose up -d
 docker compose exec backend python manage.py createsuperuser
 ```
 
-> **Heads up:** `DATABASE_URL` and `RABBITMQ_URL` embed the same password as their `POSTGRES_PASSWORD` / `RABBITMQ_PASSWORD` siblings. Django and the AWX consumer read the URL form, not the individual fields — if the two drift apart you'll get `password authentication failed` on first boot. Change them together.
+> **Heads up:** `DATABASE_URL` embeds the same password as `POSTGRES_PASSWORD`. Django reads the URL form, not the individual fields — if the two drift apart you'll get `password authentication failed` on first boot. Change them together.
 
 Open **`http://<server-host>`** (or whatever hostname / reverse-proxy URL you've put in front of the frontend container — the frontend serves on port 80 by default), sign in, then go to **Settings → MIM Management** to import the ACI schema (~25 minutes, runs in the background).
 
@@ -80,7 +79,7 @@ That's it. Detailed walkthrough, production deployment, reverse proxy, backups, 
 ## Architecture
 
 <p align="center">
-  <img src="https://docs.fabrikops.com/images/architecture.svg" alt="Fabrik architecture: operator → web tier (React + Django) → workers (Celery) → stateful services (Neo4j, PostgreSQL, Redis, RabbitMQ) → external systems (APIC, AWX, Git SCM)" width="100%">
+  <img src="https://docs.fabrikops.com/images/architecture.svg" alt="Fabrik architecture: operator → web tier (React + Django) → workers (Celery) → stateful services (Neo4j, PostgreSQL, Redis) → external systems (APIC, AWX, Git SCM)" width="100%">
 </p>
 
 <!--
@@ -96,7 +95,7 @@ Upload the SVG to docs.fabrikops.com/images/architecture.svg.
 
 ### How a request flows
 
-A user signs into the React frontend, which talks to the Django backend over JSON + JWT. Synchronous reads — class lookups, query validation, MIM browsing — return on the request thread. Anything long-running (a query against APIC, a snapshot capture, an AWX automation) is handed to **Celery** through Redis, runs in a worker, and streams progress back to the browser over a Redis-backed WebSocket channel layer. AWX job status comes back the other way: AWX posts webhook events to RabbitMQ, dedicated consumer processes pick them up and broadcast progress over the same WebSocket. The user never blocks on a slow API call.
+A user signs into the React frontend, which talks to the Django backend over JSON + JWT. Synchronous reads — class lookups, query validation, MIM browsing — return on the request thread. Anything long-running (a query against APIC, a snapshot capture, an AWX automation) is handed to **Celery** through Redis, runs in a worker, and streams progress back to the browser over a Redis-backed WebSocket channel layer. AWX job status comes back the other way: AWX posts webhook events to a Django endpoint, which updates Postgres and broadcasts progress over the same WebSocket. A 30-second Celery sync poll backs the webhook up so status stays correct even if a webhook is missed. The user never blocks on a slow API call.
 
 ### What lives where
 
@@ -107,7 +106,6 @@ A user signs into the React frontend, which talks to the Django backend over JSO
 | **Neo4j** | The ACI Managed Information Model as a graph: 17,500+ classes, containment, `Rs*` references, properties. Powers query validation and the MIM browser. |
 | **PostgreSQL** | Saved queries, snapshots (Time Machine), users, AWX automations, the immutable audit trail. |
 | **Redis** | Backend cache, Celery broker, and Channels layer for WebSocket fan-out. |
-| **RabbitMQ** | AWX webhook event bus — receives job/output/workflow status events from AWX and routes them to dedicated consumer processes that update PostgreSQL and broadcast over WebSocket. |
 | **Celery worker + beat** | Background query execution, scheduled tasks (every minute), AWX job polling, daily Time Machine retention sweep. |
 | **AWX / Tower** *(optional)* | Runs Ansible playbooks. Only needed if you use the automation feature. |
 | **Git SCM** *(optional)* | Playbook source for AWX. Fabrik launches a job; AWX pulls the latest playbook from GitLab / GitHub / Gitea before running it. Fabrik itself never writes to the repo. |
