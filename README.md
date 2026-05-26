@@ -89,7 +89,7 @@ Everything beyond this (TLS, reverse proxy, backup, upgrade paths, sizing for la
   <img src="https://docs.fabrikops.com/images/architecture.svg" alt="Fabrik architecture: operator → web tier (React + Django) → workers (Celery) → stateful services (Neo4j, PostgreSQL, Redis) → external systems (APIC, AWX, Git SCM)" width="100%">
 </p>
 
-| | |
+| Layer | Stack |
 |---|---|
 | Frontend | React 19, Vite, React Flow, Zustand, TanStack Query, Tailwind |
 | Backend | Django 6, DRF, Channels, Daphne ASGI |
@@ -103,12 +103,10 @@ Everything beyond this (TLS, reverse proxy, backup, upgrade paths, sizing for la
 
 Fabrik is in active development with a stable core that runs in production. Breaking changes are flagged in the changelog and called out in release notes. Bug reports and ideas are welcome.
 
-| | |
-|---|---|
-| **Report a bug** | [GitHub Issues](https://github.com/onemli/fabrik/issues) |
-| **Request a feature** | [GitHub Discussions](https://github.com/onemli/fabrik/discussions) |
-| **Security disclosure** | [SECURITY.md](./SECURITY.md) |
-| **Release history** | [CHANGELOG.md](./CHANGELOG.md) |
+- **Report a bug:** [GitHub Issues](https://github.com/onemli/fabrik/issues)
+- **Request a feature:** [GitHub Discussions](https://github.com/onemli/fabrik/discussions)
+- **Security disclosure:** [SECURITY.md](./SECURITY.md)
+- **Release history:** [CHANGELOG.md](./CHANGELOG.md)
 
 ## License
 
