@@ -7,11 +7,22 @@ const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
+type PopoverContentProps = React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & {
+  /**
+   * Opt out of the default Radix Portal that renders into document.body.
+   * When this Popover lives inside a Radix Dialog, the Dialog's RemoveScroll
+   * blocks wheel events on anything outside its content subtree — including
+   * portaled popover bodies. Rendering inline keeps the popover inside the
+   * Dialog's whitelist so mouse-wheel scrolling works.
+   */
+  withoutPortal?: boolean
+}
+
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
-  <PopoverPrimitive.Portal>
+  PopoverContentProps
+>(({ className, align = "center", sideOffset = 4, withoutPortal = false, ...props }, ref) => {
+  const content = (
     <PopoverPrimitive.Content
       ref={ref}
       align={align}
@@ -22,8 +33,10 @@ const PopoverContent = React.forwardRef<
       )}
       {...props}
     />
-  </PopoverPrimitive.Portal>
-))
+  )
+
+  return withoutPortal ? content : <PopoverPrimitive.Portal>{content}</PopoverPrimitive.Portal>
+})
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 
 export { Popover, PopoverTrigger, PopoverContent }

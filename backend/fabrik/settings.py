@@ -212,7 +212,7 @@ for _scope, _default in _rate_limit_defaults.items():
 # OpenAPI / Swagger (drf-spectacular)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'FABRIK API',
-    'VERSION': '1.2.0',
+    'VERSION': '1.2.1',
     'DESCRIPTION': 'Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.',
     'SCHEMA_PATH_PREFIX': '/api/',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -503,7 +503,7 @@ else:
 # =============================================================================
 
 # Platform metadata (used in audit trails and extra_vars)
-FABRIK_VERSION = os.getenv('FABRIK_VERSION', '1.2.0')
+FABRIK_VERSION = os.getenv('FABRIK_VERSION', '1.2.1')
 FABRIK_BASE_URL = os.getenv('FABRIK_BASE_URL', 'http://localhost:3000')
 
 # Feature Flags

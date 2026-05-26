@@ -41,59 +41,11 @@ export interface AIModel {
   modified_at: string
 }
 
-export interface AIGeneratedNode {
-  id: string
-  type: string
-  position: { x: number; y: number }
-  data: {
-    className: string
-    label?: string
-    scope?: string
-    classInfo?: { label?: string }
-    filters?: AIGeneratedFilter[]
-    [key: string]: unknown
-  }
-}
-
-export interface AIGeneratedFilter {
-  property: string
-  operator: 'eq' | 'ne' | 'gt' | 'lt' | 'ge' | 'le' | 'wcard' | 'contains'
-  value: string
-}
-
-export interface AIGeneratedEdge {
-  id: string
-  source: string
-  target: string
-}
-
-export interface AIGenerateResponse {
-  success: boolean
-  query?: {
-    nodes: AIGeneratedNode[]
-    edges: AIGeneratedEdge[]
-  }
-  validation?: {
-    is_valid: boolean
-    errors: string[]
-    warnings: string[]
-  }
-  metadata?: {
-    confidence_score: number
-    log_id: number
-  }
-  error?: string
-}
-
 export interface AITestConnectionResponse {
   success: boolean
   message: string
   available_models: string[]
   ollama_url?: string
-}
-
-export interface AISuggestResponse {
-  suggestions: string[]
 }
 
 // Provider types
@@ -175,34 +127,6 @@ export const aiService = {
    */
   async getModels(): Promise<{ success: boolean; models: AIModel[]; error?: string }> {
     const response = await api.get('/api/ai/settings/models/')
-    return response.data
-  },
-
-  /**
-   * Generate query from natural language
-   */
-  async generateQuery(query: string): Promise<AIGenerateResponse> {
-    const response = await api.post('/api/ai/generate/', { query })
-    return response.data
-  },
-
-  /**
-   * Get query suggestions
-   */
-  async getSuggestions(prompt: string): Promise<AISuggestResponse> {
-    const response = await api.post('/api/ai/generate/suggest/', { prompt })
-    return response.data
-  },
-
-  /**
-   * Submit feedback for a generated query
-   */
-  async submitFeedback(logId: number, accepted: boolean, feedback?: string): Promise<{ success: boolean }> {
-    const response = await api.post('/api/ai/generate/feedback/', {
-      log_id: logId,
-      accepted,
-      feedback
-    })
     return response.data
   },
 

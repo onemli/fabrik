@@ -5,6 +5,32 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-05-26
+
+### Fixed
+
+- Mouse-wheel scrolling now works inside the package picker that opens
+  from the Class Browser dialog. The popover was being rendered through
+  a portal into `document.body`, which sat outside the dialog's scroll
+  lock allow-list, so the wheel events were being swallowed before they
+  reached the list. The package picker now renders its popover inline
+  inside the dialog content so the dialog's scroll lock recognises it
+  as a child.
+
+### Changed
+
+- README rewritten. The structure and tone are tighter; the architecture
+  section now leans on the diagram rather than restating it in prose.
+
+### Removed
+
+- Three frontend stubs in `services/ai.ts` that posted to backend AI
+  endpoints which were never implemented (`/api/ai/generate/`,
+  `/generate/suggest/`, `/generate/feedback/`), plus the test cases
+  that exercised them. Nothing in production code was calling these.
+- Stale "advisor" mentions in the `loader_v2` docstring; the feature
+  they referred to was never built.
+
 ## [1.2.0] — 2026-05-26
 
 ### Removed

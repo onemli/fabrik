@@ -6,7 +6,7 @@ Key differences from v1 (loader.py):
 
 1. Input format: devnet bundles use keys like "fv:Tenant" (package-colon-class).
    v2 normalizes to "fvTenant" internally so Neo4j stores, query builder output,
-   frontend references, and advisor lookups all stay on the existing convention.
+   and frontend references all stay on the existing convention.
    The original package-qualified form is preserved as Class.qualifiedName
    (e.g. "fv:Tenant") for reverse lookup and to stay source-agnostic — any
    future devnet/cobra/XML schema source provides the same representation.
@@ -29,7 +29,7 @@ Key differences from v1 (loader.py):
 
 5. New label: :EnumValue (one per enum/bitmask constant).
 
-Preserved from v1 (zero breakage for existing query builder / advisor code):
+Preserved from v1 (zero breakage for existing query builder code):
 - (:Class {className})                       — className is still the normalized form
 - (:Class)-[:HAS_PROPERTY]->(:Property)
 - (:Class)-[:CONTAINS]->(:Class)
@@ -443,7 +443,7 @@ class MIMLoaderV2:
                 {
                     'className': class_name,
                     'propName': prop_name,
-                    # Semantic metadata (new in v2 — the key win for advisor/UI)
+                    # Semantic metadata (new in v2 — the key win for UI)
                     'label': pdata.get('label', ''),
                     'comment': pdata.get('comment', []) or [],
                     'baseType': pdata.get('baseType', ''),

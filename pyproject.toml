@@ -1,6 +1,6 @@
 [project]
 name = "fabrik"
-version = "1.2.0"
+version = "1.2.1"
 description = "Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls."
 requires-python = ">=3.12"
 

@@ -101,7 +101,7 @@ export function PackageCombobox({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn('p-0', className)} align="start">
+      <PopoverContent className={cn('p-0', className)} align="start" withoutPortal>
         <Command>
           <CommandInput placeholder="Search packages…" />
           <CommandList>
