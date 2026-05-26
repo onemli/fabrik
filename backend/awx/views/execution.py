@@ -397,7 +397,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def output(self, request: Request, pk: Any = None) -> Response:
         """
-        Get full job output for this execution (Phase 2)
+        Get full job output for this execution.
 
         Returns all output chunks in order with metadata.
         GET /api/awx/executions/{id}/output/
@@ -456,7 +456,7 @@ class AutomationExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def download_output(self, request: Request, pk: Any = None) -> Union[Response, HttpResponse]:
         """
-        Download full job output as text file (Phase 2)
+        Download full job output as text file.
 
         GET /api/awx/executions/{id}/download_output/
         """

@@ -28,7 +28,7 @@ router.register(r'regex-patterns', RegexPatternViewSet, basename='regex-pattern'
 
 urlpatterns = [
     path('', include(router.urls)),
-    # Webhook endpoints (event-driven architecture - Phase 1)
+    # AWX webhook endpoints
     path('webhooks/receiver/', awx_webhook_receiver, name='awx-webhook-receiver'),
     path('webhooks/health/', webhook_health_check, name='webhook-health'),
     path('webhooks/test/', test_webhook_event, name='webhook-test'),

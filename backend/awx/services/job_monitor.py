@@ -113,7 +113,6 @@ class JobMonitor:
                 return False
 
             if success:
-                # Emit WebSocket update (placeholder for Phase 3)
                 self._emit_websocket_update(execution)
 
             return success

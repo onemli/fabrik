@@ -203,7 +203,7 @@ def awx_webhook_receiver(request: Request) -> Response:
         # Extract event type and normalize data
         routing_key, event_data = parse_awx_webhook_payload(payload)
 
-        # Process directly via JobMonitor instead of publishing to RabbitMQ
+        # Process directly via JobMonitor
         awx_job_id = event_data.get('awx_job_id')
         if awx_job_id:
             try:
@@ -217,8 +217,7 @@ def awx_webhook_receiver(request: Request) -> Response:
                 if executions.exists():
                     monitor = JobMonitor()
                     for execution in executions:
-                        monitor._configure_awx_client(execution.awx_connection)
-                        monitor.sync_single_execution(execution)
+                        monitor.sync_job_status(execution.id)
 
             except Exception:
                 logger.exception('Failed to sync job %s from webhook', awx_job_id)
