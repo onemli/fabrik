@@ -11,7 +11,7 @@ pytest-xdist==3.5.0  # Parallel test execution
 
 # Test Data Factories
 factory-boy==3.3.0
-faker==22.0.0
+faker==40.19.1
 
 # HTTP Mocking
 responses==0.25.0
