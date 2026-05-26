@@ -7,7 +7,7 @@
 
 # The fabric, finally legible.
 
-**Visualize, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.**
+**Visualise, Query, and Automate Your Cisco ACI Fabric — Without Writing API Calls.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/onemli/fabrik/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/onemli/fabrik/codeql.yml?branch=main&style=flat-square&label=CodeQL&logo=github)](https://github.com/onemli/fabrik/actions/workflows/codeql.yml)
@@ -18,13 +18,7 @@
 [![Docker Frontend](https://img.shields.io/docker/pulls/onemli/fabrik-frontend?style=flat-square&label=frontend%20pulls&color=2563eb&logo=docker&logoColor=white)](https://hub.docker.com/r/onemli/fabrik-frontend)
 [![Docs](https://img.shields.io/badge/docs-fabrikops.com-7c3aed?style=flat-square)](https://docs.fabrikops.com/fabrik/)
 
-[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Neo4j](https://img.shields.io/badge/Neo4j-5-018BFF?style=flat-square&logo=neo4j&logoColor=white)](https://neo4j.com/)
-[![Cisco ACI](https://img.shields.io/badge/Cisco%20ACI-5.2.x%20%7C%206.0.x%20%7C%206.1.x-1BA0D7?style=flat-square&logo=cisco&logoColor=white)](https://www.cisco.com/c/en/us/solutions/data-center-virtualization/application-centric-infrastructure/index.html)
-
-[**Documentation**](https://docs.fabrikops.com/fabrik/) · [**Quickstart**](https://docs.fabrikops.com/fabrik/getting-started/) · [**Releases**](https://github.com/onemli/fabrik/releases) · [**Discussions**](https://github.com/onemli/fabrik/discussions) · [**Report a bug**](https://github.com/onemli/fabrik/issues)
+[**Docs**](https://docs.fabrikops.com/fabrik/) · [**Quickstart**](https://docs.fabrikops.com/fabrik/getting-started/) · [**Releases**](https://github.com/onemli/fabrik/releases) · [**Discussions**](https://github.com/onemli/fabrik/discussions) · [**Report a bug**](https://github.com/onemli/fabrik/issues)
 
 <br>
 
@@ -34,91 +28,80 @@
 
 ---
 
-## What is Fabrik?
+## Why this exists
 
-Fabrik is a self-hosted operations platform for Cisco ACI that replaces the APIC API browser, ad-hoc Postman collections, and the "save this moquery in a notes file" workflow with a single canvas.
+Anyone who has operated a Cisco ACI fabric long enough ends up with the same pile of tooling around APIC.
 
-- **Visual query builder.** Drag classes, attach filters, run queries — Fabrik translates the diagram into APIC REST calls and returns structured results.
-- **Configuration time machine.** Snapshot anything you can query. Diff snapshots, track a single DN over time, detect drift before it becomes an incident.
-- **Automation orchestration.** Drive AWX/Ansible Tower job templates and workflows from automation requests. Structured table input with field validation backed by live APIC queries. AWX pulls the playbooks from your own Git repository (GitLab / GitHub / Gitea).
-- **MIM browser.** Search 17,500+ ACI classes by name, label, description, DN pattern, or property — with AI-assisted suggestions validated against the live MIM.
+A folder full of moquery commands.
+A Postman collection nobody maintains anymore.
+Python scripts that manually build /api/mo/... URLs.
+Screenshots from Visore tabs saved “just in case.”
+Spreadsheets for bulk changes.
+Shell history full of copied queries.
 
-> Full documentation, screenshots, and tutorials live at **[docs.fabrikops.com](https://docs.fabrikops.com/fabrik/)**.
+The reality is that most ACI operational workflows still live outside APIC itself.
 
----
+Fabrik brings those workflows into a single place.
 
-## Quickstart
+## What it does
 
-> **Requirements:** Docker 24+ · Docker Compose v2. Sizing depends on fabric size and Time Machine retention — see the [deployment guide](https://docs.fabrikops.com/fabrik/deployment) for current recommendations.
+- **Visual query builder.** Draw a query on a React Flow canvas: drag classes, attach filters, connect parents to children. Fabrik turns the diagram into the right APIC REST call and shows the result as a table you can export.
+- **A library you can share.** Save the queries that work, tag them, give them to your team. New hires stop reinventing the BGP-peer query on day three.
+- **Time Machine.** Snapshot anything you can query. Diff two snapshots side by side, or follow one DN across weeks. Useful when someone asks "did this BD always have this subnet?".
+- **AWX automation, with guardrails.** Build a request from a structured table (each column validated against live APIC data), then hand it to AWX as a job or workflow. AWX pulls playbooks from your own Git (GitLab / GitHub / Gitea); Fabrik never touches your repo.
+- **MIM browser.** The full ACI Managed Information Model (17,500+ classes), searchable by name, label, description, DN pattern, or property. Optional AI assist suggests classes from a plain-English description and validates every suggestion against the live MIM before showing it.
+
+The pieces are designed to work together. A query you save in the Library can become the input source for an automation request. A Time Machine snapshot can be the basis for a diff that triggers an alert. A class lookup on the MIM browser is one click from a new query on the canvas.
+
+## Quick start
+
+You need Docker 24+ and Docker Compose v2. That's it.
 
 ```bash
 mkdir fabrik && cd fabrik
 curl -fLo docker-compose.yml https://github.com/onemli/fabrik/releases/latest/download/docker-compose.release.yml
 curl -fLo .env.example       https://github.com/onemli/fabrik/releases/latest/download/.env.example
 cp .env.example .env
+```
 
-# Edit .env — at minimum set:
-#   DJANGO_SECRET_KEY, ENCRYPTION_KEY
-#   POSTGRES_PASSWORD          (and update the password inside DATABASE_URL!)
-#   NEO4J_PASSWORD
-#   ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS
+Open `.env` and fill in the four things you have to fill in:
 
+- `DJANGO_SECRET_KEY` and `ENCRYPTION_KEY`: generate fresh values, don't leave the placeholders
+- `POSTGRES_PASSWORD`, plus the same password inside `DATABASE_URL` on the line below
+- `NEO4J_PASSWORD`
+- `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`: the hostname you'll actually reach Fabrik at
+
+Then bring it up:
+
+```bash
 docker compose pull
 docker compose up -d
 docker compose exec backend python manage.py createsuperuser
 ```
 
-> **Heads up:** `DATABASE_URL` embeds the same password as `POSTGRES_PASSWORD`. Django reads the URL form, not the individual fields — if the two drift apart you'll get `password authentication failed` on first boot. Change them together.
+Open `http://<your-host>` (port 80 by default), sign in with the superuser, and head to **Settings → MIM Management** to import the ACI schema for your APIC version. The import runs in the background and takes around 25 minutes the first time. Once it's done, the canvas knows every class in the fabric.
 
-Open **`http://<server-host>`** (or whatever hostname / reverse-proxy URL you've put in front of the frontend container — the frontend serves on port 80 by default), sign in, then go to **Settings → MIM Management** to import the ACI schema (~25 minutes, runs in the background).
+Everything beyond this (TLS, reverse proxy, backup, upgrade paths, sizing for larger fabrics) is on **[docs.fabrikops.com](https://docs.fabrikops.com/fabrik/)**.
 
-That's it. Detailed walkthrough, production deployment, reverse proxy, backups, and upgrades on **[docs.fabrikops.com](https://docs.fabrikops.com/fabrik/)**.
-
----
-
-## Architecture
+## Under the hood
 
 <p align="center">
   <img src="https://docs.fabrikops.com/images/architecture.svg" alt="Fabrik architecture: operator → web tier (React + Django) → workers (Celery) → stateful services (Neo4j, PostgreSQL, Redis) → external systems (APIC, AWX, Git SCM)" width="100%">
 </p>
 
-<!--
-Diagram source: frontend/src/assets/architecture.mmd
-Re-render after edits with:
-  docker run --rm -v $PWD/frontend/src/assets:/data minlag/mermaid-cli:11.4.0 \
-    -i /data/architecture.mmd -o /data/architecture.svg -b transparent
-Upload the SVG to docs.fabrikops.com/images/architecture.svg.
--->
-
-
-> Solid arrows are synchronous calls; dashed arrows are asynchronous events.
-
-### How a request flows
-
-A user signs into the React frontend, which talks to the Django backend over JSON + JWT. Synchronous reads — class lookups, query validation, MIM browsing — return on the request thread. Anything long-running (a query against APIC, a snapshot capture, an AWX automation) is handed to **Celery** through Redis, runs in a worker, and streams progress back to the browser over a Redis-backed WebSocket channel layer. AWX job status comes back the other way: AWX posts webhook events to a Django endpoint, which updates Postgres and broadcasts progress over the same WebSocket. A 30-second Celery sync poll backs the webhook up so status stays correct even if a webhook is missed. The user never blocks on a slow API call.
-
-### What lives where
-
-| Service | Role |
+| | |
 |---|---|
-| **Frontend** | React 19 + Vite. Holds the React Flow canvas, query builder state (Zustand), and TanStack Query for server cache. |
-| **Backend** | Django 6 + DRF served by Daphne (ASGI). REST endpoints, WebSocket consumers, RBAC, audit logging, APIC client with automatic token refresh. |
-| **Neo4j** | The ACI Managed Information Model as a graph: 17,500+ classes, containment, `Rs*` references, properties. Powers query validation and the MIM browser. |
-| **PostgreSQL** | Saved queries, snapshots (Time Machine), users, AWX automations, the immutable audit trail. |
-| **Redis** | Backend cache, Celery broker, and Channels layer for WebSocket fan-out. |
-| **Celery worker + beat** | Background query execution, scheduled tasks (every minute), AWX job polling, daily Time Machine retention sweep. |
-| **AWX / Tower** *(optional)* | Runs Ansible playbooks. Only needed if you use the automation feature. |
-| **Git SCM** *(optional)* | Playbook source for AWX. Fabrik launches a job; AWX pulls the latest playbook from GitLab / GitHub / Gitea before running it. Fabrik itself never writes to the repo. |
+| Frontend | React 19, Vite, React Flow, Zustand, TanStack Query, Tailwind |
+| Backend | Django 6, DRF, Channels, Daphne ASGI |
+| Workers | Celery worker + beat |
+| Graph | Neo4j 5.26 (ACI MIM only) |
+| Relational | PostgreSQL 17 |
+| Cache, broker, channel layer | Redis 8 |
+| Optional | AWX / Ansible Tower for automation; LDAP for SSO; SMTP for notifications |
 
-### Boundaries
+## Status
 
-The full stack runs from a single `docker compose up`. **APIC** is the only required out-of-stack dependency; **AWX** is optional and only used when the automation feature is enabled. AWX in turn pulls playbooks from a Git repository you operate — Fabrik never writes to that repo, it just hands AWX a job spec. No Kubernetes, no managed services, no telemetry, no phone-home.
-
----
-
-## Project status
-
-Fabrik is in **active development** with a stable core in production use. Bug reports and feature requests are welcome via GitHub Issues and Discussions.
+Fabrik is in active development with a stable core that runs in production. Breaking changes are flagged in the changelog and called out in release notes. Bug reports and ideas are welcome.
 
 | | |
 |---|---|
@@ -127,10 +110,8 @@ Fabrik is in **active development** with a stable core in production use. Bug re
 | **Security disclosure** | [SECURITY.md](./SECURITY.md) |
 | **Release history** | [CHANGELOG.md](./CHANGELOG.md) |
 
----
-
 ## License
 
-Released under the [Apache License 2.0](./LICENSE).
+Apache License 2.0. See [LICENSE](./LICENSE).
 
 Cisco, ACI, APIC, and AWX are trademarks of their respective owners. Fabrik is an independent open-source project and is not affiliated with or endorsed by Cisco Systems.

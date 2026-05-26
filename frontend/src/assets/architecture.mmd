@@ -22,7 +22,6 @@ flowchart LR
         NEO[(Neo4j<br/>MIM graph)]
         PG[(PostgreSQL<br/>state · snapshots · audit)]
         REDIS[(Redis<br/>cache · Celery broker · channel layer)]
-        MQ[(RabbitMQ<br/>AWX event bus)]
     end
 
     User -->|HTTPS| FE
@@ -43,8 +42,8 @@ flowchart LR
 
     BE -->|class&nbsp;/&nbsp;mo queries| APIC
     WORKER -->|launch jobs| AWX
-    AWX -.->|webhook events| MQ
-    MQ -.->|consume| WORKER
+    AWX -.->|webhook events| BE
+    BEAT -.->|30s status poll| AWX
     AWX -.->|pull playbooks| SCM
 
     classDef ext stroke:#64748b,stroke-width:1.5px
@@ -54,7 +53,7 @@ flowchart LR
     classDef user stroke:#6b7280,stroke-width:1.5px
 
     class APIC,AWX,SCM ext
-    class NEO,PG,REDIS,MQ data
+    class NEO,PG,REDIS data
     class WORKER,BEAT worker
     class FE,BE,WS web
     class User user

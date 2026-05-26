@@ -256,7 +256,7 @@ class ExecutionEngine:
             )
 
             # Platform info
-            extra_vars['fabrik_platform_version'] = getattr(settings, 'FABRIK_VERSION', '1.2.0')
+            extra_vars['fabrik_platform_version'] = getattr(settings, 'FABRIK_VERSION', '1.2.1')
 
             # Add any additional variables from template
             if template.variable_mappings:

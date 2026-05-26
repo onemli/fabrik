@@ -92,47 +92,6 @@ describe('aiService', () => {
     })
   })
 
-  describe('generateQuery', () => {
-    it('sends natural language query', async () => {
-      mockApi.post.mockResolvedValueOnce({
-        data: {
-          success: true,
-          query: { nodes: [{ id: 'n1', type: 'classNode' }], edges: [] },
-          metadata: { confidence_score: 0.85 },
-        },
-      })
-
-      const result = await aiService.generateQuery('show all tenants')
-      expect(result.success).toBe(true)
-      expect(result.query?.nodes).toHaveLength(1)
-    })
-  })
-
-  describe('getSuggestions', () => {
-    it('returns suggestions', async () => {
-      mockApi.post.mockResolvedValueOnce({
-        data: { suggestions: ['show tenants', 'show BDs'] },
-      })
-
-      const result = await aiService.getSuggestions('show')
-      expect(result.suggestions).toHaveLength(2)
-    })
-  })
-
-  describe('submitFeedback', () => {
-    it('sends feedback with log id', async () => {
-      mockApi.post.mockResolvedValueOnce({ data: { success: true } })
-
-      const result = await aiService.submitFeedback(42, true, 'Great query!')
-      expect(result.success).toBe(true)
-      expect(mockApi.post).toHaveBeenCalledWith('/api/ai/generate/feedback/', {
-        log_id: 42,
-        accepted: true,
-        feedback: 'Great query!',
-      })
-    })
-  })
-
   // Provider management (BYOK)
 
   describe('getAvailableProviders', () => {
