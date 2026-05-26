@@ -1,0 +1,232 @@
+# Fabrik — release-time docker-compose
+#
+# This is the compose file users download from a GitHub release. It pulls
+# pre-built images from Docker Hub (no local build context, no source tree
+# required) and is meant to be paired with a release-managed .env.
+#
+# Pin a specific version by exporting FABRIK_VERSION before bringing the
+# stack up, e.g.:
+#   echo "FABRIK_VERSION=1.2.1" >> .env
+#   docker compose pull
+#   docker compose up -d
+#
+# The default is `latest`, which floats with whatever the most recent
+# successful build pushed.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: fabrik-postgres
+    mem_limit: 512m
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - POSTGRES_DB=${POSTGRES_DB:-fabrik}
+      - POSTGRES_USER=${POSTGRES_USER:-fabrik}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_EXTERNAL_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fabrik-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fabrik"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    container_name: fabrik-redis
+    mem_limit: 256m
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "127.0.0.1:${REDIS_EXTERNAL_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fabrik-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5.26
+    container_name: fabrik-neo4j
+    mem_limit: 3g
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - NEO4J_server_memory_pagecache_size=${NEO4J_PAGECACHE_SIZE:-512M}
+      - NEO4J_server_memory_heap_initial__size=1G
+      - NEO4J_server_memory_heap_max__size=${NEO4J_HEAP_MAX_SIZE:-2G}
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_memory_transaction_total_max=${NEO4J_TX_MEMORY_MAX:-1G}
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687"
+    restart: unless-stopped
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - fabrik-network
+
+  backend:
+    image: onemli/fabrik-backend:${FABRIK_VERSION:-latest}
+    container_name: fabrik-backend
+    mem_limit: 512m
+    # Uses the image CMD (entrypoint.sh): migrate -> bootstrap_mim -> daphne.
+    volumes:
+      - fabrik_mim_cache:/app/mim_cache
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery-worker:
+    image: onemli/fabrik-backend:${FABRIK_VERSION:-latest}
+    container_name: fabrik-celery-worker
+    mem_limit: 2g
+    command: celery -A fabrik worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2} -Q celery,query_exec,scheduled,awx_monitor,awx_exec,maintenance,mim_import
+    volumes:
+      - fabrik_mim_cache:/app/mim_cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery-beat:
+    image: onemli/fabrik-backend:${FABRIK_VERSION:-latest}
+    container_name: fabrik-celery-beat
+    mem_limit: 256m
+    command: celery -A fabrik beat --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:?CELERY_BROKER_URL is required}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:?CELERY_RESULT_BACKEND is required}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      - DEFAULT_USER_TIMEZONE=${DEFAULT_USER_TIMEZONE:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    image: onemli/fabrik-frontend:${FABRIK_VERSION:-latest}
+    container_name: fabrik-frontend
+    mem_limit: 256m
+    # nginx serves the built SPA and proxies /api, /admin, /static, /ws to backend.
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    environment:
+      - TZ=${TZ:-UTC}
+    restart: unless-stopped
+    networks:
+      - fabrik-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+    name: fabrik_postgres_data
+  redis_data:
+    name: fabrik_redis_data
+  neo4j_data:
+    name: fabrik_neo4j_data
+  neo4j_logs:
+    name: fabrik_neo4j_logs
+  fabrik_mim_cache:
+    name: fabrik_mim_cache
+
+networks:
+  fabrik-network:
+    name: fabrik-network
+    driver: bridge
