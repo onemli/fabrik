@@ -60,7 +60,7 @@ You need Docker 24+ and Docker Compose v2. That's it.
 ```bash
 mkdir fabrik && cd fabrik
 curl -fLo docker-compose.yml https://github.com/onemli/fabrik/releases/latest/download/docker-compose.release.yml
-curl -fLo .env.example       https://github.com/onemli/fabrik/releases/latest/download/.env.example
+curl -fLo .env.example       https://github.com/onemli/fabrik/releases/latest/download/env.example
 cp .env.example .env
 ```
 

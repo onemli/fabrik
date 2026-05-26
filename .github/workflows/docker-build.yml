@@ -244,13 +244,19 @@ jobs:
         # Fails clearly if the release doesn't yet exist for this tag —
         # the expectation is that `gh release create v<x.y.z>` ran first.
         # `--clobber` lets re-runs replace previously-uploaded copies.
+        #
+        # `.env.example` is copied to `env.example` (no leading dot)
+        # before upload because GitHub's release asset storage strips
+        # leading dots and serves dotfiles as `default.env.example`,
+        # which breaks the README's curl URL.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/v}"
+          cp .env.example env.example
           gh release upload "v${VERSION}" \
             docker-compose.release.yml \
-            .env.example \
+            env.example \
             --clobber
-          echo "Uploaded docker-compose.release.yml and .env.example to release v${VERSION}"
+          echo "Uploaded docker-compose.release.yml and env.example to release v${VERSION}"
