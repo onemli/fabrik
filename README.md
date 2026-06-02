@@ -18,6 +18,10 @@
 [![Docker Frontend](https://img.shields.io/docker/pulls/onemli/fabrik-frontend?style=flat-square&label=frontend%20pulls&color=2563eb&logo=docker&logoColor=white)](https://hub.docker.com/r/onemli/fabrik-frontend)
 [![Docs](https://img.shields.io/badge/docs-fabrikops.com-7c3aed?style=flat-square)](https://docs.fabrikops.com/fabrik/)
 
+[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/onemli/fabrik)
+[![Run in Cisco Cloud IDE](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-runable-icon.svg)](https://developer.cisco.com/codeexchange/devenv/onemli/fabrik/)
+[![Cisco Developed](https://static.production.devnetcloud.com/codeexchange/assets/images/cisco-developed.svg)](https://developer.cisco.com/codeexchange/github/repo/onemli/fabrik)
+
 [**Docs**](https://docs.fabrikops.com/fabrik/) · [**Quickstart**](https://docs.fabrikops.com/fabrik/getting-started/) · [**Releases**](https://github.com/onemli/fabrik/releases) · [**Discussions**](https://github.com/onemli/fabrik/discussions) · [**Report a bug**](https://github.com/onemli/fabrik/issues)
 
 <br>
