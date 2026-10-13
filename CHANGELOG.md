@@ -5,6 +5,18 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **What a program may run.** `GET /api/queries/runs/catalog/` lists the
+  saved queries and the active APIC connections visible to the caller:
+  `{"queries": [{"id", "name", "description", "category", "version",
+  "updated_at"}], "connections": [{"id", "name"}]}`. A query or a
+  connection shared with the program's user in Fabrik shows up there, so
+  the program no longer needs to be told their numbers. It needs
+  `queries.view_queryrun`, like reading a run.
+
 ## [1.3.0] - 2026-10-13
 
 ### Added
