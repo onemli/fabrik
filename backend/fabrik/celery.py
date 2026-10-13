@@ -73,6 +73,11 @@ app.conf.beat_schedule = {
         'task': 'notifications.check_escalations',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
+    # Delete old query runs, keeping each query's latest result (daily at 04:30)
+    'delete-old-query-runs': {
+        'task': 'queries.delete_old_runs',
+        'schedule': crontab(hour=4, minute=30),
+    },
     # Cleanup expired password reset codes (daily at 05:00)
     'cleanup-expired-reset-codes': {
         'task': 'users.cleanup_expired_reset_codes',
@@ -103,6 +108,8 @@ app.conf.update(
         'queries.check_scheduled_tasks': {'queue': 'scheduled'},
         'queries.execute_scheduled_task': {'queue': 'scheduled'},
         'queries.execute_pipeline': {'queue': 'query_exec'},
+        'queries.run_query': {'queue': 'query_exec'},
+        'queries.delete_old_runs': {'queue': 'maintenance'},
         # AWX automation
         'awx.sync_running_jobs': {'queue': 'awx_monitor'},
         'awx.execute_automation_request': {'queue': 'awx_exec'},

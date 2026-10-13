@@ -14,6 +14,7 @@ from .views import (
     ScheduledTaskExecutionViewSet,
     TaskManagementSettingsViewSet,
     PipelineExecutionViewSet,
+    QueryRunViewSet,
 )
 
 router = DefaultRouter()
@@ -26,6 +27,7 @@ router.register(
 )
 router.register(r'task-settings', TaskManagementSettingsViewSet, basename='tasksettings')
 router.register(r'pipeline-executions', PipelineExecutionViewSet, basename='pipelineexecution')
+router.register(r'runs', QueryRunViewSet, basename='queryrun')
 
 urlpatterns = [
     path('', include(router.urls)),

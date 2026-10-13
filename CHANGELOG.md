@@ -5,6 +5,39 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Query runs over the API.** A saved query can now be run on the
+  server and its result collected without the UI.
+  `POST /api/queries/runs/` with `{"query": <id>, "connections": [<id>, ...]}`
+  starts one run per connection and returns `202` right away; the run
+  executes in Celery. `GET /api/queries/runs/{id}/` gives its status,
+  `GET /api/queries/runs/{id}/rows/?after=0&limit=1000` its rows in order,
+  a page at a time, and `GET /api/queries/runs/latest/?query=<id>&connection=<id>`
+  the latest successful run of a query on a connection.
+- **Every page of the answer.** A run reads all pages, ordered by the
+  class's `dn` so a row cannot move between pages while they are read.
+  A failed page is tried again after signing in, up to three times. Only
+  `GET` is sent to the APIC. The query's post-processors run on the whole
+  result.
+- **API keys for programs.** A key belongs to a user and can do what that
+  user can do. It is created with `manage.py create_api_key` and shown
+  once; only its SHA-256 hash is stored. Keys can be limited to addresses
+  or networks, expire, and be revoked in the Django admin. They are
+  accepted by the query run endpoints only; anywhere else a key gets
+  `401`.
+- **Permissions.** Starting a run needs `queries.add_queryrun`, reading one
+  `queries.view_queryrun`, and the group must be allowed to execute
+  queries. A run is visible to whoever can see both its query and its
+  connection.
+- **Settings.** `QUERY_RUN_PAGE_SIZE` (default 1000 rows per APIC
+  request), `QUERY_RUN_MAX_ROWS` (500000; a bigger result fails the run
+  rather than keep part of it) and `QUERY_RUN_RETENTION_DAYS` (7). Older
+  runs are deleted daily at 04:30 UTC, except the latest successful run
+  of each query on each connection.
+
 ## [1.2.1] — 2026-05-26
 
 ### Fixed
