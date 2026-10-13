@@ -152,6 +152,29 @@ class TestReadingARun:
 
 
 @pytest.mark.django_db
+class TestCatalog:
+    def test_the_queries_and_active_connections_shared_with_the_key(self, key, shared, bot):
+        query, connection = shared
+        SavedQueryFactory(name='Not shared')
+        APICConnectionFactory(name='Not shared either')
+        off = APICConnectionFactory(name='Switched off', is_active=False)
+        off.shared_with.add(bot)
+        response = client_with(key).get(f'{RUNS}catalog/')
+        assert response.status_code == 200
+        body = response.json()
+        assert [q['id'] for q in body['queries']] == [query.pk]
+        assert body['queries'][0]['name'] == query.name
+        assert body['queries'][0]['category'] == query.category.name
+        assert body['queries'][0]['version'] == f'{query.major_version}.{query.minor_version}'
+        assert body['connections'] == [{'id': connection.pk, 'name': connection.name}]
+
+    def test_it_needs_the_permission_to_read_runs(self, shared, bot):
+        bot.user_permissions.remove(Permission.objects.get(codename='view_queryrun'))
+        key = ApiKey.create(bot, 'no reading')[1]
+        assert client_with(key).get(f'{RUNS}catalog/').status_code == 403
+
+
+@pytest.mark.django_db
 class TestApiKeys:
     def test_only_the_hash_is_kept(self, bot):
         record, key = ApiKey.create(bot, 'x')

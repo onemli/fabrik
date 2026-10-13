@@ -13,6 +13,9 @@
 #                                                   the latest successful run of a query on a connection
 #   GET  /api/queries/runs/?query=12&connection=3&status=success
 #                                                   runs, newest first
+#   GET  /api/queries/runs/catalog/                 the saved queries and the active APIC
+#                                                   connections the caller can see: what a
+#                                                   program can run, without asking a person
 #
 # Who sees what: a run is visible to whoever can see both its query and its
 # connection, the same rule the UI uses for them. Starting a run needs the
@@ -179,6 +182,33 @@ class QueryRunViewSet(viewsets.GenericViewSet):
                 'row_count': run.row_count,
                 'rows': rows,
                 'next': last if last < (run.row_count or 0) else None,
+            }
+        )
+
+    @action(detail=False, methods=['get'])
+    def catalog(self, request):
+        """What the caller can run: its visible saved queries and active connections.
+
+        A program sharing in Fabrik's own terms: a query or a connection shared
+        with the program's user is one it may run, and is listed here.
+        """
+        user = request.user
+        queries = visible_queries(user).select_related('category').order_by('name', 'pk')
+        connections = visible_connections(user).filter(is_active=True).order_by('name', 'pk')
+        return Response(
+            {
+                'queries': [
+                    {
+                        'id': query.pk,
+                        'name': query.name,
+                        'description': query.description or '',
+                        'category': query.category.name if query.category else None,
+                        'version': f'{query.major_version}.{query.minor_version}',
+                        'updated_at': query.updated_at,
+                    }
+                    for query in queries
+                ],
+                'connections': [{'id': c.pk, 'name': c.name} for c in connections],
             }
         )
 
