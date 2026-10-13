@@ -122,6 +122,7 @@ INSTALLED_APPS = [
     'awx',
     'notifications',
     'dashboard',
+    'api_keys',
 ]
 
 MIDDLEWARE = [
@@ -520,6 +521,14 @@ AWX_MAX_CONCURRENT_GLOBAL = int(os.getenv('AWX_MAX_CONCURRENT_GLOBAL', '20'))
 
 # Job Monitoring
 AWX_JOB_SYNC_INTERVAL = int(os.getenv('AWX_JOB_SYNC_INTERVAL', '10'))  # seconds
+
+# Query runs over the API (queries/views/runs.py)
+# How many result rows one APIC request asks for, and the most a run keeps;
+# a run with more rows fails rather than keep part of the answer.
+QUERY_RUN_PAGE_SIZE = int(os.getenv('QUERY_RUN_PAGE_SIZE', '1000'))
+QUERY_RUN_MAX_ROWS = int(os.getenv('QUERY_RUN_MAX_ROWS', '500000'))
+# Runs older than this are deleted, except the latest successful one of each query on each connection.
+QUERY_RUN_RETENTION_DAYS = int(os.getenv('QUERY_RUN_RETENTION_DAYS', '7'))
 
 # Validation Polling (Admin configurable)
 AWX_VALIDATION_POLLING_INTERVAL = int(os.getenv('AWX_VALIDATION_POLLING_INTERVAL', '2'))  # seconds

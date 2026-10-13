@@ -10,6 +10,7 @@ from .scheduled_task import ScheduledTaskViewSet, ScheduledTaskExecutionViewSet
 from .notifications import TaskManagementSettingsViewSet
 from .ai_builder import AISettingsViewSet, UserAIProviderViewSet
 from .pipeline import PipelineExecutionViewSet
+from .runs import QueryRunViewSet
 
 __all__ = [
     'CategoryViewSet',
@@ -21,4 +22,5 @@ __all__ = [
     'AISettingsViewSet',
     'UserAIProviderViewSet',
     'PipelineExecutionViewSet',
+    'QueryRunViewSet',
 ]

@@ -6,6 +6,7 @@ from .core import Category, SavedQuery, QueryExecutionLog
 from .chain import ChainExecutionJob, ChainIterationResult
 from .scheduled import ScheduledTask, ScheduledTaskExecution, TaskManagementSettings
 from .ai import AIQueryBuilderSettings, UserAIProvider
+from .runs import QueryRun, QueryRunRow
 
 __all__ = [
     'Category',
@@ -18,4 +19,6 @@ __all__ = [
     'TaskManagementSettings',
     'AIQueryBuilderSettings',
     'UserAIProvider',
+    'QueryRun',
+    'QueryRunRow',
 ]

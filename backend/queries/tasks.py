@@ -8,6 +8,8 @@
 #   execute_scheduled_task    — runs a ScheduledTask; handles both APIC queries and
 #                               system tasks (cleanup, snapshots, etc.)
 #   execute_saved_query_sync  — blocking helper used by column validation at save time
+#   run_query                 : a run asked for over the API (queries/views/runs.py)
+#   delete_old_runs           : Beat, daily; drops old runs (queries/services/query_runner.py)
 
 import logging
 import traceback
@@ -22,6 +24,7 @@ from notifications.services import create_notification
 from apic_connections.models import APICConnection
 from apic_connections.apic_client import APICClient
 from queries.services.postprocessor import PostProcessorEngine
+from queries.services import query_runner
 
 logger = logging.getLogger(__name__)
 
@@ -578,3 +581,15 @@ def execute_saved_query_sync(query_id: int, connection_id: int) -> Any:
         result = apply_post_processors(result, post_processor_nodes)
 
     return result
+
+
+# A big query (tens of thousands of rows, many pages) can take minutes, longer
+# than the default five; an hour is the most a run may take.
+@shared_task(name='queries.run_query', soft_time_limit=3600, time_limit=3900)
+def run_query(run_id: str) -> None:
+    query_runner.execute(run_id)
+
+
+@shared_task(name='queries.delete_old_runs')
+def delete_old_runs() -> int:
+    return query_runner.delete_old_runs()
