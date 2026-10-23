@@ -22,6 +22,13 @@
 #     Uses /api/node/class/<className>.json — node-local queries for
 #     operational/debug data. Not auto-selected; callers must force it.
 #
+# Node scope (see node_scope.py): a query on classes that live on the
+# switches can be limited to chosen nodes, written in the root class node's
+# Node scope field or named by an id filter on fabricNode / topSystem above
+# them in the chain. ClassQueryStrategy then asks
+# /api/node/class/topology/pod-1/node-101/<className>.json; MO is not used,
+# since its DNs start at uni/.
+#
 # The executor picks the cheapest strategy (by estimated ms) among the ones
 # that can_handle() the intent. In practice it's almost always MO or Class.
 #
@@ -36,8 +43,18 @@ from urllib.parse import urlencode
 import re
 from fabrik.logging import safe
 from .class_hierarchy import build_rn, can_build_dn_from_filter, get_rn_format
+from .node_scope import DEFAULT_POD, NodeScopeError, node_path_prefix, parse_node_scope
 
 logger = logging.getLogger(__name__)
+
+# The classes above a switch's own tree, and which of their properties name
+# the pod or the node: fabricTopology > fabricPod > fabricNode > topSystem.
+NODE_SCOPE_CLASSES = {
+    'fabricTopology': {},
+    'fabricPod': {'id': 'pod'},
+    'fabricNode': {'id': 'node'},
+    'topSystem': {'id': 'node', 'podId': 'pod'},
+}
 
 
 class QueryIntent:
@@ -89,6 +106,10 @@ class QueryIntent:
 
         # Build class chain (parent hierarchy)
         self.class_chain = self._build_class_chain()
+
+        # (pod, node) pairs to run on, or None for the whole fabric. May trim
+        # the fabric classes off the front of class_chain.
+        self.node_scope = self._resolve_node_scope()
 
     def _find_node_by_id(self, node_id: str) -> Optional[dict]:
         """Find node by ID"""
@@ -228,6 +249,88 @@ class QueryIntent:
 
         logger.info('_build_class_chain: Built chain with %d items', len(chain))
         return chain
+
+    def _resolve_node_scope(self) -> Optional[List[Tuple[int, int]]]:
+        """The nodes the query runs on: from the root class node's Node scope
+        field, or from a node id filter higher in the chain. Both at once is an
+        error rather than a guess."""
+        for item in self.class_chain[1:]:
+            if parse_node_scope(item['class_node'].get('data', {}).get('nodeScope')):
+                raise NodeScopeError(
+                    f'Node scope is read only on the first class of the chain; '
+                    f'clear it on {item["class_name"]}.'
+                )
+        root_data = self.class_chain[0]['class_node'].get('data', {}) if self.class_chain else {}
+        written = parse_node_scope(root_data.get('nodeScope'))
+        derived = self._node_scope_from_chain()
+        if written and derived:
+            raise NodeScopeError(
+                'The nodes are given twice: in the Node scope field and by a node id '
+                'filter in the chain. Keep one.'
+            )
+        return written or derived
+
+    def _node_scope_from_chain(self) -> Optional[List[Tuple[int, int]]]:
+        """A node named by eq filters on fabricPod / fabricNode / topSystem above
+        the target, e.g. fabricNode(id=101) > topSystem > bgpEntity > ... > bgpPeerEntry.
+
+        Below topSystem everything lives on the switch, where a class query
+        cannot see those parents; so they become the URL's node path and are
+        taken off the chain. Applies only when the chain goes below topSystem
+        and names a node; otherwise the chain is left as it was.
+        """
+        names = [item['class_name'] for item in self.class_chain]
+        if 'topSystem' not in names:
+            return None
+        system_index = names.index('topSystem')
+        if system_index == len(names) - 1:
+            return None
+        head = self.class_chain[: system_index + 1]
+        if any(item['class_name'] not in NODE_SCOPE_CLASSES for item in head):
+            return None
+
+        found = {'pod': set(), 'node': set()}
+        others = []
+        for item in head:
+            keys = NODE_SCOPE_CLASSES[item['class_name']]
+            for filter_node in item['filter_nodes']:
+                data = filter_node.get('data', {})
+                prop = data.get('property')
+                value = str(data.get('value', '')).strip()
+                role = keys.get(prop)
+                if (
+                    role
+                    and data.get('filterType') == 'property'
+                    and data.get('operator', 'eq') == 'eq'
+                    and value.isdigit()
+                ):
+                    found[role].add(int(value))
+                else:
+                    others.append(f'{item["class_name"]}.{prop or data.get("filterType")}')
+
+        if not found['node']:
+            return None
+        if others:
+            raise NodeScopeError(
+                f'With a node chosen by id, the classes above it can only name the pod '
+                f'and node with an eq filter; remove the filter on {", ".join(others)}.'
+            )
+        if len(found['node']) > 1 or len(found['pod']) > 1:
+            raise NodeScopeError(
+                'The chain names more than one node or pod. To query several nodes, '
+                'use the Node scope field of the class node instead.'
+            )
+
+        pod = found['pod'].pop() if found['pod'] else DEFAULT_POD
+        node = found['node'].pop()
+        self.class_chain = self.class_chain[system_index + 1 :]
+        logger.info(
+            '[QueryIntent] Node scope pod-%s/node-%s from the chain; querying from %s',
+            pod,
+            node,
+            safe(self.class_chain[0]['class_name']),
+        )
+        return [(pod, node)]
 
     def _find_connected_filter(self, node_id: str) -> Optional[dict]:
         """
@@ -537,6 +640,9 @@ class MOQueryStrategy(QueryStrategy):
 
     def can_handle(self, intent: QueryIntent) -> bool:
         """MO strategy requires buildable DN (full or partial)"""
+        if intent.node_scope:
+            # MO DNs here are built from uni/; a node scope needs /api/node/class/.
+            return False
         can_full = intent.can_build_dn()
         can_partial = intent.can_build_partial_dn()
         logger.info(f'[MOQueryStrategy] can_handle: full_dn={can_full}, partial_dn={can_partial}')
@@ -866,12 +972,16 @@ class ClassQueryStrategy(QueryStrategy):
         # For single class, use target class
         if len(intent.class_chain) > 1:
             root_class = intent.class_chain[0].get('class_name')
-            base_url = f'/api/class/{root_class}.json'
             logger.info(
                 f'[ClassQueryStrategy] Multi-class chain detected, using root class: {root_class}'
             )
         else:
-            base_url = f'/api/class/{intent.class_name}.json'
+            root_class = intent.class_name
+
+        if intent.node_scope:
+            base_url = f'/api/node/class/{node_path_prefix(intent.node_scope)}/{root_class}.json'
+        else:
+            base_url = f'/api/class/{root_class}.json'
 
         params = {}
 
@@ -941,6 +1051,10 @@ class ClassQueryStrategy(QueryStrategy):
             'uses_dn': False,
             'explanation': 'Class-based query (DN could not be constructed or has wildcards)',
         }
+        if intent.node_scope:
+            nodes = ', '.join(f'pod-{pod}/node-{node}' for pod, node in intent.node_scope)
+            metadata['node_scope'] = [{'pod': pod, 'node': node} for pod, node in intent.node_scope]
+            metadata['explanation'] = f'Class query on the chosen nodes ({nodes})'
 
         logger.info(f'[ClassQueryStrategy] Generated: {query_url}')
 

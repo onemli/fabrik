@@ -86,7 +86,9 @@ def query_path(generated_query, variables: dict) -> str:
 def order_class(path: str) -> str | None:
     """The class whose dn orders the pages: the one asked for by class, or the
     single target-subtree-class of a subtree query. None when it cannot be told."""
-    by_class = re.search(r'/api/(?:node/)?class/([A-Za-z0-9]+)\.json', path)
+    # A node-scoped path has the topology before the class:
+    # /api/node/class/topology/pod-1/node-101/bgpPeerEntry.json
+    by_class = re.search(r'/api/(?:node/)?class/(?:[^?]*/)?([A-Za-z0-9]+)\.json', path)
     if by_class:
         return by_class.group(1)
     subtree = re.search(r'[?&]target-subtree-class=([A-Za-z0-9]+)(?:&|$)', path)

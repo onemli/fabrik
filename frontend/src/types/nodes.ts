@@ -58,6 +58,7 @@ export interface ClassNodeData extends BaseNodeData {
   scope: 'self' | 'children' | 'subtree';
   forceStrategy?: QueryStrategy; // Expert mode: Override automatic strategy selection
   supplementalData?: SupplementalDataConfig; // rsp-subtree-include configuration
+  nodeScope?: string; // Nodes to run on, e.g. "101, 2/201" (lib/nodeScope.ts); root class only
 }
 
 export type FilterOperator = 'eq' | 'ne' | 'gt' | 'lt' | 'ge' | 'le' | 'wcard';

@@ -2,13 +2,18 @@
 //
 // Side-panel configuration form for ClassNode. Lets the user search and pick
 // an ACI class, set the query scope (self / children / subtree), choose which
-// property groups to include, and add supplemental data filters.
+// property groups to include, and add supplemental data filters. For classes
+// that live on the switches, the first class of a chain can also name the
+// nodes to run on (Node scope, lib/nodeScope.ts).
 // Opens automatically when a ClassNode is selected on the canvas.
 // Class selection always opens ClassBrowserDialog (full-screen) for better UX.
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight, Activity, Search } from 'lucide-react'
 import { useQueryBuilderStore } from '@/store/queryBuilderStore'
+import { mimApi } from '@/lib/api'
+import { livesOnNodes, parseNodeScope } from '@/lib/nodeScope'
 import {
   Select,
   SelectContent,
@@ -19,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { ClassBrowserDialog } from '@/components/ClassBrowserDialog'
 import type { ClassNodeData, MIMClass, SupplementalDataConfig } from '@/types'
 
@@ -44,10 +50,48 @@ export function ClassNodeConfig({ nodeId, data }: ClassNodeConfigProps) {
   })()
   const isChildClass = !!parentClassName
 
+  // First class of its chain: no class node before it, through filters too
+  // (pipeline edges start a new chain). Only there is a node scope read.
+  const isFirstClass = (() => {
+    const seen = new Set<string>()
+    let current = nodeId
+    while (!seen.has(current)) {
+      seen.add(current)
+      const incoming = edges.find(e => e.target === current && e.data?.edgeType !== 'pipeline')
+      if (!incoming) return true
+      const source = nodes.find(n => n.id === incoming.source)
+      if (!source) return true
+      if (source.type === 'classNode') return false
+      current = source.id
+    }
+    return true
+  })()
+
+  // Node scope is offered for classes that live on the switches (MIM dnFormats)
+  const { data: classDetail } = useQuery({
+    queryKey: ['classDetail', data.className],
+    queryFn: () => mimApi.getClassDetail(data.className),
+    enabled: !!data.className && isFirstClass,
+  })
+  const showNodeScope = isFirstClass && livesOnNodes(classDetail?.dnFormats)
+  const nodeScopeError = (() => {
+    if (data.nodeScope && !isFirstClass) {
+      return 'Node scope is read only on the first class of the chain; clear it here.'
+    }
+    try {
+      parseNodeScope(data.nodeScope)
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error)
+    }
+  })()
+
   const handleClassSelect = (className: string, classInfo?: MIMClass) => {
     updateNode(nodeId, {
       className,
       classInfo,
+      // Nodes chosen for another class may not suit this one
+      nodeScope: undefined,
     })
     setIsBrowserOpen(false)
   }
@@ -232,6 +276,32 @@ export function ClassNodeConfig({ nodeId, data }: ClassNodeConfigProps) {
                 </div>
               </div>
             </div>
+
+            {/* Node scope - classes on the switches, first class of the chain */}
+            {(showNodeScope || data.nodeScope) && (
+              <div className="pt-4 border-t border-border space-y-2">
+                <Label htmlFor="node-scope" className="text-xs font-medium text-foreground">
+                  Node scope
+                </Label>
+                <Input
+                  id="node-scope"
+                  value={data.nodeScope || ''}
+                  onChange={(e) => updateNode(nodeId, { nodeScope: e.target.value || undefined })}
+                  placeholder="All nodes"
+                  className="h-9 text-sm font-mono"
+                />
+                {nodeScopeError ? (
+                  <p className="text-xs text-destructive">{nodeScopeError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    This class lives on the switches, so a filter on its DN cannot pick a node.
+                    Name the nodes here: <span className="font-mono">101, 102</span> (pod 1)
+                    or <span className="font-mono">2/201</span>. Each node is asked on its own
+                    and the results are put together.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

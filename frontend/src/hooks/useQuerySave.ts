@@ -10,6 +10,7 @@ import { NodeType } from '@/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { queriesService } from '@/services/queries'
 import { generateAPICQuery } from '@/lib/queryGenerator'
+import { toast } from '@/lib/toast'
 
 export function useQuerySave() {
   const { nodes, edges } = useQueryBuilderStore()
@@ -37,6 +38,10 @@ export function useQuerySave() {
       if (response?.success && response?.preview_query) {
         setGeneratedQueryForSave(response.preview_query)
         setShowSaveQueryDialog(true)
+      } else if (response?.error) {
+        // The canvas cannot be a query (a bad node scope); saving the
+        // frontend's simpler query instead would save something else.
+        toast.error(response.error)
       } else {
         const query = generateAPICQuery(nodes, edges)
         if (query) {
