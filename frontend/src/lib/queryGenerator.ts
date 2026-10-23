@@ -15,6 +15,7 @@ import {
   APICQuery,
   PostProcessorConfig,
 } from '@/types'
+import { nodePathPrefix, parseNodeScope } from '@/lib/nodeScope'
 
 /**
  * Generate APIC REST API query from React Flow nodes and edges
@@ -77,6 +78,12 @@ function findRootClassNode(nodes: Node<QueryNodeData>[], edges: Edge[]): Node<Qu
  */
 function buildQueryURL(classData: ClassNodeData): string {
   const { className } = classData
+
+  // Node scope: the chosen switches are in the path (lib/nodeScope.ts)
+  const nodes = parseNodeScope(classData.nodeScope)
+  if (nodes) {
+    return `/api/node/class/${nodePathPrefix(nodes)}/${className}.json`
+  }
 
   // Base URL only - scope is added as rsp-subtree parameter
   return `/api/class/${className}.json`

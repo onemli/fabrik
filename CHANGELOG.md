@@ -5,6 +5,23 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Queries on chosen switches.** Classes that live on the switches
+  (`bgpPeerEntry`, `l1PhysIf`, ...) answer with their node-local DN
+  (`sys/bgp/...`), so a filter on their DN cannot pick a node. The class
+  node now has a **Node scope** field for them: `101, 102` (pod 1) or
+  `2/201`. One node is asked as
+  `/api/node/class/topology/pod-1/node-101/<class>.json`; several nodes
+  are asked one by one and their results put together, in the UI, saved
+  queries, scheduled tasks, pipelines and query runs alike. A node named by
+  an `eq` filter on `fabricNode.id` or `topSystem.id` higher in the chain
+  (with `fabricPod.id` or `topSystem.podId` for the pod) scopes the query
+  the same way. A node scope that cannot be a query is reported, never
+  run on the whole fabric instead.
+
 ## [1.4.0] - 2026-10-13
 
 ### Added

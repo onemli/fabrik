@@ -32,6 +32,7 @@ from ..serializers_export import (
     generate_export_json,
 )
 from ..services.optimizer import QueryIntent, QueryExecutor
+from ..services.node_scope import NodeScopeError
 from ..services.class_hierarchy import build_rn
 
 
@@ -597,7 +598,12 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             truncated_flow = self._truncate_flow_at_node(flow_data, preview_node_id)
 
             # Generate query path from truncated flow
-            query_path = self._generate_preview_query(truncated_flow, preview_node_id)
+            try:
+                query_path = self._generate_preview_query(truncated_flow, preview_node_id)
+            except NodeScopeError as error:
+                return Response(
+                    {'success': False, 'error': str(error)}, status=status.HTTP_400_BAD_REQUEST
+                )
 
             # Get connection and execute query
             connection = APICConnection.objects.get(id=connection_id)
@@ -666,7 +672,8 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 "force_strategy": "MO" | "Class" | "NodeClass"  (optional)
             }
 
-        Returns:
+        Returns {"success": false, "error": "..."} when the canvas's node scope
+        cannot be a query. Otherwise:
             {
                 "success": true,
                 "preview_query": "/api/mo/uni/tn-common.json?query-target=subtree&target-subtree-class=fvCtx",
@@ -689,10 +696,15 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        intent = QueryIntent(flow_data)
-
-        executor = QueryExecutor()
-        query_url, metadata = executor.execute(intent, force_strategy=force_strategy)
+        # A node scope that cannot be a query is answered with its reason, so
+        # the UI shows it instead of falling back to its own simpler generator
+        # and running the query on the whole fabric.
+        try:
+            intent = QueryIntent(flow_data)
+            executor = QueryExecutor()
+            query_url, metadata = executor.execute(intent, force_strategy=force_strategy)
+        except NodeScopeError as error:
+            return Response({'success': False, 'error': str(error)})
 
         logger.info(f'[GenerateQuery] Strategy: {metadata["strategy"]}, Query: {query_url}')
 
@@ -888,6 +900,9 @@ class SavedQueryViewSet(viewsets.ModelViewSet):
             )
 
             return query_url
+        except NodeScopeError:
+            # The old logic knows no node scope: it would run on the whole fabric.
+            raise
         except Exception as e:
             # Fallback to old logic if QueryExecutor fails
             import logging

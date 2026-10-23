@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { NodeType, type QueryNodeData } from '@/types'
 import type { ClassNodeData, FilterNodeData, PostProcessorNodeData } from '@/types'
+import { nodePathPrefix, parseNodeScope } from '@/lib/nodeScope'
 
 interface QueryImpactAreaProps {
   nodeType: NodeType
@@ -27,7 +28,14 @@ export function QueryImpactArea({ nodeType, nodeData }: QueryImpactAreaProps) {
         if (!data.className) return 'Class not configured'
         const scope = data.scope || 'self'
         const propInclude = data.propertyInclude || 'all'
-        return `/api/class/${data.className}.json?query-target=${scope}&rsp-prop-include=${propInclude}`
+        let base = `/api/class/${data.className}.json`
+        try {
+          const nodes = parseNodeScope(data.nodeScope)
+          if (nodes) base = `/api/node/class/${nodePathPrefix(nodes)}/${data.className}.json`
+        } catch {
+          // A bad Node scope is shown in the class panel and the preview bar
+        }
+        return `${base}?query-target=${scope}&rsp-prop-include=${propInclude}`
       }
 
       case NodeType.FILTER: {

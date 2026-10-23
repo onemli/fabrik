@@ -385,6 +385,7 @@ class QueriesService {
 
   async generateQueryPath(flowData: any, forceStrategy?: string): Promise<{
     success: boolean
+    error?: string // why the canvas cannot be a query (success false)
     preview_query: string
     strategy: string
     estimated_cost: number

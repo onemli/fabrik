@@ -8,10 +8,16 @@
 # executeQuery() is the main entry point — it builds the APIC URL, fires the
 # GET request, and returns the imdata array. The caller doesn't need to know
 # about the APIC-specific response format.
+#
+# A GET whose path holds a node group (topology/{pod-1/node-101,...}, see
+# queries/services/node_scope.py) is sent once per node and the answers are
+# merged, so callers run a query over several switches like any other.
 
 import requests
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
+
+from queries.services.node_scope import expand_node_paths, node_of_path
 
 
 class APICClient:
@@ -93,6 +99,50 @@ class APICClient:
             data: Request payload for POST/PUT
         Returns: (success: bool, response_data: Any, error_message: Optional[str])
         """
+        if method == 'GET':
+            paths = expand_node_paths(path)
+            if len(paths) > 1:
+                return self._execute_on_nodes(paths)
+        return self._execute_one(path, method, data)
+
+    def _execute_on_nodes(self, paths: list) -> Tuple[bool, Any, Optional[str]]:
+        """Send a node-scoped GET to each node and merge the answers.
+
+        One node failing fails the whole query, naming the node: a merged
+        answer missing a node would look complete and be wrong. The node goes
+        after the error so callers still see it start with "HTTP 400" etc.
+        """
+        imdata = []
+        total = 0
+        for path in paths:
+            success, answer, error = self._execute_one(path, 'GET', None)
+            if not success:
+                return False, None, f'{error} (on {node_of_path(path)})'
+            answer = answer if isinstance(answer, dict) else {}
+            found = answer.get('imdata') or []
+            imdata.extend(found)
+            try:
+                total += int(answer.get('totalCount', len(found)))
+            except (TypeError, ValueError):
+                total += len(found)
+
+        # rsp-subtree-include=count answers one moCount per node; add them up.
+        if imdata and all(isinstance(item, dict) and set(item) == {'moCount'} for item in imdata):
+            count = 0
+            for item in imdata:
+                try:
+                    count += int(item['moCount']['attributes']['count'])
+                except (KeyError, TypeError, ValueError):
+                    break
+            else:
+                merged = {'moCount': {'attributes': {'count': str(count)}}}
+                return True, {'totalCount': '1', 'imdata': [merged]}, None
+
+        return True, {'totalCount': str(total), 'imdata': imdata}, None
+
+    def _execute_one(
+        self, path: str, method: str = 'GET', data: Optional[Dict] = None
+    ) -> Tuple[bool, Any, Optional[str]]:
         # Ensure we're authenticated
         success, error = self.ensure_authenticated()
         if not success:

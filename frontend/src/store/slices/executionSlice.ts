@@ -328,6 +328,9 @@ export const createExecutionSlice: ExecutionSliceCreator = (set, get) => ({
       set({ generatedQuery: query })
 
       let queryPath: string
+      // The backend's reason the canvas cannot be a query (a bad node scope):
+      // shown instead of running the simpler frontend query.
+      let canvasError: string | undefined
 
       try {
         const backendQuery = await queriesService.generateQueryPath({ nodes, edges })
@@ -339,6 +342,7 @@ export const createExecutionSlice: ExecutionSliceCreator = (set, get) => ({
             currentQueryMetadata: backendQuery.metadata,
           })
         } else {
+          canvasError = backendQuery.error
           const params = new URLSearchParams(query.params).toString()
           queryPath = params
             ? `${query.url}${query.url.includes('?') ? '&' : '?'}${params}`
@@ -351,6 +355,11 @@ export const createExecutionSlice: ExecutionSliceCreator = (set, get) => ({
           ? `${query.url}${query.url.includes('?') ? '&' : '?'}${params}`
           : query.url
         set({ actualQueryPath: queryPath })
+      }
+
+      if (canvasError) {
+        set({ actualQueryPath: null })
+        throw new Error(canvasError)
       }
 
       if (enablePagination) {

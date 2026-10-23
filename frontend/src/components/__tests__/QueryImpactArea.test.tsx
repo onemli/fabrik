@@ -83,6 +83,30 @@ describe('QueryImpactArea', () => {
       expect(button?.textContent).toContain('/api/class/fvTenant.json')
     })
 
+    it('should put the nodes of a Node scope in the CLASS node query', () => {
+      const nodeData: ClassNodeData = {
+        className: 'bgpPeerEntry',
+        label: "Class Node",
+        id: "class-1",
+        scope: 'self',
+        propertyInclude: 'all',
+        nodeScope: '101, 102',
+      }
+
+      const { container } = render(
+        <QueryImpactArea
+          nodeType={NodeType.CLASS}
+          nodeData={nodeData}
+        />
+      )
+
+      // Expanded, the line is shown whole
+      fireEvent.click(container.querySelector('button')!)
+      expect(container.querySelector('button')?.textContent).toContain(
+        '/api/node/class/topology/{pod-1/node-101,pod-1/node-102}/bgpPeerEntry.json'
+      )
+    })
+
     it('should generate correct CLASS node query with different scopes', () => {
       const nodeData: ClassNodeData = {
         className: 'fvBD',

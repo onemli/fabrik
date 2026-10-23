@@ -13,7 +13,7 @@ import { generateAPICQuery } from '@/lib/queryGenerator'
 import { queriesService } from '@/services/queries'
 import { NodeType } from '@/types'
 import type { Node, Edge } from '@xyflow/react'
-import type { QueryNodeData } from '@/types'
+import type { APICQuery, QueryNodeData } from '@/types'
 
 interface BackendPreview {
   query: string
@@ -42,6 +42,8 @@ export function QueryPreviewBar() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
   const [backendPreview, setBackendPreview] = useState<BackendPreview | null>(null)
+  // Why the backend says the canvas cannot be a query (a bad node scope)
+  const [backendError, setBackendError] = useState<string | null>(null)
   const [isLoadingBackend, setIsLoadingBackend] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -50,15 +52,18 @@ export function QueryPreviewBar() {
     [nodes]
   )
 
-  const queryPreview = useMemo(() => {
-    if (!hasClassNode) return null
+  // A node scope the frontend generator cannot read is named in the bar;
+  // other generator errors keep the generic hint.
+  const [queryPreview, nodeScopeError] = useMemo((): [APICQuery | null, string | null] => {
+    if (!hasClassNode) return [null, null]
     try {
-      return generateAPICQuery(
+      return [generateAPICQuery(
         nodes as Node<QueryNodeData>[],
         edges as Edge[]
-      )
-    } catch {
-      return null
+      ), null]
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      return [null, message.startsWith('Node scope') ? message : null]
     }
   }, [nodes, edges, hasClassNode])
 
@@ -79,6 +84,7 @@ export function QueryPreviewBar() {
     const classNodes = nodes.filter(n => n.type === NodeType.CLASS)
     if (classNodes.length < 2) {
       setBackendPreview(null)
+      setBackendError(null)
       return
     }
 
@@ -92,11 +98,14 @@ export function QueryPreviewBar() {
           estimatedCost: result.estimated_cost,
           suggestions: result.suggestions || [],
         })
+        setBackendError(null)
       } else {
         setBackendPreview(null)
+        setBackendError(result.error || null)
       }
     } catch {
       setBackendPreview(null)
+      setBackendError(null)
     } finally {
       setIsLoadingBackend(false)
     }
@@ -105,6 +114,7 @@ export function QueryPreviewBar() {
   useEffect(() => {
     if (!hasClassNode) {
       setBackendPreview(null)
+      setBackendError(null)
       return
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -143,12 +153,12 @@ export function QueryPreviewBar() {
   // The path shown — backend when available, frontend as fallback
   const displayPath = appendPagination(backendPreview ? backendPreview.query : frontendPath)
 
-  if (!queryPreview) {
+  if (!queryPreview || backendError) {
     return (
       <div className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs">
         <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
         <span className="text-amber-600 dark:text-amber-400">
-          Query cannot be generated — check node configuration
+          {backendError || nodeScopeError || 'Query cannot be generated — check node configuration'}
         </span>
       </div>
     )
