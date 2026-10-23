@@ -2,9 +2,6 @@
 # Fabrik .gitignore
 # =====================================================
 
-# Claude Code local state
-.claude/
-
 # CRITICAL: Environment variables & Secrets
 .env
 .env.*
