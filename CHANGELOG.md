@@ -5,6 +5,25 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Query runs on chosen switches.** `POST /api/queries/runs/` takes
+  `"nodes"`, by connection id: `{"query": 12, "connections": [3, 4],
+  "nodes": {"3": "101, 102", "4": "2/201"}}`. A connection left out runs on
+  the whole fabric, as before. The saved query's class is asked under
+  `topology/...` on those nodes, its filters kept; a node scope it was saved
+  with is replaced. Each run gives its `node_scope` back (`"1/101, 1/102"`),
+  so a program can tell it was honored. Nodes for a query that asks by DN
+  (`/api/mo/...`), or that are not nodes, are refused with `400` before any
+  run starts.
+
+### Upgrade
+
+One migration (`queries.0003_queryrun_node_scope`, a column on query runs);
+it runs when the backend starts.
+
 ## [1.5.0] - 2026-10-23
 
 ### Added

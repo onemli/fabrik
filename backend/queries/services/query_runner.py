@@ -11,6 +11,9 @@
 # counted twice or not at all.
 #
 # Only GET is sent: a run reads the fabric, it never changes it.
+#
+# A run given nodes (QueryRun.node_scope, the run API's "nodes") asks the
+# saved query's class on those switches instead of the whole fabric.
 
 import json
 import logging
@@ -25,6 +28,7 @@ from django.utils import timezone
 
 from apic_connections.apic_client import APICClient
 from queries.models import QueryRun, QueryRunRow
+from queries.services.node_scope import NodeScopeError, parse_node_scope, scoped_path
 from queries.services.postprocessor import PostProcessorEngine
 from queries.services.response_flattener import maybe_flatten_response
 
@@ -191,6 +195,11 @@ def execute(run_id) -> None:
         if query is None or connection is None:
             raise RunError('The query or the APIC connection was deleted before the run started.')
         path = query_path(query.generated_query, run.variables)
+        if run.node_scope:
+            try:
+                path = scoped_path(path, parse_node_scope(run.node_scope))
+            except NodeScopeError as error:
+                raise RunError(str(error))
         client = APICClient(
             url=connection.url,
             username=connection.username,

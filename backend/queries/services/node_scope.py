@@ -86,6 +86,34 @@ def node_path_prefix(pairs: List[Tuple[int, int]]) -> str:
     return f'topology/{{{",".join(members)}}}'
 
 
+def format_node_scope(pairs: List[Tuple[int, int]]) -> str:
+    """The one way a scope is written back: "1/101, 2/201"."""
+    return ', '.join(f'{pod}/{node}' for pod, node in pairs)
+
+
+# A class query, whole fabric or already node-scoped:
+#   /api/class/<cls>.json, /api/node/class/<cls>.json,
+#   /api/node/class/topology/pod-1/node-101/<cls>.json, .../topology/{..}/<cls>.json
+_CLASS_PATH = re.compile(
+    r'^/api/(?:node/)?class/(?:topology/(?:pod-\d+/node-\d+|\{[^{}]+\})/)?([A-Za-z0-9]+\.json)(\?.*)?$'
+)
+
+
+def scoped_path(path: str, pairs: List[Tuple[int, int]]) -> str:
+    """A saved query's path run on the given nodes instead (the run API's
+    "nodes"): its class part moves under topology/..., its parameters stay.
+    A node scope the query was saved with is replaced. A query that asks by
+    DN (/api/mo/...) has no class to scope: NodeScopeError."""
+    match = _CLASS_PATH.match(path)
+    if not match:
+        raise NodeScopeError(
+            'Nodes can be given only for a query that asks by class (/api/class/...); '
+            f'this one asks {path.split("?")[0][:120]}.'
+        )
+    class_file, query = match.group(1), match.group(2) or ''
+    return f'/api/node/class/{node_path_prefix(pairs)}/{class_file}{query}'
+
+
 def expand_node_paths(path: str) -> List[str]:
     """One APIC path per node for a path with a {..} node group; any other
     path comes back alone and unchanged."""

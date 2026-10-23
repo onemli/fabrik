@@ -190,6 +190,31 @@ class TestExecute:
         ]
         assert QueryRunRow.objects.get(run=run, number=1500).data == tenant(1499)
 
+    def test_a_run_with_nodes_asks_them(self):
+        query = SavedQueryFactory(
+            generated_query='/api/class/bgpPeerEntry.json?query-target-filter=eq(bgpPeerEntry.operSt,"established")'
+        )
+        run = make_run(query=query, node_scope='1/101, 2/201')
+        apic = FakeApic([tenant(1)])
+        with mock.patch.object(query_runner, 'APICClient', return_value=apic):
+            query_runner.execute(run.pk)
+        run.refresh_from_db()
+        assert run.status == QueryRun.SUCCESS, run.error
+        assert apic.asked[0].startswith(
+            '/api/node/class/topology/{pod-1/node-101,pod-2/node-201}/bgpPeerEntry.json'
+            '?query-target-filter=eq(bgpPeerEntry.operSt,"established")&order-by=bgpPeerEntry.dn'
+        )
+
+    def test_nodes_on_a_query_by_dn_fail_the_run_and_say_why(self):
+        query = SavedQueryFactory(generated_query='/api/mo/uni/tn-common.json')
+        run = make_run(query=query, node_scope='1/101')
+        with mock.patch.object(query_runner, 'APICClient') as client:
+            query_runner.execute(run.pk)
+        run.refresh_from_db()
+        assert run.status == QueryRun.FAILED
+        assert 'asks by class' in run.error
+        client.assert_not_called()
+
     def test_a_failed_sign_in_fails_the_run_and_says_why(self):
         run = make_run()
         apic = FakeApic([])

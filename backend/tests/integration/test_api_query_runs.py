@@ -109,6 +109,68 @@ class TestStartingARun:
         assert response.status_code == 400
         assert str(hidden.pk) in str(response.json())
 
+    def test_nodes_are_kept_per_connection(self, key, shared, bot):
+        query, connection = shared
+        query.generated_query = '/api/class/bgpPeerEntry.json'
+        query.save()
+        other = APICConnectionFactory()
+        other.shared_with.add(bot)
+        with mock.patch('queries.views.runs.run_query'):
+            response = client_with(key).post(
+                RUNS,
+                {
+                    'query': query.pk,
+                    'connections': [connection.pk, other.pk],
+                    'nodes': {str(connection.pk): '101, 102 2/201', str(other.pk): ' '},
+                },
+                format='json',
+            )
+        assert response.status_code == 202
+        runs = response.json()['runs']
+        assert [run['node_scope'] for run in runs] == ['1/101, 1/102, 2/201', '']
+
+    def test_without_nodes_a_run_has_no_scope(self, key, shared):
+        with mock.patch('queries.views.runs.run_query'):
+            response = client_with(key).post(
+                RUNS, {'query': shared[0].pk, 'connections': [shared[1].pk]}, format='json'
+            )
+        assert response.json()['runs'][0]['node_scope'] == ''
+
+    @pytest.mark.parametrize(
+        'nodes, says',
+        [
+            ({'999': '101'}, 'Connection 999 is not in'),
+            ({'x': '101'}, 'A whole number'),
+            ({'CONNECTION': 'leaf1'}, '"leaf1" is not a node'),
+        ],
+    )
+    def test_wrong_nodes_are_refused_before_any_run(self, key, shared, nodes, says):
+        query, connection = shared
+        nodes = {k.replace('CONNECTION', str(connection.pk)): v for k, v in nodes.items()}
+        response = client_with(key).post(
+            RUNS, {'query': query.pk, 'connections': [connection.pk], 'nodes': nodes}, format='json'
+        )
+        assert response.status_code == 400
+        assert says in str(response.json()['nodes'])
+        assert not QueryRun.objects.exists()
+
+    def test_nodes_for_a_query_by_dn_are_refused(self, key, shared):
+        query, connection = shared
+        query.generated_query = '/api/mo/uni/tn-common.json?query-target=children'
+        query.save()
+        response = client_with(key).post(
+            RUNS,
+            {
+                'query': query.pk,
+                'connections': [connection.pk],
+                'nodes': {str(connection.pk): '101'},
+            },
+            format='json',
+        )
+        assert response.status_code == 400
+        assert 'asks by class' in str(response.json()['nodes'])
+        assert not QueryRun.objects.exists()
+
     def test_starting_a_run_needs_its_permission(self, shared, bot):
         bot.user_permissions.remove(Permission.objects.get(codename='add_queryrun'))
         key = ApiKey.create(bot, 'read only')[1]

@@ -21,6 +21,13 @@ class RunRequestSerializer(serializers.Serializer):
         default=dict,
         help_text="A template query's values, by variable id",
     )
+    nodes = serializers.DictField(
+        child=serializers.CharField(allow_blank=True),
+        required=False,
+        default=dict,
+        help_text='The nodes to run on, by connection id: {"3": "101, 102", "4": "2/201"}; '
+        'a connection left out runs on the whole fabric',
+    )
 
 
 class QueryRunSerializer(serializers.ModelSerializer):
@@ -38,6 +45,7 @@ class QueryRunSerializer(serializers.ModelSerializer):
             'connection',
             'connection_name',
             'variables',
+            'node_scope',
             'status',
             'error',
             'row_count',
