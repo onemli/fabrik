@@ -44,6 +44,9 @@ class QueryRun(models.Model):
     )
     connection_name = models.CharField(max_length=100)
     variables = models.JSONField(default=dict, blank=True, help_text="A template query's values")
+    # The nodes the run asked instead of the whole fabric, "1/101, 2/201"
+    # (the run API's "nodes"); empty for the query as it was saved.
+    node_scope = models.TextField(blank=True)
 
     requested_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name='query_runs'

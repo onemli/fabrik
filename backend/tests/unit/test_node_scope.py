@@ -16,9 +16,11 @@ from queries.services.node_scope import (
     MAX_NODES,
     NodeScopeError,
     expand_node_paths,
+    format_node_scope,
     node_of_path,
     node_path_prefix,
     parse_node_scope,
+    scoped_path,
 )
 from queries.services.optimizer import (
     ClassQueryStrategy,
@@ -130,6 +132,42 @@ class TestParseNodeScope:
     def test_node_scope_error_is_a_value_error(self):
         # Callers that catch ValueError keep working
         assert issubclass(NodeScopeError, ValueError)
+
+
+@pytest.mark.unit
+class TestScopedPath:
+    @pytest.mark.parametrize(
+        'path',
+        [
+            '/api/class/l1PhysIf.json?query-target-filter=eq(l1PhysIf.adminSt,"up")',
+            '/api/node/class/l1PhysIf.json?query-target-filter=eq(l1PhysIf.adminSt,"up")',
+            '/api/node/class/topology/pod-1/node-999/l1PhysIf.json'
+            '?query-target-filter=eq(l1PhysIf.adminSt,"up")',
+            '/api/node/class/topology/{pod-1/node-1,pod-1/node-2}/l1PhysIf.json'
+            '?query-target-filter=eq(l1PhysIf.adminSt,"up")',
+        ],
+    )
+    def test_the_class_moves_under_the_nodes_and_the_query_stays(self, path):
+        assert scoped_path(path, [(1, 101), (2, 201)]) == (
+            '/api/node/class/topology/{pod-1/node-101,pod-2/node-201}/l1PhysIf.json'
+            '?query-target-filter=eq(l1PhysIf.adminSt,"up")'
+        )
+
+    def test_one_node_and_no_query(self):
+        assert (
+            scoped_path('/api/class/l1PhysIf.json', [(1, 101)])
+            == '/api/node/class/topology/pod-1/node-101/l1PhysIf.json'
+        )
+
+    @pytest.mark.parametrize(
+        'path', ['/api/mo/uni/tn-common.json', '/api/mo/topology/pod-1/node-101/sys.json?x=1']
+    )
+    def test_a_query_by_dn_is_refused(self, path):
+        with pytest.raises(NodeScopeError, match='asks by class'):
+            scoped_path(path, [(1, 101)])
+
+    def test_the_scope_written_back(self):
+        assert format_node_scope([(1, 101), (2, 201)]) == '1/101, 2/201'
 
 
 @pytest.mark.unit

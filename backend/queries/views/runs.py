@@ -6,6 +6,8 @@
 #
 #   POST /api/queries/runs/                         {"query": 12, "connections": [3, 4], "variables": {}}
 #                                                   -> 202, one run per connection, each "pending"
+#                                                   optional "nodes": {"3": "101, 102"}: run on those
+#                                                   switches of connection 3 (services/node_scope.py)
 #   GET  /api/queries/runs/{id}/                    the run: status, row count, error
 #   GET  /api/queries/runs/{id}/rows/?after=0&limit=1000
 #                                                   its rows, in order; "next" is the "after" of the next page
@@ -38,6 +40,13 @@ from apic_connections.models import APICConnection
 from audit.services import AuditService
 from queries.models import QueryRun, QueryRunRow, SavedQuery
 from queries.serializers_runs import QueryRunSerializer, RunRequestSerializer
+from queries.services.node_scope import (
+    NodeScopeError,
+    format_node_scope,
+    parse_node_scope,
+    scoped_path,
+)
+from queries.services.query_runner import RunError, query_path
 from queries.tasks import run_query
 from users.permissions import FabrikModelPermissions
 from users.quota_service import QuotaService
@@ -67,6 +76,34 @@ def _whole_number(text, name: str, default: int | None = None) -> int | None:
         return int(text)
     except ValueError:
         raise ValidationError({name: 'A whole number.'})
+
+
+def _node_scopes(nodes: dict, wanted: list, query) -> dict:
+    """The run API's "nodes", read: {connection id: "1/101, 1/102"}. A
+    connection not asked for, a scope that is not nodes, or a query that does
+    not ask by class is refused here, before any run starts."""
+    scopes = {}
+    for key, text in nodes.items():
+        connection = _whole_number(key, 'nodes')
+        if connection not in wanted:
+            raise ValidationError({'nodes': f'Connection {key} is not in "connections".'})
+        try:
+            pairs = parse_node_scope(text)
+        except NodeScopeError as error:
+            raise ValidationError({'nodes': f'Connection {key}: {error}'})
+        if pairs:
+            scopes[connection] = pairs
+    if scopes:
+        try:
+            path = query_path(query.generated_query, {})
+        except RunError:
+            path = None  # a template's values come later; the run reports a bad path
+        if path is not None:
+            try:
+                scoped_path(path, next(iter(scopes.values())))
+            except NodeScopeError as error:
+                raise ValidationError({'nodes': str(error)})
+    return {connection: format_node_scope(pairs) for connection, pairs in scopes.items()}
 
 
 class QueryRunViewSet(viewsets.GenericViewSet):
@@ -117,6 +154,8 @@ class QueryRunViewSet(viewsets.GenericViewSet):
                 {'connections': f'No active connection you can see with id {unknown}.'}
             )
 
+        scopes = _node_scopes(asked.validated_data['nodes'], wanted, query)
+
         api_key = request.auth if isinstance(request.auth, ApiKey) else None
         runs = [
             QueryRun.objects.create(
@@ -126,6 +165,7 @@ class QueryRunViewSet(viewsets.GenericViewSet):
                 apic_connection=connections[pk],
                 connection_name=connections[pk].name,
                 variables=asked.validated_data['variables'],
+                node_scope=scopes.get(pk, ''),
                 requested_by=request.user,
                 api_key_name=api_key.name if api_key else '',
             )
@@ -147,6 +187,7 @@ class QueryRunViewSet(viewsets.GenericViewSet):
             metadata={
                 'runs': [str(run.pk) for run in runs],
                 'connections': list(dict.fromkeys(wanted)),
+                'nodes': {str(pk): scope for pk, scope in scopes.items()},
             },
             request=request,
         )
