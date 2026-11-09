@@ -5,6 +5,20 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Query runs keep the tree of a query written by hand.** A run took the
+  last class of `rsp-subtree-class` out of its parents for any query, as
+  the builder's chains want. A query written by hand and imported, asking
+  for a class with chosen children
+  (`l1PhysIf?rsp-subtree=full&rsp-subtree-class=ethpmPhysIf,...`), lost
+  the class it asked for: only the children came back. Now only a chain
+  drawn in the builder (two class nodes or more) is flattened; any other
+  query's rows are the APIC's objects, each with its children. Queries
+  made in the builder answer as before.
+
 ## [1.6.0] - 2026-10-23
 
 ### Added

@@ -155,6 +155,36 @@ class TestReadPage:
         assert len(apic.asked) == 1
 
 
+class TestResultRows:
+    PATH = '/api/class/l1PhysIf.json?rsp-subtree=full&rsp-subtree-class=ethpmPhysIf'
+
+    @staticmethod
+    def port(name):
+        return {
+            'l1PhysIf': {
+                'attributes': {'dn': f'topology/pod-1/node-101/sys/phys-[{name}]', 'id': name},
+                'children': [{'ethpmPhysIf': {'attributes': {'operSt': 'up'}}}],
+            }
+        }
+
+    @staticmethod
+    def flow(*types):
+        return {'nodes': [{'id': str(n), 'type': t} for n, t in enumerate(types)], 'edges': []}
+
+    def test_a_drawn_chain_gives_its_last_class(self):
+        rows = query_runner.result_rows(
+            [self.port('eth1/1'), self.port('eth1/2')],
+            self.PATH,
+            self.flow('classNode', 'classNode', 'outputNode'),
+        )
+        assert rows == [{'ethpmPhysIf': {'attributes': {'operSt': 'up'}}}] * 2
+
+    def test_a_query_written_by_hand_keeps_the_tree(self):
+        objects = [self.port('eth1/1'), self.port('eth1/2')]
+        assert query_runner.result_rows(objects, self.PATH, self.flow('classNode')) == objects
+        assert query_runner.result_rows(objects, self.PATH, None) == objects
+
+
 def make_run(query=None, connection=None, **fields):
     query = query or SavedQueryFactory(generated_query='/api/class/fvTenant.json')
     connection = connection or APICConnectionFactory()

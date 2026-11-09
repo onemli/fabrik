@@ -155,10 +155,23 @@ def _number(text, default: int) -> int:
         return default
 
 
+def drawn_chain(flow_data) -> bool:
+    """Whether the query builder drew a chain of classes (two class nodes or more).
+
+    Only such a query wants its last class taken out of its parents. A query
+    written by hand and imported, with rsp-subtree-class in its path to pick
+    the children it wants, keeps the APIC's tree: the parents are the rows.
+    """
+    nodes = (flow_data or {}).get('nodes', []) if isinstance(flow_data, dict) else []
+    return sum(1 for node in nodes if node.get('type') == 'classNode') > 1
+
+
 def result_rows(objects: list, path: str, flow_data) -> list:
-    """The rows a caller gets: a chain's target class taken out of its parents,
-    then the query's post-processors, as the UI shows them."""
-    result = maybe_flatten_response({'totalCount': str(len(objects)), 'imdata': objects}, path)
+    """The rows a caller gets: a drawn chain's target class taken out of its
+    parents, then the query's post-processors, as the UI shows them."""
+    result = {'totalCount': str(len(objects)), 'imdata': objects}
+    if drawn_chain(flow_data):
+        result = maybe_flatten_response(result, path)
     nodes = (flow_data or {}).get('nodes', []) if isinstance(flow_data, dict) else []
     processors = [
         node for node in nodes if node.get('type') in ('post-processor', 'postProcessorNode')
