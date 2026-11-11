@@ -5,6 +5,18 @@ All notable changes to Fabrik are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **A query saved with its own page size is read in pages of it.** A run
+  always read the APIC a thousand objects a page (`QUERY_RUN_PAGE_SIZE`)
+  and dropped any `page-size` the saved path had. Now a saved
+  `page-size=N` is the size of that query's pages, never more than
+  `QUERY_RUN_PAGE_SIZE`: a heavy class an APIC cannot give a thousand at a
+  time (`faultInfo` on a large fabric) is read in small pages. Other
+  queries are read as before.
+
 ## [1.7.0] - 2026-11-10
 
 ### Changed

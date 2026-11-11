@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from queries.models import QueryRun, QueryRunRow
 from queries.services import query_runner
-from queries.services.query_runner import RunError, order_class, query_path, read_all, read_page
+from queries.services.query_runner import RunError, order_class, page_size_of, query_path, read_all, read_page
 from tests.factories.apic_factory import APICConnectionFactory
 from tests.factories.query_factory import SavedQueryFactory
 
@@ -69,6 +69,19 @@ class TestQueryPath:
             'params': {'page': '3', 'page-size': '50', 'order-by': 'fvTenant.name'},
         }
         assert query_path(saved, {}) == '/api/class/fvTenant.json?order-by=fvTenant.name'
+
+    def test_a_page_size_the_query_was_saved_with_is_its_page_size(self):
+        assert page_size_of('/api/class/faultInfo.json?query-target-filter=ne(faultInfo.severity,"cleared")&page-size=100', 1000) == 100
+        assert page_size_of({'url': '/api/class/fvTenant.json', 'params': {'page-size': '50'}}, 1000) == 50
+        assert page_size_of('{"url": "/api/class/fvTenant.json?page-size=20"}', 1000) == 20
+
+    def test_without_one_or_with_a_wrong_one_the_page_size_is_the_default(self):
+        assert page_size_of('/api/class/fvTenant.json', 1000) == 1000
+        assert page_size_of('/api/class/fvTenant.json?page-size=many', 1000) == 1000
+        assert page_size_of({'url': '/api/class/fvTenant.json', 'params': {'page-size': 'x'}}, 1000) == 1000
+        # Never more than the server allows, never less than one.
+        assert page_size_of('/api/class/fvTenant.json?page-size=50000', 1000) == 1000
+        assert page_size_of('/api/class/fvTenant.json?page-size=0', 1000) == 1
 
     def test_a_templates_values_are_filled_in_and_quoted(self):
         saved = {'url': '/api/mo/uni/tn-${tenant}.json'}
@@ -219,6 +232,18 @@ class TestExecute:
             3,
         ]
         assert QueryRunRow.objects.get(run=run, number=1500).data == tenant(1499)
+
+    def test_a_query_saved_with_a_page_size_is_read_in_pages_of_it(self):
+        query = SavedQueryFactory(generated_query='/api/class/fvTenant.json?page-size=100')
+        run = make_run(query=query)
+        apic = FakeApic([tenant(n) for n in range(250)])
+        with mock.patch.object(query_runner, 'APICClient', return_value=apic):
+            query_runner.execute(run.pk)
+        run.refresh_from_db()
+        assert (run.status, run.row_count, run.page_count) == (QueryRun.SUCCESS, 250, 3), run.error
+        assert apic.asked == [
+            f'/api/class/fvTenant.json?order-by=fvTenant.dn&page={page}&page-size=100' for page in range(3)
+        ]
 
     def test_a_run_with_nodes_asks_them(self):
         query = SavedQueryFactory(
