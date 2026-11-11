@@ -14,6 +14,11 @@
 #
 # A run given nodes (QueryRun.node_scope, the run API's "nodes") asks the
 # saved query's class on those switches instead of the whole fabric.
+#
+# A query saved with its own page-size=N is read N objects a page instead of
+# QUERY_RUN_PAGE_SIZE (page_size_of): an APIC that cannot give a thousand of
+# a heavy class (faultInfo on a large fabric) in one answer gives them in
+# small pages.
 
 import json
 import logging
@@ -83,8 +88,33 @@ def query_path(generated_query, variables: dict) -> str:
     if not path.startswith('/api/'):
         raise RunError(f"The query's path does not start with /api/: {path[:100]}")
     # Pages are asked for here; a page the query was saved with would stop at it.
+    # Its page-size, if any, is the size of each page (page_size_of).
     path = re.sub(r'[?&](page|page-size)=[^&]*', '', path)
     return path if '?' in path or '&' not in path else path.replace('&', '?', 1)
+
+
+def page_size_of(generated_query, default: int) -> int:
+    """How many objects each page of the query asks for: the query's own
+    page-size=N when it was saved with one, else `default`; never more than
+    `default`, nor less than 1. A page-size that is not a number is not one."""
+    generated = generated_query
+    if isinstance(generated, str):
+        try:
+            generated = json.loads(generated)
+        except ValueError:
+            generated = {'url': generated}
+    if not isinstance(generated, dict):
+        generated = {'url': str(generated)}
+    params = generated.get('params') or {}
+    said = params.get('page-size') if isinstance(params, dict) else None
+    if said is None:
+        found = re.search(r'[?&]page-size=(\d+)(?:&|$)', str(generated.get('url') or ''))
+        said = found.group(1) if found else None
+    try:
+        size = int(str(said))
+    except (TypeError, ValueError):
+        return default
+    return min(max(size, 1), default)
 
 
 def order_class(path: str) -> str | None:
@@ -223,9 +253,8 @@ def execute(run_id) -> None:
         signed_in, error = client.login()
         if not signed_in:
             raise RunError(f'Could not sign in to {connection.name}: {error}')
-        objects, pages = read_all(
-            client, path, settings.QUERY_RUN_PAGE_SIZE, settings.QUERY_RUN_MAX_ROWS
-        )
+        page_size = page_size_of(query.generated_query, settings.QUERY_RUN_PAGE_SIZE)
+        objects, pages = read_all(client, path, page_size, settings.QUERY_RUN_MAX_ROWS)
         rows = result_rows(objects, path, query.flow_data)
         _finish(run, rows, pages)
     except RunError as error:
